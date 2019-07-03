@@ -1,3 +1,5 @@
+EDITED BY DAVIDE!!
+
 # urop2019
 Summer UROP 2019 project repository.
 
@@ -22,5 +24,9 @@ Tensorflow is available use for python3. As an example, try running:
 ### tmux
 
 When running longer training scripts etc., you should launch them inside a screen using `tmux`. You can find a summary of `tmux` commands [here](https://gist.github.com/henrik/1967800).
+<<<<<<< HEAD
 testing
 testom
+
+ANAGH
+>>>>>>> master
