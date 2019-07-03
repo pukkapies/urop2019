@@ -3,7 +3,7 @@ Summer UROP 2019 project repository.
 
 ## Workflow
 
-Never push directly to the `master` branch!
+Never push directly to the `master` branch
 
 When working on this repository, create a new branch using the convention *yourname_feature* (with `git checkout -b branchname`). For example, the branch that updated this README.md file is called `kevin_update_readme`.
 
