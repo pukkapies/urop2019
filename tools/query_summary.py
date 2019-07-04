@@ -38,18 +38,18 @@ def from_7digitalid_get_trackid(id: int):
 
 path_to_db = '/srv/data/urop/track_metadata.db'
 
-def get_attribute(attr: str, id_type: str, id: str):
+def get_attribute(attr: str, id_type: str = 'track_id', id: str):
 	"""
 	Returns a list with the desired attribute given either the track_id or 
 	the song_id (or anything else, really...).
 
-	- attr is one of the track_metadata.db database columns (see above);
-	- id_type is either 'song_id' or 'track_id'
-	- id is the ID itself.
+	- 'attr' is the column of the track_metadata.db database (that is, the attribute) we want to retrieve;
+	- 'index' specifies which column to query;
+	- 'index_value' specifies which row to look for.
 
 	EXAMPLE: get_attribute('title', 'song_id', 'SOBNYVR12A8C13558C') --> [('Si Vos Querés',)].
     """
     conn = sqlite3.connect(path_to_db)
-    q = "SELECT " + attr + " FROM songs WHERE " + id_type + " ='" + id  + "'"
+    q = "SELECT " + attr + " FROM songs WHERE " + index + " ='" + index_value  + "'"
     res = conn.execute(q)
     return res.fetchall()
