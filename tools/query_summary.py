@@ -14,6 +14,9 @@ duration, artist_familiarity, artist_hotttnesss, year). Using the
 database to retrieve song attributes is much faster than
 scanning the HDF5 summary file.
 
+The database can be downloaded here: http://www.ee.columbia.edu/~thierry/track_metadata.db
+
+
 Since the database does not contain a '7digital_id' column, we
 have to go through the whole HDF5 file to get match a 7digital_id
 with its track_id.
@@ -32,7 +35,7 @@ def from_7digitalid_get_trackid(id: int):
     with tables.open_file(PATH, mode='r') as f:
         idxs = f.root.metadata.songs.get_where_list('track_7digitalid==' + str(id))
         return f.root.analysis.songs[idxs]['track_id']
-        
+
 
 def get_attribute(attr: str, id_type: str, id: str):
 	"""
