@@ -29,11 +29,15 @@ import tables, sqlite3
 path_to_h5 = '/srv/data/msd/msd_summary_file.h5'
 
 def from_7digitalid_get_trackid(id: int):
-    ''' Returns a numpy.ndarray with the track_id of the song specified by the 7digital_id.
+    ''' Returns the track_id of the song specified by the 7digital_id.
     '''
     with tables.open_file(path_to_h5, mode='r') as f:
-        idxs = f.root.metadata.songs.get_where_list('track_7digitalid==' + str(id))
-        return f.root.analysis.songs[idxs]['track_id']
+        idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + str(id))
+
+        # check whether the 7digital_id corresponds to one and only one track
+        assert len(idx) == 1
+
+        return f.root.analysis.songs[idx]['track_id'][0].decode('UTF-8')
 
 path_to_db = '/srv/data/urop/track_metadata.db'
 
