@@ -27,6 +27,7 @@ Copyright 2019, Davide Gallo <dg5018@ic.ac.uk>
 import tables, sqlite3
 
 path_to_h5 = '/srv/data/msd/msd_summary_file.h5'
+path_to_h5 = '../msd_summary.h5'
 
 def from_7digitalid_get_trackid(id: int):
     ''' Returns the track_id of the song specified by the 7digital_id.
@@ -39,7 +40,19 @@ def from_7digitalid_get_trackid(id: int):
 
         return f.root.analysis.songs[idx]['track_id'][0].decode('UTF-8')
 
+def from_trackid_get_7digitalid(id: str):
+    ''' Returns the 7digital_id of the song specified by the track_id.
+    '''
+    with tables.open_file(path_to_h5, mode='r') as f:
+        idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
+
+        # check whether the 7digital_id corresponds to one and only one track
+        assert len(idx) == 1
+
+        return f.root.metadata.songs[idx]['track_7digitalid'][0]
+
 path_to_db = '/srv/data/urop/track_metadata.db'
+path_to_db = '../track_metadata.db'
 
 def get_attribute(id: str, id_type: str = 'track_id', desired_column: str = 'title'):
     ''' Returns a list with the desired attribute given either the track_id or the song_id (or really anything else with which you can windex our SQL database...).
