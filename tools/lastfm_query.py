@@ -65,6 +65,7 @@ def tid_tag_count(tids):
 
 def filter_tags(tids, min_tags):
     ''' Given list of tids, returns list of those with more than min_tags tags '''
+
     count_dict = tid_tag_count(tids)
     tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
     return tids_filtered
