@@ -49,6 +49,7 @@ def from_trackid_get_7digitalid(id: str):
         assert len(idx) == 1
 
         return f.root.metadata.songs[idx]['track_7digitalid'][0]
+        
 
 path_to_db = '/srv/data/urop/track_metadata.db'
 
@@ -65,3 +66,34 @@ def get_attribute(id: str, id_type: str = 'track_id', desired_column: str = 'tit
     q = "SELECT " + desired_column + " FROM songs WHERE " + id_type + " ='" + id  + "'"
     res = conn.execute(q)
     return res.fetchall()
+
+
+
+
+
+
+
+def query(signature, id, desired_column):
+
+        """
+        id is your chosen mean of identification,
+        signature number for info from:
+        -7digital id = 0
+        -track_id = 1
+        -song_id = 2,
+        desired_column is the name of column u need info of
+        """
+
+        if signature == 0:
+                track_id = from_7digitalid_get_trackid(id)
+                get_attribute(track_id, 'track_id', desired_column)
+        elif signature == 1:
+                get_attribute(id, 'track_id', desired_column)
+        elif signature == 2:
+                get_attribute(id, 'song_id', desired_column)
+        else:
+                print("Error - wrong signature")
+
+
+
+
