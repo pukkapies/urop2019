@@ -29,12 +29,12 @@ def get_tid_num(tid):
     return res.fetchone()[0] 
 
 def get_tag_nums(tid_num):
-    ''' Returns list of 1-element tuples with the tag_nums given a tid_num '''
+    ''' Returns list of the tag_nums given a tid_num '''
 
     conn = sqlite3.connect(path_to_lastfm_tags)
     q = "SELECT tag FROM tid_tag WHERE tid ='" + str(tid_num) + "'"
     res = conn.execute(q)
-    return res.fetchall()
+    return [i[0] for i in res.fetchall()]
     
 def get_tag(tag_num):
     ''' Returns tag given tag_num '''
@@ -51,7 +51,7 @@ def get_tags_from_tids(tids):
     for tid in tids:
         tag_dict[tid] = [] 
         for tag_num in get_tag_nums(get_tid_num(tid)):
-            tag_dict[tid].append(get_tag(tag_num[0]))
+            tag_dict[tid].append(get_tag(tag_num))
     return tag_dict
 
 def tid_tag_count(tids):
