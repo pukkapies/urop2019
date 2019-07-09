@@ -14,13 +14,13 @@ In the code I will refer to the row number of the tid in the tids table as tid_n
 Similarly tag_num refers to row number of the tag in the tags table.
 
 Summary of functions:
-- get_tid_num: tid --> tid_num
-- get_tid: tid_num --> tid
-- get_tag_nums: tid_num --> list of tag_nums
-- get_tag: tag_num --> tag
-- get_tag_num_from_tag: tag --> tag_num
-- get_tags_from_tid: tid --> list of tags
-- get_tags_from_tid_list: tids --> dict with keys: tids, values: list of tags
+- tid_to_tid_nums: tid --> tid_num
+- tid_num_to_tid: tid_num --> tid
+- tid_num_to_tag_nums: tid_num --> list of tag_nums
+- tag_num_to_tag: tag_num --> tag
+- tag_to_tag_num: tag --> tag_num
+- get_tags: tid --> list of tags
+- get_tags_dict: tids --> dict with keys: tids, values: list of tags
 - tid_tag_count: tids --> dict with keys: tids, value: #tags
 - filter_tags: tids, min_tags --> list with tids that have atleast min_tags tags
 - tag_count: tids --> dict with keys: tags, values: number of tids that has this tag
@@ -32,7 +32,7 @@ import sqlite3
 path_to_lastfm_tags = '/home/calle/lastfm_tags.db'
 
 
-def get_tid_num(tid):
+def tid_to_tid_num(tid):
     ''' Returns tid_num, given tid '''
 
     conn = sqlite3.connect(path_to_lastfm_tags)
@@ -40,7 +40,7 @@ def get_tid_num(tid):
     res = conn.execute(q)
     return res.fetchone()[0] 
 
-def get_tid(tid_num):
+def tid_num_to_tid(tid_num):
     ''' Returns tid, given tid_num '''
 
     conn = sqlite3.connect(path_to_lastfm_tags)
@@ -48,7 +48,7 @@ def get_tid(tid_num):
     res = conn.execute(q)
     return res.fetchone()[0]
 
-def get_tag_nums(tid_num):
+def tid_num_to_tag_nums(tid_num):
     ''' Returns list of the tag_nums given a tid_num '''
 
     conn = sqlite3.connect(path_to_lastfm_tags)
@@ -56,7 +56,7 @@ def get_tag_nums(tid_num):
     res = conn.execute(q)
     return [i[0] for i in res.fetchall()]
     
-def get_tag(tag_num):
+def tag_num_to_tag(tag_num):
     ''' Returns tag given tag_num '''
 
     conn = sqlite3.connect(path_to_lastfm_tags)
@@ -64,7 +64,7 @@ def get_tag(tag_num):
     res = conn.execute(q)
     return res.fetchone()[0]
 
-def get_tag_num_from_tag(tag):
+def tag_to_tag_num(tag):
     ''' Returns tag_num given tag '''
 
     conn = sqlite3.connect(path_to_lastfm_tags)
@@ -72,15 +72,15 @@ def get_tag_num_from_tag(tag):
     res = conn.execute(q)
     return res.fetchone()[0]
 
-def get_tags_from_tid(tid):
+def get_tags(tid):
     ''' Gets tags for a given tid '''
     
     tags = []
-    for tag_num in get_tag_nums(get_tid_num(tid)):
-        tags.append(get_tag(tag_num))
+    for tag_num in tid_num_to_tag_nums(tid_to_tid_num(tid)):
+        tags.append(tag_num_to_tag(tag_num))
     return tags
 
-def get_tags_from_tid_list(tids):
+def get_tags_dict(tids):
     ''' Gets tags for a given list of tids
     
     Input:
@@ -94,7 +94,7 @@ def get_tags_from_tid_list(tids):
 
     tag_dict = {}
     for tid in tids:
-        tag_dict[tid] = get_tags_from_tid(tid)
+        tag_dict[tid] = get_tags(tid)
     return tag_dict
 
 def tid_tag_count(tids):
@@ -111,7 +111,7 @@ def tid_tag_count(tids):
 
     count_dict = {}
     for tid in tids:
-        count_dict[tid] = len(get_tags_from_tid(tid))
+        count_dict[tid] = len(get_tags(tid))
     return count_dict
 
 def filter_tags(tids, min_tags):
@@ -134,7 +134,7 @@ def tag_count(tids):
     '''
 
     count_dict = {}
-    for tag_list in get_tags_from_tid_list(tids).values():
+    for tag_list in get_tags_dict(tids).values():
         for tag in tag_list:
             if tag in count_dict:
                 count_dict[tag] += 1
