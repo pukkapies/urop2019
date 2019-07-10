@@ -14,16 +14,16 @@ In the code I will refer to the row number of the tid in the tids table as tid_n
 Similarly tag_num refers to row number of the tag in the tags table.
 
 Summary of functions:
-- tid_to_tid_nums: tid --> tid_num
-- tid_num_to_tid: tid_num --> tid
-- tid_num_to_tag_nums: tid_num --> list of tag_nums
-- tag_num_to_tag: tag_num --> tag
-- tag_to_tag_num: tag --> tag_num
-- get_tags: tid --> list of tags
-- get_tags_dict: tids --> dict with keys: tids, values: list of tags
-- tid_tag_count: tids --> dict with keys: tids, value: #tags
-- filter_tags: tids, min_tags --> list with tids that have atleast min_tags tags
-- tag_count: tids --> dict with keys: tags, values: number of tids that has this tag
+- tid_to_tid_nums:      tid --> tid_num
+- tid_num_to_tid:       tid_num --> tid
+- tid_num_to_tag_nums:  tid_num --> list of tag_nums
+- tag_num_to_tag:       tag_num --> tag
+- tag_to_tag_num:       tag --> tag_num
+- get_tags:             tid --> list of tags
+- get_tags_dict:        tids --> dict with keys: tids, values: list of tags
+- tid_tag_count:        tids --> dict with keys: tids, value: number of tags
+- filter_tags:          tids, min_tags --> list with tids that have atleast min_tags tags
+- tag_count:            tids --> dict with keys: tags, values: number of tids that has this tag
 '''
 
 import sqlite3
@@ -89,7 +89,7 @@ def get_tags_dict(tids):
     Output:
     tag_dict -- dictionary
         - keys: tids
-        - values: tags
+        - values: list of tags
     '''
 
     tag_dict = {}
