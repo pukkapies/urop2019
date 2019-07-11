@@ -6,6 +6,7 @@ Copyright 2019, Davide Gallo <dg5018@ic.ac.uk>
 '''
 
 import h5py
+import mutagen.mp3 as mp3
 import os
 import pandas as pd
 
@@ -15,7 +16,7 @@ PATH_TO_H5 = '/srv/data/msd/msd_summary_file.h5'
 PATH_TO_MISMATCHES_TXT = '/srv/data/msd/sid_mismatches.txt'
 PATH_TO_DUPLICATES_TXT = '/srv/data/msd/sid_duplicates.txt'
 
-def extract_ids_from_summary(file_path):
+def extract_ids_from_summary(file_path: str):
     with h5py.File(file_path, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
         dataset_2 = h5['analysis']['songs']
@@ -23,7 +24,7 @@ def extract_ids_from_summary(file_path):
         df_summary['track_id'] = df_summary['track_id'].apply(lambda x: x.decode('UTF-8'))
         return df_summary
 
-def find_tracks(root_dir):
+def find_tracks(root_dir: str):
     paths = []
     for folder, subfolders, files in os.walk(root_dir):
         for file in files:
@@ -33,7 +34,7 @@ def find_tracks(root_dir):
     paths = [path for path in paths if path[-4:] == '.mp3']
     return paths
 
-def find_tracks_with_7dids(root_dir):
+def find_tracks_with_7dids(root_dir: str):
     paths = find_tracks(root_dir)
     paths_7dids = [int(os.path.basename(path)[:-9]) for path in paths]
     df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'path': paths})
@@ -45,7 +46,7 @@ def dataframe_purge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
     our_df = our_df[-our_df.duplicated('track_id', keep=False)]
     return our_df
 
-def dataframe_purge_mismatches(track_df: pd.DataFrame, info_file):
+def dataframe_purge_mismatches(track_df: pd.DataFrame, info_file: str):
     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
     df = track_df.set_index('track_id')
     to_drop = []
@@ -56,25 +57,46 @@ def dataframe_purge_mismatches(track_df: pd.DataFrame, info_file):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def dataframe_purge_duplicates(track_df: pd.DataFrame, info_file):
-    # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
-    df = track_df.set_index('track_id')
-    to_drop = [None]
-    with open(info_file, 'r') as file:
-        for line in file:
-            # ignore first lines of comment
-            if line[0] == '#':
-                continue
-            # ignore last track from previous set of tracks, and move on to the next set
-            if line[0] == '%':
-                to_drop.pop()
-                continue
-            else:
-                to_drop.append(line[:18])
-        to_drop.pop()
-    to_drop = [tid for tid in to_drop if tid in df.index]  
-    df.drop(to_drop, inplace=True)
-    return df.reset_index()
+# def dataframe_purge_duplicates(track_df: pd.DataFrame, info_file: str):
+#     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
+#     df = track_df.set_index('track_id')
+#     to_drop = [None]
+#     with open(info_file, 'r') as file:
+#         for line in file:
+#             # ignore first lines of comment
+#             if line[0] == '#':
+#                 continue
+#             # ignore last track from previous set of tracks, and move on to the next set
+#             if line[0] == '%':
+#                 to_drop.pop()
+#                 continue
+#             else:
+#                 to_drop.append(line[:18])
+#         to_drop.pop()
+#     to_drop = [tid for tid in to_drop if tid in df.index]  
+#     df.drop(to_drop, inplace=True)
+#     return df.reset_index()
+
+def dataframe_purge_faulty_mp3(track_df: pd.DataFrame, root_dir = str):
+    for idx, path in enumerate(track_df)['path']:
+        path = os.path.join(root_dir, path)
+        
+        idx_1 = set()
+        try:
+            os.path.getsize(path)
+        except:
+            idx_1.add(idx)
+
+        idx_2 = set()
+        try:
+            mp3.MP3(path).info.length
+        except:
+            idx_2.add(idx)
+
+        track_df.drop(idx_1.union(idx_2), inplace=True)
+        
+        return (idx_1, idx_2)
+
 
 if __name__ == '__main__':
     # convert the (desired columns in the) HDF5 summary file as a dataframe
@@ -90,7 +112,7 @@ if __name__ == '__main__':
     our_df = dataframe_purge_mismatches(our_df, PATH_TO_MISMATCHES_TXT)
     
     # discard duplicates
-    our_df = dataframe_purge_duplicates(our_df, PATH_TO_DUPLICATES_TXT)
+    # our_df = dataframe_purge_duplicates(our_df, PATH_TO_DUPLICATES_TXT)
 
     # save output
     output = 'ultimate_csv.csv'
