@@ -14,6 +14,7 @@ In the code I will refer to the row number of the tid in the tids table as tid_n
 Similarly tag_num refers to row number of the tag in the tags table.
 
 Summary of functions:
+- set_path:             new_path --> sets path to new_path 
 - tid_to_tid_nums:      tid --> tid_num
 - tid_num_to_tid:       tid_num --> tid
 - tid_num_to_tag_nums:  tid_num --> list of tag_nums
@@ -28,14 +29,18 @@ Summary of functions:
 
 import sqlite3
 
-# path_to_lastfm_tags = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
-path_to_lastfm_tags = '/home/calle/lastfm_tags.db'
+# Default path
+path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
+def set_path(new_path):
+    ''' Sets default_path as path '''
+    global path
+    path = new_path
 
 def tid_to_tid_num(tid):
     ''' Returns tid_num, given tid '''
 
-    conn = sqlite3.connect(path_to_lastfm_tags)
+    conn = sqlite3.connect(path)
     q = "SELECT rowid FROM tids WHERE tid ='" + tid + "'"
     res = conn.execute(q)
     return res.fetchone()[0] 
@@ -43,7 +48,7 @@ def tid_to_tid_num(tid):
 def tid_num_to_tid(tid_num):
     ''' Returns tid, given tid_num '''
 
-    conn = sqlite3.connect(path_to_lastfm_tags)
+    conn = sqlite3.connect(path)
     q = "SELECT tid FROM tids WHERE rowid ='" + str(tid_num) + "'"
     res = conn.execute(q)
     return res.fetchone()[0]
@@ -51,7 +56,7 @@ def tid_num_to_tid(tid_num):
 def tid_num_to_tag_nums(tid_num):
     ''' Returns list of the tag_nums given a tid_num '''
 
-    conn = sqlite3.connect(path_to_lastfm_tags)
+    conn = sqlite3.connect(path)
     q = "SELECT tag FROM tid_tag WHERE tid ='" + str(tid_num) + "'"
     res = conn.execute(q)
     return [i[0] for i in res.fetchall()]
@@ -59,7 +64,7 @@ def tid_num_to_tag_nums(tid_num):
 def tag_num_to_tag(tag_num):
     ''' Returns tag given tag_num '''
 
-    conn = sqlite3.connect(path_to_lastfm_tags)
+    conn = sqlite3.connect(path)
     q = "SELECT tag FROM tags WHERE rowid = " + str(tag_num)
     res = conn.execute(q)
     return res.fetchone()[0]
@@ -67,7 +72,7 @@ def tag_num_to_tag(tag_num):
 def tag_to_tag_num(tag):
     ''' Returns tag_num given tag '''
 
-    conn = sqlite3.connect(path_to_lastfm_tags)
+    conn = sqlite3.connect(path)
     q = "SELECT rowid FROM tags WHERE tag = " + tag 
     res = conn.execute(q)
     return res.fetchone()[0]
