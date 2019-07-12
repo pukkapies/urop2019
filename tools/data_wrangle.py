@@ -15,6 +15,9 @@ PATH_TO_H5 = '/srv/data/msd/msd_summary_file.h5'
 PATH_TO_MISMATCHES_TXT = '/srv/data/msd/sid_mismatches.txt'
 PATH_TO_DUPLICATES_TXT = '/srv/data/msd/sid_duplicates.txt'
 
+
+### functions to fetch mp3 files on our server
+
 def extract_ids_from_summary(file_path: str):
     with h5py.File(file_path, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
@@ -45,6 +48,9 @@ def dataframe_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
     our_df = our_df[-our_df.duplicated('track_id', keep=False)]
     return our_df
 
+
+### functions to purge mismatches
+
 def dataframe_purge_mismatches(track_df: pd.DataFrame, info_file: str):
     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
     df = track_df.set_index('track_id')
@@ -56,25 +62,8 @@ def dataframe_purge_mismatches(track_df: pd.DataFrame, info_file: str):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-# def dataframe_purge_duplicates(track_df: pd.DataFrame, info_file: str):
-#     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
-#     df = track_df.set_index('track_id')
-#     to_drop = [None]
-#     with open(info_file, 'r') as file:
-#         for line in file:
-#             # ignore first lines of comment
-#             if line[0] == '#':
-#                 continue
-#             # ignore last track from previous set of tracks, and move on to the next set
-#             if line[0] == '%':
-#                 to_drop.pop()
-#                 continue
-#             else:
-#                 to_drop.append(line[:18])
-#         to_drop.pop()
-#     to_drop = [tid for tid in to_drop if tid in df.index]  
-#     df.drop(to_drop, inplace=True)
-#     return df.reset_index()
+
+### functions to purge mp3 errors in the files
 
 def get_idx_mp3_size_zero(track_df: pd.DataFrame, root_dir: str):
     output = []
@@ -102,6 +91,9 @@ def dataframe_purge_faulty_mp3(track_df: pd.DataFrame, root_dir: str, threshold:
     else:
         return track_df.drop(get_idx_mp3_size_less_than(track_df, root_dir, threshold))
 
+
+### functions to purge tracks with no tags
+
 def get_tids_with_tag() # to be moved on lastfm_query.py
     conn = sqlite3.connect('lastfm.db')
     q = "SELECT tid FROM tids"
@@ -120,6 +112,30 @@ def dataframe_purge_without_tag(track_df: pd.DataFrame, db_path: str = None):
     tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
     
     return pd.merge(track_df, tids_with_tag_df, on='track_id', how='inner')
+
+
+### functions to purge duplicates
+
+# def dataframe_purge_duplicates(track_df: pd.DataFrame, info_file: str):
+#     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
+#     df = track_df.set_index('track_id')
+#     to_drop = [None]
+#     with open(info_file, 'r') as file:
+#         for line in file:
+#             # ignore first lines of comment
+#             if line[0] == '#':
+#                 continue
+#             # ignore last track from previous set of tracks, and move on to the next set
+#             if line[0] == '%':
+#                 to_drop.pop()
+#                 continue
+#             else:
+#                 to_drop.append(line[:18])
+#         to_drop.pop()
+#     to_drop = [tid for tid in to_drop if tid in df.index]  
+#     df.drop(to_drop, inplace=True)
+#     return df.reset_index()
+
 
 if __name__ == '__main__':
     # convert the (desired columns in the) HDF5 summary file as a dataframe
