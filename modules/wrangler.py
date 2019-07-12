@@ -41,6 +41,7 @@ Functions
 
 import h5py
 import lastfm_query as db
+import mutagen
 import os
 import pandas as pd
 
@@ -168,7 +169,7 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
     idxs = track_df.set_index('track_id').index
     dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
 
-    if mode == 'random': # only mode supported
+    if mode == 'random': # the only mode currently supported
         df = track_df.set_index('track_id')
         to_drop = dups_purged
         for subset in to_drop:
@@ -185,7 +186,7 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
 
 ### output functions
 
-def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
+def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_duplic: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path' and (optionally) 'track_length'
     
     Parameters
@@ -196,7 +197,7 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
     discard_no_tag : bool
         if True, discards tracks which are not matched to any tag
 
-    discard_dupl : bool
+    discard_duplic : bool
         if True, discards tracks which are duplicates and keeps one for each set
 
     Returns
@@ -223,14 +224,14 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
         df = df_purge_no_tag(df)
         print('done')
     
-    if discard_dupl == True:
+    if discard_duplic == True:
         print('Purging duplicate tracks...', end=' ')
         df = df_purge_duplicates(df)
         print('done')
     
     return df
 
-def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False): # standalone function; not used to generate the ultimate_output()
+def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False):
     ''' Produces a list containing ONLY tracks on our server where each sublists contains all the duplicates for a song
     
     Parameters
