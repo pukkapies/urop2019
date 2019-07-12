@@ -40,7 +40,7 @@ if __name__ == "__main__":
         output = sys.argv[1] + '.csv'
 
     # check arguments
-    if len(sys.argv == 2):
+    if len(sys.argv) == 2:
         df = ultimate_output()
         df.to_csv(output, index=False)
     else:
