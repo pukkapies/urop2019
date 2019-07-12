@@ -12,8 +12,8 @@ import pandas as pd
 MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
-path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'
-path_txt_duplicates = '/srv/data/...'
+path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
+path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
 
 def set_path_h5(new_path):
     global path_h5
