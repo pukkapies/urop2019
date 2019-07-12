@@ -154,6 +154,11 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
 
 ### output
 
+def ultimate_output(threshold: int = 50000, discard_no_tag: bool = True, discard_dupl: bool = True, discard_dupl_mode: str = 'single_random'):
+    pass
+
+### output
+
 def read_duplicates_and_purge(threshold: int = 50000, discard_no_tag: bool = True): # standalone function; not used to generate the ultimate_output()
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
     df = df_purge_mismatches(df)
@@ -165,8 +170,3 @@ def read_duplicates_and_purge(threshold: int = 50000, discard_no_tag: bool = Tru
     idxs = df.set_index('track_id').index
     dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
     return dups_purged
-
-### output
-
-def ultimate_output(threshold: int = 50000, discard_no_tag: bool = True, discard_dupl: bool = True, discard_dupl_mode: str = 'single_random'):
-    pass
