@@ -232,6 +232,22 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
     return df
 
 def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False): # standalone function; not used to generate the ultimate_output()
+    ''' Produces a list containing ONLY tracks on our server where each sublists contains all the duplicates for a song
+    
+    Parameters
+    ----------
+    threshold : int
+        the tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value)
+    
+    discard_no_tag : bool
+        if True, discards tracks which are not matched to any tag
+
+    Returns
+    -------
+    dups_purged : lists
+        - elements are all the sets of duplicates as given in the msd_duplicates.txt file (some might be empty!)
+        - sub-elements are all the duplicate tids of some specific song - discarding inexistent tracks, mismatches, faulty audio files etc...
+    '''
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
     df = df_purge_mismatches(df)
     df = df_purge_faulty_mp3(df, threshold=threshold)
