@@ -76,7 +76,7 @@ def tag_to_tag_num(tag):
     res = conn.execute(q)
     return res.fetchone()[0]
 
-def get_tids_with_tags():
+def get_tids_with_tag():
     conn = sqlite3.connect('lastfm.db')
     q = "SELECT tid FROM tids"
     res = conn.execute(q)
