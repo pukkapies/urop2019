@@ -39,7 +39,7 @@ def find_tracks_with_7dids(root_dir: str):
     df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'path': paths})
     return df
 
-def dataframe_purge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
+def dataframe_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
     our_df = pd.merge(track_summary_df, track_df, on='track_7digitalid', how='inner')
     our_df = our_df[-our_df.duplicated('track_7digitalid', keep=False)]
     our_df = our_df[-our_df.duplicated('track_id', keep=False)]
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     df = find_tracks_with_7dids(MP3_ROOT_DIR)
     
     # create a new dataframe with the metadata for the tracks we actually have on the server
-    df = dataframe_purge(df_summary, df)
+    df = dataframe_merge(df_summary, df)
         
     # discard mismatches
     df = dataframe_purge_mismatches(df, PATH_TO_MISMATCHES_TXT)
