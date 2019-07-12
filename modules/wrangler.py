@@ -215,7 +215,7 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
     df = df_purge_mismatches(df)
     print('done')
 
-    print('Purging faulty mp3 files...', end=' ')
+    print('Purging faulty MP3 files...', end=' ')
     df = df_purge_faulty_mp3(df, threshold=threshold)
     print('done')
     
@@ -230,11 +230,13 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
         print('done')
 
     if add_length == True:
+        print('Checking length of audio tracks...', end=' ')
         lengths = []
         for path in df['path']:
             mp3 = mutagen.mp3.MP3(os.path.join(MP3_ROOT_DIR, path))
             lengths.append(mp3.info.length)
         df['track_length'] = pd.Series(lenghts, index=df.index)
+        print('done')
     
     return df
 
