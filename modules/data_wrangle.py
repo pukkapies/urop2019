@@ -135,16 +135,10 @@ def read_duplicates():
         l.append(t)
     return l
 
-def read_duplicates_and_purge(): # standalone function; not used to generate the ultimate_output()
-    dups = read_duplicates()
-    idxs = df_merge(extract_ids_from_summary(), find_tracks_with_7dids()).set_index('track_id').index
-    dups_purged = [[tid for tid in sublist if tid in idx] for sublist in dups]
-    return dups_purged
-
 def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
     dups = read_duplicates()
     idxs = track_df.set_index('track_id').index
-    dups_purged = [[tid for tid in sublist if tid in idx] for sublist in dups]
+    dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
 
     if mode == 'single_random': # currently not at all random: keeps only last track
         df = track_df.set_index('track_id')
@@ -157,3 +151,22 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
     
     else:
         raise KeyError
+
+### output
+
+def read_duplicates_and_purge(threshold: int = 50000, discard_no_tag: bool = True): # standalone function; not used to generate the ultimate_output()
+    df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
+    df = df_purge_mismatches(df)
+    df = df_purge_faulty_mp3(df, threshold=threshold)
+    if discard_no_tag:
+        df = df_purge_without_tag(df)
+
+    dups = read_duplicates()
+    idxs = df.set_index('track_id').index
+    dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
+    return dups_purged
+
+### output
+
+def ultimate_output(threshold: int = 50000, discard_no_tag: bool = True, discard_dupl: bool = True, discard_dupl_mode: str = 'single_random'):
+    pass
