@@ -176,7 +176,7 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
     
     if discard_dupl == True:
         print('Purging duplicate tracks...', end=' ')
-        df = df_purge_duplicates(df, discard_dupl_mode)
+        df = df_purge_duplicates(df)
         print('done')
     
     return df
