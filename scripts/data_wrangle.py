@@ -20,7 +20,7 @@ def die_with_usage():
 
 if __name__ == "__main__":
 
-    from data_wrangle import * 
+    from data_wrangle import ultimate_output 
 
     # show help
     if len(sys.argv) < 2:
