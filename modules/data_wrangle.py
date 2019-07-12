@@ -144,7 +144,10 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
         df = track_df.set_index('track_id')
         to_drop = dups_purged
         for subset in to_drop:
-            subset.pop()
+            if len(subset) > 1:
+                subset.pop()
+            else:
+                continue
         to_drop = [tid for sublist in to_drop for tid in sublist]
         df.drop(to_drop, inplace=True)
         return df.reset_index()
