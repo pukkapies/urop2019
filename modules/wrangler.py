@@ -1,5 +1,4 @@
-''' Contains tools for fetching MP3 files on the server, matching 7digitalid's with tid's, and 
-purging unwanted entries such as mismatches, faulty MP3 files, tracks without tags or duplicates
+''' Contains tools for fetching MP3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty MP3 files, tracks without tags or duplicates
 
 Notes
 -----
