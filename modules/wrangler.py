@@ -40,8 +40,11 @@ Functions
 '''
 
 import h5py
+import lastfm_query as db
 import os
 import pandas as pd
+
+from itertools import islice
 
 MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 
@@ -134,8 +137,6 @@ def df_purge_faulty_mp3(track_df: pd.DataFrame, threshold: int = 50000):
 
 
 ### functions to find tracks with no tags and purge them
-
-import lastfm_query as db
     
 def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
     if lastfm_db:
@@ -148,8 +149,6 @@ def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
 
 
 ### functions to tackle duplicates
-
-from itertools import islice
 
 def read_duplicates():
     l = []
