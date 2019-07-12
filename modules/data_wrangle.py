@@ -107,7 +107,7 @@ def df_purge_faulty_mp3(track_df: pd.DataFrame, threshold: int = 50000):
 
 import lastfm_query as db
     
-def df_purge_without_tag(track_df: pd.DataFrame, lastfm_db: str = None):
+def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
     # if db_path not specified, use default path (to be uncommented once get_tids_with_tags will be on lastfm_query.py)
     if lastfm_db:
         db.set_path(lastfm_db)
@@ -171,7 +171,7 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
     
     if discard_no_tag == True:
         print('Purging tracks with no tags...', end=' ')
-        df = df_purge_without_tag(df)
+        df = df_purge_no_tag(df)
         print('done')
     
     if discard_dupl == True:
@@ -183,13 +183,13 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
 
 ### output
 
-def read_duplicates_and_purge(threshold: int = 50000, discard_no_tag: bool = True): # standalone function; not used to generate the ultimate_output()
+def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False): # standalone function; not used to generate the ultimate_output()
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
     df = df_purge_mismatches(df)
     df = df_purge_faulty_mp3(df, threshold=threshold)
     
     if discard_no_tag == True:
-        df = df_purge_without_tag(df)
+        df = df_purge_no_tag(df)
 
     dups = read_duplicates()
     idxs = df.set_index('track_id').index
