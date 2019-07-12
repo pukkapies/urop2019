@@ -1,21 +1,69 @@
-if __name__ == '__main__':
-    # convert the (desired columns in the) HDF5 summary file as a dataframe
-    df_summary = extract_ids_from_summary(PATH_TO_H5)
-        
-    # search for MP3 tracks through the MP3_ROOT_DIR folder
-    df = find_tracks_with_7dids(MP3_ROOT_DIR)
-    
-    # create a new dataframe with the metadata for the tracks we actually have on the server
-    df = df_merge(df_summary, df)
-        
-    # discard mismatches
-    df = df_purge_mismatches(df, PATH_TO_MISMATCHES_TXT)
-    
-    # discard duplicates
-    # df = df_purge_duplicates(df, PATH_TO_DUPLICATES_TXT)
+import os, sys
 
-    # save output
-    output = 'ultimate_csv.csv'
-    output_path = os.path.join(OUTPUT_DIR, output)
+sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
 
-    our_df.to_csv(output_path, header=False, index=False)
+def die_with_usage():
+    print()
+    print("DataWrangle - Script to fetch MP3 songs from the server and output an ultimate CSV file")
+    print()
+    print("Usage:     python data_wrangle.py <csv filename or path> [options]")
+    print()
+    print("General Options:")
+    print("  --discard-no-tag       Choose to discard tracks with no tags.")
+    print("  --discard-dupl <mode>  Choose to discard duplicate tracks.") # <mode> not currently supported
+    print("  --help                 Show this help message and exit.")
+    print("  --threshold            Set the minimum size (in bytes) to allow for the MP3 files (default 0).")
+    print()
+    print("Example:   python data_wrangle.py ./wrangl.csv --threshold 50000 --discard-no-tag")
+    print()
+    sys.exit(0)
+
+if __name__ == "__main__":
+
+    from data_wrangle import * 
+
+    # show help
+    if len(sys.argv) < 2:
+        die_with_usage()
+    
+    # show help, if user did not input something weird
+    if '--help' in sys.argv:
+        if len(sys.argv) == 2:
+            die_with_usage()
+        else:
+            print('???')
+            sys.exit(0)
+    
+    if sys.argv[1][-4:] == '.csv':
+        output = sys.argv[1]
+    else:
+        output = sys.argv[1] + '.csv'
+
+    # check arguments
+    if len(sys.argv == 2):
+        df = ultimate_output()
+        df.to_csv(output, index=False)
+    else:
+        # initialize variables
+        threshold = 0 
+        discard_no_tag = False
+        discard_dupl = False
+
+        while True:
+            if len(sys.argv) == 2:
+                break
+            elif sys.argv[2] == '--threshold':
+                threshold = int(sys.argv[3])
+                del sys.argv[2:4]
+            elif sys.argv[2] == '--discard-no-tag':
+                discard_no_tag = True
+                del sys.argv[2]
+            elif sys.argv[2] == '--discard-dupl':
+                discard_dupl = True
+                del sys.argv[2]            
+            else:
+                print('???')
+                sys.exit(0)
+
+        df = ultimate_output(threshold, discard_no_tag, discard_dupl)
+        df.to_csv(output, index=False)
