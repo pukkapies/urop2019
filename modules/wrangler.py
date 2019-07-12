@@ -244,8 +244,8 @@ def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False):
 
     Returns
     -------
-    dups_purged : lists
-        - elements are all the sets of duplicates as given in the msd_duplicates.txt file (some might be empty!)
+    dups_purged : list of lists
+        - elements are all the 53471 sets of duplicates as given in the msd_duplicates.txt file (some might be empty after purging!)
         - sub-elements are all the duplicate tids of some specific song - discarding inexistent tracks, mismatches, faulty audio files etc...
     '''
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
