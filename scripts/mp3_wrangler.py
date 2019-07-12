@@ -12,10 +12,11 @@ def die_with_usage():
     print("Usage:     python data_wrangle.py <csv filename or path> [options]")
     print()
     print("General Options:")
-    print("  --discard-no-tag         Choose to discard tracks with no tags.")
-    print("  --discard-duplic <mode>  Choose to discard duplicate tracks.") # <mode> not currently supported
-    print("  --help                   Show this help message and exit.")
-    print("  --threshold              Set the minimum size (in bytes) to allow for the MP3 files (default 0).")
+    print("  --add-length           Choose to add column with length of audio tracks.")
+    print("  --discard-no-tag       Choose to discard tracks with no tags.")
+    print("  --discard-dupl <mode>  Choose to discard duplicate tracks.") # <mode> not currently supported
+    print("  --help                 Show this help message and exit.")
+    print("  --threshold            Set the minimum size (in bytes) to allow for the MP3 files (default 0).")
     print()
     print("Example:   python data_wrangle.py ./wrangl.csv --threshold 50000 --discard-no-tag")
     print()
@@ -50,7 +51,8 @@ if __name__ == "__main__":
         # initialize variables
         threshold = 0 
         discard_no_tag = False
-        discard_duplic = False
+        discard_dupl = False
+        add_length = False
 
         while True:
             if len(sys.argv) == 2:
@@ -61,12 +63,15 @@ if __name__ == "__main__":
             elif sys.argv[2] == '--discard-no-tag':
                 discard_no_tag = True
                 del sys.argv[2]
-            elif sys.argv[2] == '--discard-duplic':
-                discard_duplic = True
-                del sys.argv[2]            
+            elif sys.argv[2] == '--discard-dupl':
+                discard_dupl = True
+                del sys.argv[2]
+            elif sys.argv[2] == '--add-length':
+                add_length = True
+                del sys.argv[2]          
             else:
                 print('???')
                 sys.exit(0)
 
-        df = ultimate_output(threshold, discard_no_tag, discard_dupl)
+        df = ultimate_output(threshold, discard_no_tag, discard_dupl, add_length)
         df.to_csv(output, index=False)
