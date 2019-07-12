@@ -37,9 +37,9 @@ def extract_ids_from_summary():
         df_summary['track_id'] = df_summary['track_id'].apply(lambda x: x.decode('UTF-8'))
         return df_summary
 
-def find_tracks(root_dir: str):
+def find_tracks():
     paths = []
-    for folder, subfolders, files in os.walk(root_dir):
+    for folder, subfolders, files in os.walk(MP3_ROOT_DIR):
         for file in files:
             path = os.path.join(os.path.abspath(folder), file)
             paths.append(path)
@@ -47,8 +47,8 @@ def find_tracks(root_dir: str):
     paths = [path for path in paths if path[-4:] == '.mp3']
     return paths
 
-def find_tracks_with_7dids(root_dir: str):
-    paths = find_tracks(root_dir)
+def find_tracks_with_7dids():
+    paths = find_tracks()
     paths_7dids = [int(os.path.basename(path)[:-9]) for path in paths]
     df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'path': paths})
     return df
@@ -76,31 +76,31 @@ def df_purge_mismatches(track_df: pd.DataFrame):
 
 ### functions to purge mp3 errors in the files
 
-def get_idx_mp3_size_zero(track_df: pd.DataFrame, root_dir: str):
+def get_idx_mp3_size_zero(track_df: pd.DataFrame):
     output = []
     for idx, path in enumerate(track_df['path']):
-        path = os.path.join(root_dir, path)
+        path = os.path.join(MP3_ROOT_DIR, path)
         if os.path.getsize(path) == 0:
             output.append(idx)
         else:
             continue
     return output
 
-def get_idx_mp3_size_less_than(track_df: pd.DataFrame, root_dir: str, threshold: int = 50000):
+def get_idx_mp3_size_less_than(track_df: pd.DataFrame, threshold: int = 50000):
     output = []
     for idx, path in enumerate(track_df['path']):
-        path = os.path.join(root_dir, path)
+        path = os.path.join(MP3_ROOT_DIR, path)
         if os.path.getsize(path) < threshold:
             output.append(idx)
         else:
             continue
     return output
 
-def df_purge_faulty_mp3(track_df: pd.DataFrame, root_dir: str, threshold: int = 50000):
+def df_purge_faulty_mp3(track_df: pd.DataFrame, threshold: int = 50000):
     if threshold == 0:
-        return track_df.drop(get_idx_mp3_size_zero(track_df, root_dir))
+        return track_df.drop(get_idx_mp3_size_zero(track_df))
     else:
-        return track_df.drop(get_idx_mp3_size_less_than(track_df, root_dir, threshold))
+        return track_df.drop(get_idx_mp3_size_less_than(track_df, threshold))
 
 
 ### functions to purge tracks with no tags
@@ -142,10 +142,9 @@ def read_duplicates():
         l.append(t)
     return l
 
-def read_duplicates_and_purge(track_df: pd.DataFrame): # standalone function; not used to generate the ultimate_output()
+def read_duplicates_and_purge(): # standalone function; not used to generate the ultimate_output()
     dups = read_duplicates()
     idxs = df_merge(extract_ids_from_summary(), find_tracks_with_7dids()).set_index('track_id').index
-    idxs = track_df.set_index('track_id').index
     dups_purged = [[tid for tid in sublist if tid in idx] for sublist in dups]
     return dups_purged
 
