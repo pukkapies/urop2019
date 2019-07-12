@@ -155,20 +155,27 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
 ### output
 
 def ultimate_output(threshold: int = 50000, discard_no_tag: bool = True, discard_dupl: bool = True, discard_dupl_mode: str = 'single_random'):
-    print('Fetching mp3 files from root directory...')
+    print('Fetching mp3 files from root directory...', end=' ')
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
-    print('Purging mismatches...')
+    print('done')
+
+    print('Purging mismatches...', end=' ')
     df = df_purge_mismatches(df)
-    print('Purging faulty mp3 files...')
+    print('done')
+
+    print('Purging faulty mp3 files...', end=' ')
     df = df_purge_faulty_mp3(df, threshold=threshold)
+    print('done')
     
     if discard_no_tag == True:
-        print('Purging tracks with no tags...')
+        print('Purging tracks with no tags...', end=' ')
         df = df_purge_without_tag(df)
+        print('done')
     
     if discard_dupl == True:
-        print('Purging duplicate tracks...')
+        print('Purging duplicate tracks...', end=' ')
         df = df_purge_duplicates(df, discard_dupl_mode)
+        print('done')
     
     return df
 
