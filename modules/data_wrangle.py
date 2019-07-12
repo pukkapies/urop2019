@@ -142,7 +142,9 @@ def read_duplicates_and_purge(): # standalone function; not used to generate the
     return dups_purged
 
 def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
-    dups_purged = read_duplicates_and_purge(track_df)
+    dups = read_duplicates()
+    idxs = track_df.set_index('track_id').index
+    dups_purged = [[tid for tid in sublist if tid in idx] for sublist in dups]
 
     if mode == 'single_random': # currently not at all random: keeps only last track
         df = track_df.set_index('track_id')
