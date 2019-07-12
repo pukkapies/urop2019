@@ -186,7 +186,7 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
 
 ### output functions
 
-def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_duplic: bool = False):
+def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_duplic: bool = False, add_length: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path' and (optionally) 'track_length'
     
     Parameters
@@ -228,6 +228,13 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
         print('Purging duplicate tracks...', end=' ')
         df = df_purge_duplicates(df)
         print('done')
+
+    if add_length == True:
+        lengths = []
+        for path in df['path']:
+            mp3 = mutagen.mp3.MP3(os.path.join(MP3_ROOT_DIR, path))
+            lengths.append(mp3.info.length)
+        df['track_length'] = pd.Series(lenghts, index=df.index)
     
     return df
 
