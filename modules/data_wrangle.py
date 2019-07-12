@@ -155,7 +155,17 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
 ### output
 
 def ultimate_output(threshold: int = 50000, discard_no_tag: bool = True, discard_dupl: bool = True, discard_dupl_mode: str = 'single_random'):
-    pass
+    df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
+    df = df_purge_mismatches(df)
+    df = df_purge_faulty_mp3(df, threshold=threshold)
+    
+    if discard_no_tag == True:
+        df = df_purge_without_tag(df)
+    
+    if discard_dupl == True:
+        df = df_purge_duplicates(df, discard_dupl_mode)
+    
+    return df
 
 ### output
 
@@ -163,7 +173,8 @@ def read_duplicates_and_purge(threshold: int = 50000, discard_no_tag: bool = Tru
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
     df = df_purge_mismatches(df)
     df = df_purge_faulty_mp3(df, threshold=threshold)
-    if discard_no_tag:
+    
+    if discard_no_tag == True:
         df = df_purge_without_tag(df)
 
     dups = read_duplicates()
