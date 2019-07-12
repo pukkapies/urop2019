@@ -1,8 +1,9 @@
-'''
-This code contains simple tools for querying the lastfm_tags.db file.
+''' Contains simple tools for querying the lastfm_tags.db file
 
 
-The lastfm_tags tags database contains 3 tables: tids, tags, tid_tag.
+Notes
+-----
+The lastfm_tags database contains 3 tables: tids, tags, tid_tag.
 - tids, 1-column table containing the track ids.
 - tid_tags, contains 3 columns:
     - tid: rowid of the track id in the tids table
@@ -10,21 +11,28 @@ The lastfm_tags tags database contains 3 tables: tids, tags, tid_tag.
     - val: number between 0 and 100 (guessing this is how accurate the tag is?)
 - tags, 1-column table containing the tags.
 
-In the code I will refer to the row number of the tid in the tids table as tid_num.
-Similarly tag_num refers to row number of the tag in the tags table.
+The row number of the tid in the tids table will be refered to as as tid_num.
+Similarly tag_num will refer to the row number of the tag in the tags table.
 
-Summary of functions:
-- set_path:             new_path --> sets path to new_path 
-- tid_to_tid_nums:      tid --> tid_num
-- tid_num_to_tid:       tid_num --> tid
-- tid_num_to_tag_nums:  tid_num --> list of tag_nums
-- tag_num_to_tag:       tag_num --> tag
-- tag_to_tag_num:       tag --> tag_num
-- get_tags:             tid --> list of tags
-- get_tags_dict:        tids --> dict with keys: tids, values: list of tags
-- tid_tag_count:        tids --> dict with keys: tids, value: number of tags
-- filter_tags:          tids, min_tags --> list with tids that have atleast min_tags tags
-- tag_count:            tids --> dict with keys: tags, values: number of tids that has this tag
+IMPORTANT: If using this script elsewhere than on boden then run set_path(db_path) to
+set the path of the database. Otherwise it will use the default path, which is the path
+to the database on boden.
+
+
+Functions
+---------
+- set_path              Sets path to the lastfm_tags.db
+- tid_to_tid_nums       Gets tid_num given tid
+- tid_num_to_tid        Gets tid given tid_num 
+- tid_num_to_tag_nums   Gets tag_num given tid_num 
+- tag_num_to_tag        Gets tag given tag_num 
+- tag_to_tag_num        Gets tag_num given tag 
+- get_tags              Gets a list of tags associated to given tid 
+- get_tags_dict         Gets a dict with tids as keys and a list of its tags as value
+- tid_tag_count         Gets a dict with tids as keys and its number of tags as value 
+- filter_tags           Filters list of tids based on minimum number of tags
+- tag_count             From list of tids it gets a dict with tags associated to these
+                        tids as keys and its number associated tids as value.
 '''
 
 import sqlite3
@@ -53,7 +61,7 @@ def tid_num_to_tid(tid_num):
     return res.fetchone()[0]
 
 def tid_num_to_tag_nums(tid_num):
-    ''' Returns list of the tag_nums given a tid_num '''
+    ''' Returns list of the associated tag_nums to the given tid_num '''
 
     conn = sqlite3.connect(path)
     q = "SELECT tag FROM tid_tag WHERE tid ='" + str(tid_num) + "'"
@@ -96,13 +104,16 @@ def get_tags(tid):
 def get_tags_dict(tids):
     ''' Gets tags for a given list of tids
     
-    Input:
-    tids -- list of tids
+    Parameters
+    ----------
+    tids : list
+        list containing tids in string form
 
-    Output:
-    tag_dict -- dictionary
-        - keys: tids
-        - values: list of tags
+    Returns
+    -------
+    tag_dict : dict
+        keys are the tids from the tids list,
+        values are lists of tags for given tid.
     '''
 
     tag_dict = {}
@@ -113,13 +124,16 @@ def get_tags_dict(tids):
 def tid_tag_count(tids):
     ''' Gets number of tags for each given tid 
     
-    Input:
-    tids -- list of tids
+    Parameters
+    ----------
+    tids : list
+        list containing tids in string form
 
-    Output:
-    tag_dict -- dictionary
-        - keys: tids
-        - values: number of tags for the given tid
+    Returns
+    -------
+    count_dict : dict
+        keys are the tids from the tids parameter,
+        values are number of tags for given tid.
     '''
 
     count_dict = {}
@@ -137,13 +151,16 @@ def filter_tags(tids, min_tags):
 def tag_count(tids):
     ''' Gets number of tags for each given tid 
     
-    Input:
-    tids -- list of tids
+    Parameters
+    ----------
+    tids : list
+        list containing tids in string form
 
-    Output:
-    tag_dict -- dictionary
-        - keys: tags
-        - values: number of tids with the given tag 
+    Returns
+    -------
+    count_dict : dict
+        keys are the tags associated to any tid from the tids parameter,
+        values are number of tids that the given tag is associated to. 
     '''
 
     count_dict = {}
