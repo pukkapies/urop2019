@@ -1,6 +1,9 @@
 import os, sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
+if os.path.basename(os.getcwd()) == 'scripts':
+    sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
+else:
+    sys.path.insert(0, os.path.join(os.getcwd(), 'modules'))
 
 def die_with_usage():
     print()
