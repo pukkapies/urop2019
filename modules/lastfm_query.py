@@ -31,8 +31,7 @@ Functions
 - get_tags_dict         Gets a dict with tids as keys and a list of its tags as value
 - tid_tag_count         Gets a dict with tids as keys and its number of tags as value 
 - filter_tags           Filters list of tids based on minimum number of tags
-- tag_count             From list of tids it gets a dict with tags associated to these tids 
-                        as keys and its number associated tids as value
+- tag_count             Gets a dict with the tags associated to tids as keys and their count number as values
 '''
 
 import sqlite3

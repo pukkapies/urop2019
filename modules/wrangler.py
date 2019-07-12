@@ -1,8 +1,42 @@
-'''
-Davide Gallo (2019) Imperial College London
-dg5018@ic.ac.uk
+''' Contains tools for fetching MP3 files on the server, matching 7digitalid's with tid's, and 
+purging unwanted entries such as mismatches, faulty MP3 files, tracks without tags or duplicates
 
-Copyright 2019, Davide Gallo <dg5018@ic.ac.uk>
+Notes
+-----
+The purpose of this module is to provide an ultimate_output() function returning a
+dataframe with three columns: track_id, track_7digitalid and path (optionally also track_length).
+
+The only function which does not contribute to the above-mentioned purpose is 
+read_duplicates_and_purge(), which returns a list of sublists where each sublists contains the
+duplicate tracks for a particular songs, discarding all the tracks which are damaged or not
+on our server.
+
+When running the ultimate_output() function, one can choose whether or not to exclude tracks with
+no tags, whether or not to exclude duplicates, and what the minimum size (in bytes) of the MP3
+files should be. With all the parameters left to their default value, the function takes slightly
+less than a minute to run on our server. Nevertheless, in order not to have to run the same 
+function every time such a dataset is needed, a CLI script mp3_wrangler.py is provided, which 
+relies on the functions contained in this modules and produces a CSV file. 
+
+
+Functions
+---------
+- set_path_h5                Sets path to the msd_summary_file.h5
+- set_path_txt_mismatches    Sets path to the msd_mismatches.txt file
+- set_path_txt_duplicates    Sets path to the msd_duplicates.txt file
+- extract_ids_from_summary   Produces a dataframe with 7digitalid's and tid's of all tracks in the dataset
+- find_tracks                Gets a list of paths of MP3 files on our server
+- find_tracks_with_7dids     Produces a dataframe with 7digitalid's and paths of MP3 files on our server
+- df_merge                   Produces a dataframe wiht 7digitalid's, tid's and paths of MP3 files on our server
+- df_purge_mismatches        Removes mismatches from previously generated dataset
+- get_idx_mp3_size_zero      Gets a list of indexes in the dataset of tracks whose size is 0
+- get_idx_mp3_size_less_than Gets a list of indexes in the dataset of tracks whose size is less than a threshold
+- df_purge_faulty_mp3        Removes tracks whose size is less than a certain threshold
+- df_purge_no_tag            Removes tracks which are not matched to any tag
+- read_duplicates            Reads the msd_duplicates.txt file and produces a list (of lists) of duplicates
+- read_duplicates_and_purge  Reads the msd_duplicates.txt file and keeps only "good" tracks
+- df_purge_duplicates        Retains only one track for each set of duplicates
+- ultimate_output            Combine the previous functions and produces a dataframe accoring to the given parameters
 '''
 
 import h5py
