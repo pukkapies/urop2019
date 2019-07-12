@@ -10,16 +10,27 @@ import os
 import pandas as pd
 
 MP3_ROOT_DIR = '/srv/data/msd/7digital/'
-OUTPUT_DIR = '/srv/data/urop/'
-PATH_TO_H5 = '/srv/data/msd/msd_summary_file.h5'
-PATH_TO_MISMATCHES_TXT = '/srv/data/msd/sid_mismatches.txt'
-PATH_TO_DUPLICATES_TXT = '/srv/data/...'
 
+path_h5 = '/srv/data/msd/msd_summary_file.h5'
+path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'
+path_txt_duplicates = '/srv/data/...'
+
+def set_path_h5(new_path):
+    global path_h5
+    path_h5 = new_path
+
+def set_path_txt_mismatches(new_path):
+    global path_txt_mismatches
+    path_txt_mismatches = new_path
+
+def set_path_txt_duplicates(new_path):
+    global path_txt_duplicates
+    path_txt_duplicates = new_path
 
 ### functions to fetch mp3 files on our server
 
-def extract_ids_from_summary(file_path: str):
-    with h5py.File(file_path, 'r') as h5:
+def extract_ids_from_summary():
+    with h5py.File(path_h5, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
         dataset_2 = h5['analysis']['songs']
         df_summary = pd.DataFrame(data={'track_7digitalid': dataset_1['track_7digitalid'], 'track_id': dataset_2['track_id']})
@@ -51,11 +62,11 @@ def df_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
 
 ### functions to purge mismatches
 
-def df_purge_mismatches(track_df: pd.DataFrame, info_file: str):
+def df_purge_mismatches(track_df: pd.DataFrame):
     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
     df = track_df.set_index('track_id')
     to_drop = []
-    with open(info_file, 'r') as file:
+    with open(path_txt_mismatches, 'r') as file:
         for line in file:
             to_drop.append(line[27:45])
     to_drop = [tid for tid in to_drop if tid in df.index]
@@ -118,9 +129,9 @@ def df_purge_without_tag(track_df: pd.DataFrame, db_path: str = None):
 
 from itertools import islice
 
-def read_duplicates(info_file: str):
+def read_duplicates():
     l = []
-    with open (info_file, 'r') as file:
+    with open (path_txt_duplicates, 'r') as file:
         t = []
         for line in islice(file, 7, None):
             if line[0] == '%':
@@ -131,14 +142,15 @@ def read_duplicates(info_file: str):
         l.append(t)
     return l
 
-def read_duplicates_and_purge(track_df: pd.DataFrame, info_file: str):
-    dups = read_duplicates(info_file)
+def read_duplicates_and_purge(track_df: pd.DataFrame): # standalone function; not used to generate the ultimate_output()
+    dups = read_duplicates()
+    idxs = df_merge(extract_ids_from_summary(), find_tracks_with_7dids()).set_index('track_id').index
     idxs = track_df.set_index('track_id').index
     dups_purged = [[tid for tid in sublist if tid in idx] for sublist in dups]
     return dups_purged
 
-def df_purge_duplicates(track_df: pd.DataFrame, info_file:str, mode: str = 'single_random'):
-    dups_purged = read_duplicates_and_purge(track_df, info_file)
+def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single_random'):
+    dups_purged = read_duplicates_and_purge(track_df)
 
     if mode == 'single_random': # currently not at all random: keeps only last track
         df = track_df.set_index('track_id')

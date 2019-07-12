@@ -31,10 +31,10 @@ import sqlite3
 
 path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db' # default path
 
-def set_path(db_path):
-    ''' Sets default_path as path '''
+def set_path(new_path):
+    ''' Sets new_path as path '''
     global path
-    path = db_path
+    path = new_path
 
 def tid_to_tid_num(tid):
     ''' Returns tid_num, given tid '''
