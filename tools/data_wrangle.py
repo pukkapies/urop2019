@@ -6,7 +6,6 @@ Copyright 2019, Davide Gallo <dg5018@ic.ac.uk>
 '''
 
 import h5py
-import mutagen.mp3 as mp3
 import os
 import pandas as pd
 
@@ -77,26 +76,31 @@ def dataframe_purge_mismatches(track_df: pd.DataFrame, info_file: str):
 #     df.drop(to_drop, inplace=True)
 #     return df.reset_index()
 
-def dataframe_purge_faulty_mp3(track_df: pd.DataFrame, root_dir = str):
-    for idx, path in enumerate(track_df)['path']:
+def get_idx_mp3_size_zero(track_df: pd.DataFrame, root_dir: str):
+    output = []
+    for idx, path in enumerate(track_df['path']):
         path = os.path.join(root_dir, path)
-        
-        idx_1 = set()
-        try:
-            os.path.getsize(path)
-        except:
-            idx_1.add(idx)
+        if os.path.getsize(path) == 0:
+            output.append(idx)
+        else:
+            continue
+    return output
 
-        idx_2 = set()
-        try:
-            mp3.MP3(path).info.length
-        except:
-            idx_2.add(idx)
+def get_idx_mp3_size_less_than(track_df: pd.DataFrame, root_dir: str, threshold: int = 50000):
+    output = []
+    for idx, path in enumerate(track_df['path']):
+        path = os.path.join(root_dir, path)
+        if os.path.getsize(path) < threshold:
+            output.append(idx)
+        else:
+            continue
+    return output
 
-        track_df.drop(idx_1.union(idx_2), inplace=True)
-        
-        return (idx_1, idx_2)
-
+def dataframe_purge_faulty_mp3(track_df: pd.DataFrame, root_dir: str, threshold: int = 50000):
+    if threshold == 0:
+        return track_df.drop(get_idx_mp3_size_zero(track_df, root_dir))
+    else:
+        return track_df.drop(get_idx_mp3_size_less_than(track_df, root_dir, threshold))
 
 if __name__ == '__main__':
     # convert the (desired columns in the) HDF5 summary file as a dataframe
@@ -106,13 +110,13 @@ if __name__ == '__main__':
     df = find_tracks_with_7dids(MP3_ROOT_DIR)
     
     # create a new dataframe with the metadata for the tracks we actually have on the server
-    our_df = dataframe_purge(df_summary, df)
+    df = dataframe_purge(df_summary, df)
         
     # discard mismatches
-    our_df = dataframe_purge_mismatches(our_df, PATH_TO_MISMATCHES_TXT)
+    df = dataframe_purge_mismatches(df, PATH_TO_MISMATCHES_TXT)
     
     # discard duplicates
-    # our_df = dataframe_purge_duplicates(our_df, PATH_TO_DUPLICATES_TXT)
+    # df = dataframe_purge_duplicates(df, PATH_TO_DUPLICATES_TXT)
 
     # save output
     output = 'ultimate_csv.csv'
