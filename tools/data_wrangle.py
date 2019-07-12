@@ -102,6 +102,25 @@ def dataframe_purge_faulty_mp3(track_df: pd.DataFrame, root_dir: str, threshold:
     else:
         return track_df.drop(get_idx_mp3_size_less_than(track_df, root_dir, threshold))
 
+def get_tids_with_tag() # to be moved on lastfm_query.py
+    conn = sqlite3.connect('lastfm.db')
+    q = "SELECT tid FROM tids"
+    res = conn.execute(q)
+    output = res.fetchall()
+    output = [tid[0] for tid in output]
+    conn.close()
+    return output
+    
+def dataframe_purge_without_tag(track_df: pd.DataFrame, db_path: str = None):
+    # if db_path not specified, use default path (to be uncommented once get_tids_with_tags will be on lastfm_query.py)
+    # if db_path:
+    #    lastfm_query.set_path(db_path)
+
+    tids_with_tag = get_tids_with_tag()
+    tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
+    
+    return pd.merge(track_df, tids_with_tag_df, on='track_id', how='inner')
+
 if __name__ == '__main__':
     # convert the (desired columns in the) HDF5 summary file as a dataframe
     df_summary = extract_ids_from_summary(PATH_TO_H5)
