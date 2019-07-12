@@ -105,7 +105,7 @@ def df_purge_faulty_mp3(track_df: pd.DataFrame, threshold: int = 50000):
 
 ### functions to purge tracks with no tags
 
-def get_tids_with_tag() # to be moved on lastfm_query.py
+def get_tids_with_tag(): # to be moved on lastfm_query.py
     conn = sqlite3.connect('lastfm.db')
     q = "SELECT tid FROM tids"
     res = conn.execute(q)
