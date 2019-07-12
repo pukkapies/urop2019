@@ -105,14 +105,14 @@ def df_purge_faulty_mp3(track_df: pd.DataFrame, threshold: int = 50000):
 
 ### functions to purge tracks with no tags
 
-import lastfm_query
+import lastfm_query as db
     
 def df_purge_without_tag(track_df: pd.DataFrame, lastfm_db: str = None):
     # if db_path not specified, use default path (to be uncommented once get_tids_with_tags will be on lastfm_query.py)
     if lastfm_db:
-        lastfm_query.set_path(lastfm_db)
+        db.set_path(lastfm_db)
 
-    tids_with_tag = get_tids_with_tag()
+    tids_with_tag = db.get_tids_with_tag()
     tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
     
     return pd.merge(track_df, tids_with_tag_df, on='track_id', how='inner')
