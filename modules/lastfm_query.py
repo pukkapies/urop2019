@@ -40,7 +40,7 @@ import sqlite3
 path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db' # default path
 
 def set_path(new_path):
-    ''' Sets new_path as path '''
+    ''' Sets new_path as default path for the lastfm_tags database '''
     global path
     path = new_path
 
