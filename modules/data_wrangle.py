@@ -135,12 +135,12 @@ def read_duplicates():
         l.append(t)
     return l
 
-def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single-random'):
+def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
     dups = read_duplicates()
     idxs = track_df.set_index('track_id').index
     dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
 
-    if mode == 'single-random': # currently not at all random: keeps only last track
+    if mode == 'random': # currently not at all random: keeps only last track
         df = track_df.set_index('track_id')
         to_drop = dups_purged
         for subset in to_drop:
@@ -151,13 +151,12 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'single-random'):
         to_drop = [tid for sublist in to_drop for tid in sublist]
         df.drop(to_drop, inplace=True)
         return df.reset_index()
-    
     else:
-        raise KeyError
+        raise NameError("mode '" + mode + "' is not defined")
 
 ### output
 
-def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False, discard_dupl_mode: str = 'single-random'):
+def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
     print('Fetching mp3 files from root directory...', end=' ')
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
     print('done')
