@@ -13,7 +13,7 @@ MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 OUTPUT_DIR = '/srv/data/urop/'
 PATH_TO_H5 = '/srv/data/msd/msd_summary_file.h5'
 PATH_TO_MISMATCHES_TXT = '/srv/data/msd/sid_mismatches.txt'
-PATH_TO_DUPLICATES_TXT = '/srv/data/msd/sid_duplicates.txt'
+PATH_TO_DUPLICATES_TXT = '/srv/data/...'
 
 
 ### functions to fetch mp3 files on our server
@@ -42,7 +42,7 @@ def find_tracks_with_7dids(root_dir: str):
     df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'path': paths})
     return df
 
-def dataframe_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
+def df_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
     our_df = pd.merge(track_summary_df, track_df, on='track_7digitalid', how='inner')
     our_df = our_df[-our_df.duplicated('track_7digitalid', keep=False)]
     our_df = our_df[-our_df.duplicated('track_id', keep=False)]
@@ -51,7 +51,7 @@ def dataframe_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
 
 ### functions to purge mismatches
 
-def dataframe_purge_mismatches(track_df: pd.DataFrame, info_file: str):
+def df_purge_mismatches(track_df: pd.DataFrame, info_file: str):
     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
     df = track_df.set_index('track_id')
     to_drop = []
@@ -85,7 +85,7 @@ def get_idx_mp3_size_less_than(track_df: pd.DataFrame, root_dir: str, threshold:
             continue
     return output
 
-def dataframe_purge_faulty_mp3(track_df: pd.DataFrame, root_dir: str, threshold: int = 50000):
+def df_purge_faulty_mp3(track_df: pd.DataFrame, root_dir: str, threshold: int = 50000):
     if threshold == 0:
         return track_df.drop(get_idx_mp3_size_zero(track_df, root_dir))
     else:
@@ -103,7 +103,7 @@ def get_tids_with_tag() # to be moved on lastfm_query.py
     conn.close()
     return output
     
-def dataframe_purge_without_tag(track_df: pd.DataFrame, db_path: str = None):
+def df_purge_without_tag(track_df: pd.DataFrame, db_path: str = None):
     # if db_path not specified, use default path (to be uncommented once get_tids_with_tags will be on lastfm_query.py)
     # if db_path:
     #    lastfm_query.set_path(db_path)
@@ -116,25 +116,41 @@ def dataframe_purge_without_tag(track_df: pd.DataFrame, db_path: str = None):
 
 ### functions to purge duplicates
 
-# def dataframe_purge_duplicates(track_df: pd.DataFrame, info_file: str):
-#     # generate a new dataframe with 'track_id' as index column, this makes searching through the index faster
-#     df = track_df.set_index('track_id')
-#     to_drop = [None]
-#     with open(info_file, 'r') as file:
-#         for line in file:
-#             # ignore first lines of comment
-#             if line[0] == '#':
-#                 continue
-#             # ignore last track from previous set of tracks, and move on to the next set
-#             if line[0] == '%':
-#                 to_drop.pop()
-#                 continue
-#             else:
-#                 to_drop.append(line[:18])
-#         to_drop.pop()
-#     to_drop = [tid for tid in to_drop if tid in df.index]  
-#     df.drop(to_drop, inplace=True)
-#     return df.reset_index()
+from itertools import islice
+
+def read_duplicates(info_file: str):
+    l = []
+    with open (info_file, 'r') as file:
+        t = []
+        for line in islice(file, 7, None):
+            if line[0] == '%':
+                l.append(t)
+                t = []
+            else:
+                t.append(line[:18])
+        l.append(t)
+    return l
+
+def read_duplicates_and_purge(track_df: pd.DataFrame, info_file: str):
+    dups = read_duplicates(info_file)
+    idxs = track_df.set_index('track_id').index
+    dups_purged = [[tid for tid in sublist if tid in idx] for sublist in dups]
+    return dups_purged
+
+def df_purge_duplicates(track_df: pd.DataFrame, info_file:str, mode: str = 'single_random'):
+    dups_purged = read_duplicates_and_purge(track_df, info_file)
+
+    if mode == 'single_random': # currently not at all random: keeps only last track
+        df = track_df.set_index('track_id')
+        to_drop = dups_purged
+        for subset in to_drop:
+            subset.pop()
+        to_drop = [tid for sublist in to_drop for tid in sublist]
+        df.drop(to_drop, inplace=True)
+        return df.reset_index()
+    
+    else:
+        raise KeyError
 
 
 if __name__ == '__main__':
@@ -145,13 +161,13 @@ if __name__ == '__main__':
     df = find_tracks_with_7dids(MP3_ROOT_DIR)
     
     # create a new dataframe with the metadata for the tracks we actually have on the server
-    df = dataframe_merge(df_summary, df)
+    df = df_merge(df_summary, df)
         
     # discard mismatches
-    df = dataframe_purge_mismatches(df, PATH_TO_MISMATCHES_TXT)
+    df = df_purge_mismatches(df, PATH_TO_MISMATCHES_TXT)
     
     # discard duplicates
-    # df = dataframe_purge_duplicates(df, PATH_TO_DUPLICATES_TXT)
+    # df = df_purge_duplicates(df, PATH_TO_DUPLICATES_TXT)
 
     # save output
     output = 'ultimate_csv.csv'
