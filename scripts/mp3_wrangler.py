@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
 
 def die_with_usage():
     print()
-    print("DataWrangle - Script to fetch MP3 songs from the server and output an ultimate CSV file")
+    print("Mp3Wrangler - Script to fetch Mp3 songs from the server and output an ultimate CSV file")
     print()
     print("Usage:     python data_wrangle.py <csv filename or path> [options]")
     print()
@@ -20,7 +20,7 @@ def die_with_usage():
 
 if __name__ == "__main__":
 
-    from data_wrangle import ultimate_output 
+    from wrangler import ultimate_output 
 
     # show help
     if len(sys.argv) < 2:
