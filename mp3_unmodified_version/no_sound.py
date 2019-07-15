@@ -170,14 +170,14 @@ def count(final_check=False, ult_path='~/urop2019/pre_no_sound.csv'):
         return(counter)
         
         
-def zip_correction(trackid):
+def zip_correction(track_7digitalid):
     '''
     NEED CHANGES IN PATHS?
     
     Parameters
     ----------
-    trakid: int
-        The track_id of the track.
+    track_7digitalid: int
+        The track_7digitalid of the track.
         
     Returns
     -------
@@ -187,7 +187,8 @@ def zip_correction(trackid):
     '''
     
     
-    path = '/'+str(trackid)[0]+'/'+str(trackid)[1]+'/'+str(trackid)+'.clip.mp3'
+    path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'
+    +str(track_7digitalid)+'.clip.mp3'
     path_np = NUMPY_ROOT_DIR[:-1] +path[:-9]
     _ = MP3_ROOT_DIR[:-1] +path
     array, sr = librosa.core.load(_, sr=None, mono=False)

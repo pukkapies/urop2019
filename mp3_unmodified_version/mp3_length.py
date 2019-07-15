@@ -15,37 +15,40 @@ import pandas as pd
 import numpy as np
 from mutagen.mp3 import MP3
 
-ult_path = '~/urop2019/ultimate_csv.csv'
+MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 
-df = pd.read_csv(ult_path, header=None)
-df.rename(columns={0:'track_id', 1:'track_7digitalid', 2:'path'}, inplace=True)
-df = df.sort_values(by='path')
+def mp3_length(ult_path='~/urop2019/ultimate_csv.csv', 
+               output_path='~/urop2019/ultimate_csv_size.csv'):
 
-size = np.zeros(len(df))
-length = np.zeros(len(df))
+    df = pd.read_csv(ult_path, header=None)
+    df.rename(columns={0:'track_id', 1:'track_7digitalid', 2:'path'}, inplace=True)
+    df = df.sort_values(by='path')
 
-paths = df.path.tolist()
+    size = np.zeros(len(df))
+    length = np.zeros(len(df))
 
-for i, path in enumerate(paths):
-    _ = '/srv/data/msd/7digital'+path
+    paths = df.path.tolist()
+
+    for i, path in enumerate(paths):
+        _ = MP3_ROOT_DIR[:-1] + path
     
     #getting file size of mp3
-    try:
-        size[i] = os.path.getsize(_)
-    except:
-        size[i] = 999999999999
+        try:
+            size[i] = os.path.getsize(_)
+        except:
+            size[i] = 999999999999
         
-    try:
-        audio = MP3(_)
-        length[i] = audio.info.length
-    except:
-        length[i] = 999999999999
+        try:
+            audio = MP3(_)
+            length[i] = audio.info.length
+        except:
+            length[i] = 999999999999
         
     
     
     #if i%10000 ==0:
-    print(i)
+        print(i)
     
-df.loc[:,'sizes']=size
-df.loc[:,'lengths']=length
-df.to_csv('~/urop2019/ultimate_csv_size.csv')
+    df.loc[:,'sizes']=size
+    df.loc[:,'lengths']=length
+    df.to_csv(output_path, index=False)
