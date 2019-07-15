@@ -92,7 +92,7 @@ def get_7digitalid_from_trackid(ids: list):
             return output[0]
 
 def get_attribute(attr: str, ids: list):
-    ''' Returns the specified attribute corresponding to each track passed as input
+    ''' Returns the specified attribute corresponding to each track passed as input.
     
     Parameters
     ----------
