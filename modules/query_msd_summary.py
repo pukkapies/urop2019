@@ -57,21 +57,21 @@ def get_trackid_from_7digitalid(ids: list):
         output = []
 
         if all([isinstance(id, int) for id in ids]):
-                ids = [str(id) for id in ids]
+            ids = [str(id) for id in ids]
 
         for id in ids:
-                idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + id)
+            idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + id)
 
-                # check whether the given id corresponds to one and only one track
-                assert len(idx) == 1
+            # check whether the given id corresponds to one and only one track
+            assert len(idx) == 1
 
-                tid = f.root.analysis.songs[idx]['track_id'][0].decode('UTF-8')
-                output.append(tid)
+            tid = f.root.analysis.songs[idx]['track_id'][0].decode('UTF-8')
+            output.append(tid)
         
         if len(output) > 1:
-                return output
+            return output
         else:
-                return output[0]
+            return output[0]
 
 def get_7digitalid_from_trackid(ids: list):
     ''' Returns the 7digital_id of the song specified by the track_id. '''
@@ -81,18 +81,18 @@ def get_7digitalid_from_trackid(ids: list):
     with tables.open_file(path_h5, mode='r') as f:
         output = []
         for id in ids:
-                idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
+            idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
 
-                # check whether the given id corresponds to one and only one track
-                assert len(idx) == 1
+            # check whether the given id corresponds to one and only one track
+            assert len(idx) == 1
 
-                tid = f.root.metadata.songs[idx]['track_7digitalid'][0]
-                output.append(tid)
+            tid = f.root.metadata.songs[idx]['track_7digitalid'][0]
+            output.append(tid)
         
         if len(output) > 1:
-                return output
+            return output
         else:
-                return output[0]
+            return output[0]
 
 def get_attribute(attr: str, ids: list):
     ''' Returns the specified attribute corresponding to each track passed as input
