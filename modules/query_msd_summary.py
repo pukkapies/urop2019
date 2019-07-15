@@ -39,8 +39,11 @@ def set_path_db(new_path):
     path_db = new_path
 
 def get_trackid_from_7digitalid(*ids):
-    ''' Returns the track_id of the song specified by the 7digital_id.
-    '''
+    ''' Returns the track_id of the song specified by the 7digital_id. '''
+
+    if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
+        ids = ids[0]
+
     with tables.open_file(path_h5, mode='r') as f:
         output = []
 
@@ -62,8 +65,11 @@ def get_trackid_from_7digitalid(*ids):
                 return output[0]
 
 def get_7digitalid_from_trackid(*ids):
-    ''' Returns the 7digital_id of the song specified by the track_id.
-    '''
+    ''' Returns the 7digital_id of the song specified by the track_id. '''
+
+    if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
+        ids = ids[0]
+
     with tables.open_file(path_h5, mode='r') as f:
         output = []
         for id in ids:
@@ -90,10 +96,13 @@ def get_attribute(attr: str, *ids):
     EXAMPLE: get_attribute('SOBNYVR12A8C13558C', 'song_id') --> [('Si Vos Querés',)].
     '''
 
+	if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
+		ids = ids[0]
+
 	id_type = ('track_id', 'song_id')
 
 	if all([isinstance(id, int) for id in ids]):
-		ids = get_7digitalid_from_trackid(ids)
+		ids = [get_trackid_from_7digitalid(id) for id in ids]
 		id_type = id_type[0]
 	elif all([id[:2] == 'TR' for id in ids]):
 		id_type = id_type[0]
@@ -108,10 +117,11 @@ def get_attribute(attr: str, *ids):
 	q = "SELECT " + attr + " FROM songs WHERE " + id_type + " = '"
 
 	for id in ids:
-		c.execute(q + id)
+		c.execute(q + id + "'")
 		output.extend(c.fetchone())
 
 	conn.close()
+
 	if len(output) > 1:
 		return output
 	else:
