@@ -38,17 +38,17 @@ def set_path_db(new_path):
     global path_db
     path_db = new_path
 
-def get_trackid_from_7digitalid(*args):
+def get_trackid_from_7digitalid(*ids):
     ''' Returns the track_id of the song specified by the 7digital_id.
     '''
     with tables.open_file(path_h5, mode='r') as f:
         output = []
 
-        if all([isinstance(arg, int) for arg in args]):
-                args = [str(arg) for arg in args]
+        if all([isinstance(id, int) for id in ids]):
+                ids = [str(id) for id in ids]
 
-        for arg in args:
-                idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + arg)
+        for id in ids:
+                idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + id)
 
                 # check whether the given id corresponds to one and only one track
                 assert len(idx) == 1
@@ -61,13 +61,13 @@ def get_trackid_from_7digitalid(*args):
         else:
                 return output[0]
 
-def get_7digitalid_from_trackid(*args):
+def get_7digitalid_from_trackid(*ids):
     ''' Returns the 7digital_id of the song specified by the track_id.
     '''
     with tables.open_file(path_h5, mode='r') as f:
         output = []
-        for arg in args:
-                idx = f.root.analysis.songs.get_where_list('track_id=="' + arg + '"')
+        for id in ids:
+                idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
 
                 # check whether the given id corresponds to one and only one track
                 assert len(idx) == 1
@@ -80,8 +80,8 @@ def get_7digitalid_from_trackid(*args):
         else:
                 return output[0]
 
-def get_attribute(id: str, id_type: str = 'track_id', desired_column: str = 'title'):
-    ''' Returns a list with the desired attribute given either the track_id or the song_id (or really anything else with which you can windex our SQL database...).
+def get_attribute(attr: str, *ids):
+	''' Returns a list with the desired attribute given either the track_id or the song_id (or really anything else with which you can windex our SQL database...).
     
     - 'id': is the track_id or the song_id we are using to query the database;
     - 'id_type': is the type of id we are using;
@@ -89,7 +89,30 @@ def get_attribute(id: str, id_type: str = 'track_id', desired_column: str = 'tit
     
     EXAMPLE: get_attribute('SOBNYVR12A8C13558C', 'song_id') --> [('Si Vos Querés',)].
     '''
-    conn = sqlite3.connect(path_db)
-    q = "SELECT " + desired_column + " FROM songs WHERE " + id_type + " = '" + id  + "'"
-    res = conn.execute(q)
-    return res.fetchall()
+
+	id_type = ('track_id', 'song_id')
+
+	if all([isinstance(id, int) for id in ids]):
+		ids = get_7digitalid_from_trackid(ids)
+		id_type = id_type[0]
+	elif all([id[:2] == 'TR' for id in ids]):
+		id_type = id_type[0]
+	elif all([id[:2] == 'SO' for id in ids]):
+		id_type = id_type[1]
+	else:
+		raise NameError
+
+	output = []
+	conn = sqlite3.connect(path_db)
+	c = conn.cursor()
+	q = "SELECT " + attr + " FROM songs WHERE " + id_type + " = '"
+
+	for id in ids:
+		c.execute(q + id)
+		output.extend(c.fetchone())
+
+	conn.close()
+	if len(output) > 1:
+		return output
+	else:
+		return output[0]
