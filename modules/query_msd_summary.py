@@ -43,8 +43,12 @@ def get_trackid_from_7digitalid(*args):
     '''
     with tables.open_file(path_h5, mode='r') as f:
         output = []
+
+        if all[isinstance(arg, int) for arg in args]:
+                args = [str(arg) for arg in args]
+
         for arg in args:
-                idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + str(id))
+                idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + arg)
 
                 # check whether the given id corresponds to one and only one track
                 assert len(idx) == 1
@@ -63,7 +67,7 @@ def get_7digitalid_from_trackid(*args):
     with tables.open_file(path_h5, mode='r') as f:
         output = []
         for arg in args:
-                idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
+                idx = f.root.analysis.songs.get_where_list('track_id=="' + arg + '"')
 
                 # check whether the given id corresponds to one and only one track
                 assert len(idx) == 1
