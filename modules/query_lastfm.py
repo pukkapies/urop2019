@@ -115,13 +115,13 @@ def get_tags_dict(tids):
     Parameters
     ----------
     tids : list
-        List containing tids as strings
+        List containing tids as strings.
 
     Returns
     -------
     tag_dict : dict
-        - keys are the tids from the tids list
-        - values are lists of tags for each given tid
+        The keys are the tids from the input list.
+        The values are lists of tags for each given tid.
     '''
 
     tag_dict = {}
@@ -135,13 +135,13 @@ def tag_count(tids):
     Parameters
     ----------
     tids : list
-        list containing tids as strings
+        List containing tids as strings.
 
     Returns
     -------
     count_dict : dict
-        - keys are the tags associated to any tid from the tids list
-        - values are number of tids which the given tag is associated to
+        The keys are the tags associated to any tid from the input list.
+        The values are the number of tids which the given tag is associated to.
     '''
 
     count_dict = {}
@@ -159,13 +159,13 @@ def tid_tag_count(tids):
     Parameters
     ----------
     tids : list
-        list of tids as strings
+        List containing tids as strings.
 
     Returns
     -------
     count_dict : dict
-        - keys are the tids from the tids list
-        - values are number of tags for each given tid
+        The keys are the tids from the input list.
+        The values are the number of tags for each given tid.
     '''
 
     count_dict = {}

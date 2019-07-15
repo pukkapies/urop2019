@@ -97,9 +97,9 @@ def get_attribute(attr: str, ids: list):
     Parameters
     ----------
     attr : str
-        the column of the track_metadata.db database to be queried (possible
-        values are 'title', 'release', 'duration', 'artist_id', 'artist_mbid',
-        'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year')
+        The column of the track_metadata.db database to be queried.
+        The possible values are 'title', 'release', 'duration', 'artist_id', 
+        'artist_mbid', 'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year'.
     '''
 
     if isinstance(ids, str) or not hasattr(ids, '__iter__'): ids = [ids]
