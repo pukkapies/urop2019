@@ -44,7 +44,7 @@ def get_trackid_from_7digitalid(*args):
     with tables.open_file(path_h5, mode='r') as f:
         output = []
 
-        if all[isinstance(arg, int) for arg in args]:
+        if all([isinstance(arg, int) for arg in args]):
                 args = [str(arg) for arg in args]
 
         for arg in args:
@@ -79,11 +79,8 @@ def get_7digitalid_from_trackid(*args):
                 return output
         else:
                 return output[0]
-        
 
-PATH_TO_DB = '/srv/data/urop/track_metadata.db'
-
-def get_attribute(id: str, id_type: str = 'track_id', desired_column: str = 'title', filepath: 'str' = PATH_TO_DB):
+def get_attribute(id: str, id_type: str = 'track_id', desired_column: str = 'title'):
     ''' Returns a list with the desired attribute given either the track_id or the song_id (or really anything else with which you can windex our SQL database...).
     
     - 'id': is the track_id or the song_id we are using to query the database;
@@ -92,7 +89,7 @@ def get_attribute(id: str, id_type: str = 'track_id', desired_column: str = 'tit
     
     EXAMPLE: get_attribute('SOBNYVR12A8C13558C', 'song_id') --> [('Si Vos Querés',)].
     '''
-    conn = sqlite3.connect(filepath)
+    conn = sqlite3.connect(path_db)
     q = "SELECT " + desired_column + " FROM songs WHERE " + id_type + " = '" + id  + "'"
     res = conn.execute(q)
     return res.fetchall()
