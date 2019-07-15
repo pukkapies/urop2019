@@ -97,9 +97,30 @@ def get_attribute(attr: str, ids: list):
     Parameters
     ----------
     attr : str
-        The column of the track_metadata.db database to be queried.
-        The possible values are 'title', 'release', 'duration', 'artist_id', 
-        'artist_mbid', 'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year'.
+        The column of the track_metadata.db database to be queried. 
+        Possible values are 'title', 'release', 'duration', 'artist_id', 'artist_mbid', 
+        'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year'.
+
+    Returns
+    -------
+    list or str
+        List of attributes for each track passed as input. Sigle attribute
+        if only one track is passed.
+
+    Examples
+    --------
+    >>> get_attribute('title', 'TRMMQYP128F428E72A')
+    'Shine On'
+
+    >>> get_attribute('artist_name', 'SOGTUKN12AB017F4F1')
+    'Hudson Mohawke'
+
+    >>> tids = get_trackid_from_7digitalid([2168257, 2264873])
+    >>> get_attribute('title', tids)
+    [Si Vos Querés, 'Tangle of Aspens']
+
+    >>> get_attribute('title', [2168257, '2264873'])
+    [Si Vos Querés, 'Tangle of Aspens']
     '''
 
     if isinstance(ids, str) or not hasattr(ids, '__iter__'): ids = [ids]
