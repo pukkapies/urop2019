@@ -55,10 +55,7 @@ def get_trackid_from_7digitalid(ids: list):
 
     with tables.open_file(path_h5, mode='r') as f:
         output = []
-
-        if not all([isinstance(id, str) for id in ids]):
-            ids = [str(id) for id in ids]
-
+        ids = [str(id) for id in ids]
         for id in ids:
             idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + id)
 
