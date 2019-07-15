@@ -69,8 +69,7 @@ def tid_num_to_tag_nums(tid_num):
     conn = sqlite3.connect(path)
     q = "SELECT tag FROM tid_tag WHERE tid ='" + str(tid_num) + "'"
     res = conn.execute(q)
-    output = res.fetchall()
-    output = [i[0] for i in output]
+    output = [i[0] for i in res.fetchall()]
     conn.close()
     return output
     
