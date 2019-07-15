@@ -49,8 +49,7 @@ def tid_to_tid_num(tid):
     conn = sqlite3.connect(path)
     q = "SELECT rowid FROM tids WHERE tid ='" + tid + "'"
     res = conn.execute(q)
-    output = res.fetchone()
-    output = output[0]
+    output = res.fetchone()[0]
     conn.close()
     return output
 
@@ -60,8 +59,7 @@ def tid_num_to_tid(tid_num):
     conn = sqlite3.connect(path)
     q = "SELECT tid FROM tids WHERE rowid ='" + str(tid_num) + "'"
     res = conn.execute(q)
-    output = res.fetchone()
-    output = output[0]
+    output = res.fetchone()[0]
     conn.close()
     return output
 
@@ -82,8 +80,7 @@ def tag_num_to_tag(tag_num):
     conn = sqlite3.connect(path)
     q = "SELECT tag FROM tags WHERE rowid = " + str(tag_num)
     res = conn.execute(q)
-    output = res.fetchone()
-    output = output[0]
+    output = res.fetchone()[0]
     conn.close()
     return output
 
@@ -93,8 +90,7 @@ def tag_to_tag_num(tag):
     conn = sqlite3.connect(path)
     q = "SELECT rowid FROM tags WHERE tag = " + tag 
     res = conn.execute(q)
-    output = res.fetchone()
-    output = output[0]
+    output = res.fetchone()[0]
     conn.close()
     return output
 
