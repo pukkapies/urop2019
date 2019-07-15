@@ -97,8 +97,7 @@ def get_tids_with_tag():
     conn = sqlite3.connect(path)
     q = "SELECT tid FROM tids"
     res = conn.execute(q)
-    output = res.fetchall()
-    output = [i[0] for i in output]
+    output = [i[0] for i in res.fetchall()]
     conn.close()
     return output
 
