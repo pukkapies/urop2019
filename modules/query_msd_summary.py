@@ -1,27 +1,37 @@
-'''
-Davide Gallo (2019) Imperial College London
-dg5018@ic.ac.uk
+''' Contains simple tools for querying the msd_summary_file.h5 file
 
 
-This code contains a set of getters functions to retrieve
-various song attributes from the HDF5 summary file, given the 
-song 7digital ID.
+Notes
+-----
+The track_metadata database contains a table called 'songs' with the following 
+columns: track_id, title, song_id, release, artist_id, artist_mbid, artist_name, duration, 
+artist_familiarity, artist_hotttnesss, year. These are the possible values of
+the variable attr in the function get_attribute(). Querying the database is much
+faster than searching through the h5 file (which is not indexed).
 
-The track_metadata.db database contains a table called 'songs'
-with the following columns: (track_id, title, song_id, 
-release, artist_id, artist_mbid, artist_name, 
-duration, artist_familiarity, artist_hotttnesss, year). Using the
-database to retrieve song attributes is much faster than
-scanning the HDF5 summary file.
+To get the track_id associated with a given 7digital_id, the only way is to search
+through the h5 file (it might take some seconds), since we don't have a '7digital_id'
+column on the database. Yes, we could have added it. Still, this module is mainly
+for experimentation, and it will not be used in production.
 
-The database can be downloaded from: http://www.ee.columbia.edu/~thierry/track_metadata.db
+The function get_attribute() automatically infers whether a track_id or a song_id
+is being used. If a 7digital_id is begin used, get_trackid_from_7digitalid() is
+called behind the scenes (therefore making the execution much slower). The function is
+extremely flexible, and can receive multiple id's as input, both as a single tuple/list 
+or as multiple arguments.
 
-Since the database does not contain a '7digital_id' column, we
-have to go through the whole HDF5 file to get match a 7digital_id
-with its track_id.
+IMPORTANT: If using this script elsewhere than on boden then run set_path_h5(path) or
+set_path_db(path) to set the path of the summary files. Otherwise it will use the default 
+path, which is the path to the database on boden.
 
 
-Copyright 2019, Davide Gallo <dg5018@ic.ac.uk>
+Functions
+---------
+- set_path_h5                   Sets path to the msd_summary_file.h5
+- set_path_db                   Sets path to the track_metadata.db
+- get_trackid_from_7digitalid   Returns a (list of) tid(s) given a (list of) 7digital_id(s)
+- get_7digitalid_from_trackid   Returns a (list of) 7digital_id(s) given a (list of) tid(s)
+- get_attribute                 Returns a (list of) attribute(s) such as title or artist_id given a (list of )track_id(s), song_id(s) or 7digital_id(s)
 '''
 
 import tables, sqlite3
@@ -87,13 +97,14 @@ def get_7digitalid_from_trackid(*ids):
                 return output[0]
 
 def get_attribute(attr: str, *ids):
-	''' Returns a list with the desired attribute given either the track_id or the song_id (or really anything else with which you can windex our SQL database...).
+	''' Returns the specified attribute corresponding to each track passed as input
     
-    - 'id': is the track_id or the song_id we are using to query the database;
-    - 'id_type': is the type of id we are using;
-    - 'desired_column': is the song attribute we are looking for (that is, one of the database columns).
-    
-    EXAMPLE: get_attribute('SOBNYVR12A8C13558C', 'song_id') --> [('Si Vos Querés',)].
+    Parameters
+    ----------
+    attr : str
+        the column of the track_metadata.db database to be queried (possible
+        values are 'title', 'release', 'duration', 'artist_id', 'artist_mbid',
+        'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year')
     '''
 
 	if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
