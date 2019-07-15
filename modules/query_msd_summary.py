@@ -110,15 +110,13 @@ def get_attribute(attr: str, *ids):
 	if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
 		ids = ids[0]
 
-	id_type = ('track_id', 'song_id')
-
 	if all([isinstance(id, int) for id in ids]):
 		ids = [get_trackid_from_7digitalid(id) for id in ids]
-		id_type = id_type[0]
+		id_type = 'track_id'
 	elif all([id[:2] == 'TR' for id in ids]):
-		id_type = id_type[0]
+		id_type = 'track_id'
 	elif all([id[:2] == 'SO' for id in ids]):
-		id_type = id_type[1]
+		id_type = 'song_id'
 	else:
 		raise NameError
 
