@@ -48,11 +48,10 @@ def set_path_db(new_path):
     global path_db
     path_db = new_path
 
-def get_trackid_from_7digitalid(*ids):
+def get_trackid_from_7digitalid(ids: list):
     ''' Returns the track_id of the song specified by the 7digital_id. '''
 
-    if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
-        ids = ids[0]
+    if isinstance(ids, str) or not hasattr(ids, '__iter__'): ids = [ids]
 
     with tables.open_file(path_h5, mode='r') as f:
         output = []
@@ -74,11 +73,10 @@ def get_trackid_from_7digitalid(*ids):
         else:
                 return output[0]
 
-def get_7digitalid_from_trackid(*ids):
+def get_7digitalid_from_trackid(ids: list):
     ''' Returns the 7digital_id of the song specified by the track_id. '''
 
-    if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
-        ids = ids[0]
+    if isinstance(ids, str) or not hasattr(ids, '__iter__'): ids = [ids]
 
     with tables.open_file(path_h5, mode='r') as f:
         output = []
@@ -96,7 +94,7 @@ def get_7digitalid_from_trackid(*ids):
         else:
                 return output[0]
 
-def get_attribute(attr: str, *ids):
+def get_attribute(attr: str, ids: list):
     ''' Returns the specified attribute corresponding to each track passed as input
     
     Parameters
@@ -107,8 +105,7 @@ def get_attribute(attr: str, *ids):
         'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year')
     '''
 
-    if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
-        ids = ids[0]
+    if isinstance(ids, str) or not hasattr(ids, '__iter__'): ids = [ids]
 
     if all([isinstance(id, int) for id in ids]):
         ids = [get_trackid_from_7digitalid(id) for id in ids]
