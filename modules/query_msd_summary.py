@@ -107,31 +107,31 @@ def get_attribute(attr: str, *ids):
         'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year')
     '''
 
-	if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
-		ids = ids[0]
+    if len(ids) == 1 and hasattr(ids[0], '__iter__') and not isinstance(ids[0], str):
+        ids = ids[0]
 
-	if all([isinstance(id, int) for id in ids]):
-		ids = [get_trackid_from_7digitalid(id) for id in ids]
-		id_type = 'track_id'
-	elif all([id[:2] == 'TR' for id in ids]):
-		id_type = 'track_id'
-	elif all([id[:2] == 'SO' for id in ids]):
-		id_type = 'song_id'
-	else:
-		raise NameError
+    if all([isinstance(id, int) for id in ids]):
+        ids = [get_trackid_from_7digitalid(id) for id in ids]
+        id_type = 'track_id'
+    elif all([id[:2] == 'TR' for id in ids]):
+        id_type = 'track_id'
+    elif all([id[:2] == 'SO' for id in ids]):
+        id_type = 'song_id'
+    else:
+        raise NameError
 
-	output = []
-	conn = sqlite3.connect(path_db)
-	c = conn.cursor()
-	q = "SELECT " + attr + " FROM songs WHERE " + id_type + " = '"
+    output = []
+    conn = sqlite3.connect(path_db)
+    c = conn.cursor()
+    q = "SELECT " + attr + " FROM songs WHERE " + id_type + " = '"
 
-	for id in ids:
-		c.execute(q + id + "'")
-		output.extend(c.fetchone())
+    for id in ids:
+        c.execute(q + id + "'")
+        output.extend(c.fetchone())
 
-	conn.close()
+    conn.close()
 
-	if len(output) > 1:
-		return output
-	else:
-		return output[0]
+    if len(output) > 1:
+        return output
+    else:
+        return output[0]
