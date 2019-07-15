@@ -31,19 +31,17 @@ Functions
 - get_tags_dict         Gets a dict with tids as keys and a list of its tags as value
 - tid_tag_count         Gets a dict with tids as keys and its number of tags as value 
 - filter_tags           Filters list of tids based on minimum number of tags
-- tag_count             From list of tids it gets a dict with tags associated to these
-                        tids as keys and its number associated tids as value.
+- tag_count             Gets a dict with the tags associated to tids as keys and their count number as values
 '''
 
 import sqlite3
 
 path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db' # default path
 
-def set_path(db_path):
-    ''' Sets default_path to db_path '''
-
+def set_path(new_path):
+    ''' Sets new_path as default path for the lastfm_tags database '''
     global path
-    path = db_path
+    path = new_path
 
 def tid_to_tid_num(tid):
     ''' Returns tid_num, given tid '''
@@ -51,7 +49,10 @@ def tid_to_tid_num(tid):
     conn = sqlite3.connect(path)
     q = "SELECT rowid FROM tids WHERE tid ='" + tid + "'"
     res = conn.execute(q)
-    return res.fetchone()[0] 
+    output = res.fetchone()
+    output = output[0]
+    conn.close()
+    return output
 
 def tid_num_to_tid(tid_num):
     ''' Returns tid, given tid_num '''
@@ -59,7 +60,10 @@ def tid_num_to_tid(tid_num):
     conn = sqlite3.connect(path)
     q = "SELECT tid FROM tids WHERE rowid ='" + str(tid_num) + "'"
     res = conn.execute(q)
-    return res.fetchone()[0]
+    output = res.fetchone()
+    output = output[0]
+    conn.close()
+    return output
 
 def tid_num_to_tag_nums(tid_num):
     ''' Returns list of the associated tag_nums to the given tid_num '''
@@ -67,7 +71,10 @@ def tid_num_to_tag_nums(tid_num):
     conn = sqlite3.connect(path)
     q = "SELECT tag FROM tid_tag WHERE tid ='" + str(tid_num) + "'"
     res = conn.execute(q)
-    return [i[0] for i in res.fetchall()]
+    output = res.fetchall()
+    output = [i[0] for i in output]
+    conn.close()
+    return output
     
 def tag_num_to_tag(tag_num):
     ''' Returns tag given tag_num '''
@@ -75,7 +82,10 @@ def tag_num_to_tag(tag_num):
     conn = sqlite3.connect(path)
     q = "SELECT tag FROM tags WHERE rowid = " + str(tag_num)
     res = conn.execute(q)
-    return res.fetchone()[0]
+    output = res.fetchone()
+    output = output[0]
+    conn.close()
+    return output
 
 def tag_to_tag_num(tag):
     ''' Returns tag_num given tag '''
@@ -83,7 +93,19 @@ def tag_to_tag_num(tag):
     conn = sqlite3.connect(path)
     q = "SELECT rowid FROM tags WHERE tag = " + tag 
     res = conn.execute(q)
-    return res.fetchone()[0]
+    output = res.fetchone()
+    output = output[0]
+    conn.close()
+    return output
+
+def get_tids_with_tag():
+    conn = sqlite3.connect(path)
+    q = "SELECT tid FROM tids"
+    res = conn.execute(q)
+    output = res.fetchall()
+    output = [i[0] for i in output]
+    conn.close()
+    return output
 
 def get_tags(tid):
     ''' Gets tags for a given tid '''
@@ -99,13 +121,13 @@ def get_tags_dict(tids):
     Parameters
     ----------
     tids : list
-        list containing tids in string form
+        list containing tids as strings
 
     Returns
     -------
     tag_dict : dict
-        keys are the tids from the tids list,
-        values are lists of tags for given tid.
+        - keys are the tids from the tids list
+        - values are lists of tags for each given tid
     '''
 
     tag_dict = {}
@@ -113,19 +135,43 @@ def get_tags_dict(tids):
         tag_dict[tid] = get_tags(tid)
     return tag_dict
 
+def tag_count(tids):
+    ''' Gets number of tags for each given tid 
+    
+    Parameters
+    ----------
+    tids : list
+        list containing tids as strings
+
+    Returns
+    -------
+    count_dict : dict
+        - keys are the tags associated to any tid from the tids list
+        - values are number of tids which the given tag is associated to
+    '''
+
+    count_dict = {}
+    for tag_list in get_tags_dict(tids).values():
+        for tag in tag_list:
+            if tag in count_dict:
+                count_dict[tag] += 1
+            else:
+                count_dict[tag] = 1 
+    return count_dict
+
 def tid_tag_count(tids):
     ''' Gets number of tags for each given tid 
     
     Parameters
     ----------
     tids : list
-        list containing tids in string form
+        list of tids as strings
 
     Returns
     -------
     count_dict : dict
-        keys are the tids from the tids parameter,
-        values are number of tags for given tid.
+        - keys are the tids from the tids list
+        - values are number of tags for each given tid
     '''
 
     count_dict = {}
@@ -139,27 +185,3 @@ def filter_tags(tids, min_tags):
     count_dict = tid_tag_count(tids)
     tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
     return tids_filtered
-
-def tag_count(tids):
-    ''' Gets number of tags for each given tid 
-    
-    Parameters
-    ----------
-    tids : list
-        list containing tids in string form
-
-    Returns
-    -------
-    count_dict : dict
-        keys are the tags associated to any tid from the tids parameter,
-        values are number of tids that the given tag is associated to. 
-    '''
-
-    count_dict = {}
-    for tag_list in get_tags_dict(tids).values():
-        for tag in tag_list:
-            if tag in count_dict:
-                count_dict[tag] += 1
-            else:
-                count_dict[tag] = 1 
-    return count_dict
