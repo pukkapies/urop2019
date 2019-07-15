@@ -26,29 +26,55 @@ Copyright 2019, Davide Gallo <dg5018@ic.ac.uk>
 
 import tables, sqlite3
 
-PATH_TO_H5 = '/srv/data/msd/msd_summary_file.h5'
+path_h5 = '/srv/data/msd/msd_summary_file.h5' # default path to msd summary file
 
-def get_trackid_from_7digitalid(id: int, filepath: str = PATH_TO_H5):
+path_db = '/srv/data/urop/track_metadata.db'  # default path to 'database version' of msd summary file
+
+def set_path_h5(new_path):
+    global path_h5
+    path_h5 = new_path
+
+def set_path_db(new_path):
+    global path_db
+    path_db = new_path
+
+def get_trackid_from_7digitalid(*args):
     ''' Returns the track_id of the song specified by the 7digital_id.
     '''
-    with tables.open_file(filepath, mode='r') as f:
-        idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + str(id))
+    with tables.open_file(path_h5, mode='r') as f:
+        output = []
+        for arg in args:
+                idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + str(id))
 
-        # check whether the 7digital_id corresponds to one and only one track
-        assert len(idx) == 1
+                # check whether the given id corresponds to one and only one track
+                assert len(idx) == 1
 
-        return f.root.analysis.songs[idx]['track_id'][0].decode('UTF-8')
+                tid = f.root.analysis.songs[idx]['track_id'][0].decode('UTF-8')
+                output.append(tid)
+        
+        if len(output) > 1:
+                return output
+        else:
+                return output[0]
 
-def get_7digitalid_from_trackid(id: str, filepath: str = PATH_TO_H5):
+def get_7digitalid_from_trackid(*args):
     ''' Returns the 7digital_id of the song specified by the track_id.
     '''
-    with tables.open_file(filepath, mode='r') as f:
-        idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
+    with tables.open_file(path_h5, mode='r') as f:
+        output = []
+        for arg in args:
+                idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
 
-        # check whether the 7digital_id corresponds to one and only one track
-        assert len(idx) == 1
+                # check whether the given id corresponds to one and only one track
+                assert len(idx) == 1
 
-        return f.root.metadata.songs[idx]['track_7digitalid'][0]
+                tid = f.root.metadata.songs[idx]['track_7digitalid'][0]
+                output.append(tid)
+        
+        if len(output) > 1:
+                return output
+        else:
+                return output[0]
         
 
 PATH_TO_DB = '/srv/data/urop/track_metadata.db'
