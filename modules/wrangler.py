@@ -40,7 +40,6 @@ Functions
 
 import h5py
 import lastfm_query as db
-import mutagen.mp3
 import os
 import pandas as pd
 
