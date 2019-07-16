@@ -113,68 +113,6 @@ def create_folder_structure():
         else:
             print("Folder does already exits!")
 
-def mp3_length(ult_file='ultimate_csv.csv', 
-               output_file='ultimate_csv_size.csv'):
-    
-    '''
-    Parameters
-    ----------
-    
-    ult_file: The file name of the input csv. Default- ultimate_csv.csv
-    output_file: The file name of the output csv. Default-ultimate_csv_size.csv.
-    
-    Returns
-    -------
-    csv: A csv that has two extra columns:
-        'sizes': float
-            The file size of mp3 tracks.
-            
-        'lengths': float
-            The duration of the mp3 tracks.
-            
-        NOTE: 999999999999 is returned to the corresponding rows for lengths 
-        and sizes if the script cannot read the size of the tracks or cannot 
-        open the tracks (i.e. broken tracks).
-        
-    
-    '''
-
-    ult_path = os.path.join(path_ult, ult_file)
-    output_path = os.path.join(path_ult, output_file)
-
-    df = pd.read_csv(ult_path, header=None)
-    df.rename(columns={0:'track_id', 1:'track_7digitalid', 2:'path'}, inplace=True)
-    df = df.sort_values(by='path')
-
-    size = np.zeros(len(df))
-    length = np.zeros(len(df))
-
-    paths = df.path.tolist()
-
-    for i, path in enumerate(paths):
-        _ = MP3_ROOT_DIR[:-1] + path
-    
-    #getting file size of mp3
-        try:
-            size[i] = os.path.getsize(_)
-        except:
-            size[i] = 999999999999
-        
-        try:
-            audio = MP3(_)
-            length[i] = audio.info.length
-        except:
-            length[i] = 999999999999
-        
-    
-    
-    #if i%10000 ==0:
-        print(i)
-    
-    df.loc[:,'sizes']=size
-    df.loc[:,'lengths']=length
-    df.to_csv(output_path, index=False)
-
 def no_sound(start, end, file='ultimate_csv_size.csv'):
     
     '''
