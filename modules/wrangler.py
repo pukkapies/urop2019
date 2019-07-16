@@ -3,7 +3,7 @@
 Notes
 -----
 The purpose of this module is to provide an ultimate_output() function returning a
-dataframe with three columns: track_id, track_7digitalid and path (optionally also track_length).
+dataframe with three columns: track_id, track_7digitalid and path.
 
 The only function which does not contribute to the above-mentioned purpose is 
 read_duplicates_and_purge(), which returns a list of sublists where each sublists contains the
@@ -185,8 +185,8 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
 
 ### output functions
 
-def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False, add_length: bool = False):
-    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path' and (optionally) 'track_length'
+def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
+    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid' and 'path'.
     
     Parameters
     ----------
@@ -199,13 +199,10 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
     discard_dupl : bool
         if True, discards tracks which are duplicates and keeps one for each set
 
-    add_length : bool
-        if True, adds one column with the length of each audio track
-
     Returns
     -------
     df : pd.DataFrame
-        - columns are 'track_id', 'track_7digitalid', 'path' (optionally 'track_length')
+        - columns are 'track_id', 'track_7digitalid' and 'path'
         - entries are all the tracks on our server which are not mismatched and satisfy the given parameters
     '''
 
@@ -231,14 +228,14 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
         df = df_purge_duplicates(df)
         print('done')
 
-    if add_length == True:
-        print('Checking length of audio tracks...', end=' ')
-        lengths = []
-        for path in df['path']:
-            mp3 = mutagen.mp3.MP3(os.path.join(MP3_ROOT_DIR, path))
-            lengths.append(mp3.info.length)
-        df['track_length'] = pd.Series(lenghts, index=df.index)
-        print('done')
+#     if add_length == True:
+#         print('Checking length of audio tracks...', end=' ')
+#         lengths = []
+#         for path in df['path']:
+#             mp3 = mutagen.mp3.MP3(os.path.join(MP3_ROOT_DIR, path))
+#             lengths.append(mp3.info.length)
+#         df['track_length'] = pd.Series(lenghts, index=df.index)
+#         print('done')
     
     return df
 
