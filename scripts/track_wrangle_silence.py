@@ -83,6 +83,8 @@ import os
 import pandas as pd
 import numpy as np
 
+from mutagen.mp3 import MP3
+
 MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 
 if 'path_ult' not in globals():

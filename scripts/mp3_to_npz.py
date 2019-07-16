@@ -73,12 +73,10 @@ Functions
 '''
 
 import librosa
-import pandas as pd
-import time
 import numpy as np
 import os
-import get_faulty_mp3
-from mutagen.mp3 import MP3
+import pandas as pd
+import time
 
 MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 NUMPY_ROOT_DIR = '/srv/data/urop/7digital_numpy/'
