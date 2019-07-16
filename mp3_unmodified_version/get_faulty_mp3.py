@@ -7,33 +7,49 @@ Created on Mon Jul  8 22:19:15 2019
 '''
 Note
 ----
+This module interprets the result obtained from no_sound.py. The structure can
+be divided into two steps:
+    
+-Analyse result: get_faulty_mp3() checks for broken mp3 tracks, and 
+check_silence analyse silent sections within the tracks and return a detail 
+analysis dataframe.
+-Filter result: Return a DataFrame by filtering out tracks that are below 
+a minimum trimmed length threshold, tracks that have total mid-silent section
+above a maximum threshold, and tracks that have length of maximum mid=silent
+section above a maximum threshold. See Glossary for what the terms mean.
+    
 
 
 Functions
 ---------
-- get_faulty_mp3              DEPRECATED
 
-- check_silence               Interpret the csv obtained from no_sound.py and
-                              add extra columns to the output csv.
+- set_path_ult
+    Tell the script the path of where 'ultimate_csv.csv' was stored.
+    
+- get_faulty_mp3
+    Return a list of mp3 which cannot be opened or have size zero.
+
+- check_silence
+    Interpret the csv obtained from no_sound.py and add extra columns to the 
+    output csv.
                               
-- filter_trim_length          Return the track_id of tracks that satisfy the 
-                              condition: 
-                              duration after trimming >= min_duration.
+- filter_trim_length          
+    Return the track_id of tracks that satisfy the condition: 
+    duration after trimming >= min_duration.
                               
-- filter_tot_silence_duration Return the track_id of tracks that satisfy the 
-                              condition: 
-                              total length of mid-silent duration 
-                              <= max_duration.
+- filter_tot_silence_duration 
+    Return the track_id of tracks that satisfy the condition: 
+    total length of mid-silent duration <= max_duration.
                               
-- filter_max_silence_duration Return the track_id of tracks that satisfy the 
-                              condition: 
-                              the maximum length amongst the individual 
-                              mid-silent sections <= max_duration.
+- filter_max_silence_duration 
+    Return the track_id of tracks that satisfy the condition: 
+    the maximum length amongst the individual mid-silent 
+    sections <= max_duration.
 
 
 
 Glossary
---------
+----------
 
     trim:
         The total duration of tracks excluding the starting and ending section 
@@ -44,6 +60,22 @@ Glossary
         starting silent section nor the ending silent section.
         
 
+Examples
+--------
+    import pd
+    
+    df_pre = no_sound.pre_no_sound()
+    
+    df = check_silence(df_pre)   /or/   
+    df = pd.read_csv(os.path.join(path_ult, 'ultimate_csv_size2.csv'))
+
+    a = filter_tot_silence_duration(df, 1)
+    
+    b = filter_max_silence_duration(df, 1)
+    
+    c = filter_trim_length(df, 15)
+
+    set(a).intersection(set(b), set(c))  #return list of track_ids
 '''
 
 
@@ -52,15 +84,52 @@ import pandas as pd
 import numpy as np
 import no_sound
 
-#path='D://UROP/millionsongsubset_full/MillionSongSubset'
-def get_faulty_mp3(path, file='ultimate_csv_size.csv', track_id=True):
+if 'path_ult' not in globals():
+    path_ult = '/srv/data/urop'
+
+def set_path_ult_get_faulty_mp3(new_path):
     '''
-    DEPRECATED
-    '''
+    Parameters
+    ----------
     
-    DIR = os.path.join(path, file)
+    
+    new_path: str
+        The path where 'ultimate_csv.csv' is stored.
+        
+    '''
+    global path_ult
+    path_ult = new_path
+    
+    
+    
+
+#path='D://UROP/millionsongsubset_full/MillionSongSubset'
+def get_faulty_mp3(file='ultimate_csv_size.csv', track_id=True):
+    
+    '''
+    Parameters
+    ----------
+    file: str
+        The name of the input csv. Default--'ultimate_csv_size.csv'
+        
+    track_id: bool
+        If True, the function will return track_ids of tracks, ortherwise
+        track_7digitalid.
+    
+    
+    
+    Returns
+    -------
+    LIST: list
+        A list of track_ids (or track_7digitalids) which could not be opened
+        or have size zero.
+        
+    '''
+
+
+    
+    DIR = os.path.join(path_ult, file)
     df_size = pd.read_csv(DIR)
-    df_size = df_size.iloc[:,1:]
     
     #select tracks that were not opened correctly
     BOOL1 = df_size.loc[:,'lengths']>=999999999999
@@ -69,15 +138,15 @@ def get_faulty_mp3(path, file='ultimate_csv_size.csv', track_id=True):
     BOOL2 = df_size.loc[:,'sizes']==0
     
     if track_id:
-        LIST = df_size[BOOL1 | BOOL2].track_id.tolist()
+        LIST = df_size[BOOL1 | BOOL2].loc[:,"track_id"].tolist()
     else:
-        LIST = df_size[BOOL1 | BOOL2].track_id.tolist()
+        LIST = df_size[BOOL1 | BOOL2].loc[:,"track_7digitalid"].tolist()
         
     return LIST
 
 
 
-def check_silence(path='/home/aden/urop2019', file='pre_no_sound.csv'):
+def check_silence(df):
     
     '''
     Parameters
@@ -133,8 +202,7 @@ def check_silence(path='/home/aden/urop2019', file='pre_no_sound.csv'):
                 
     '''
     
-    DIR = os.path.join(path, file)
-    df = pd.read_csv(DIR)
+    df = no_sound.pre_no_sound()
     path_list = df.path.tolist()
     df_len = len(df)
     
@@ -206,7 +274,7 @@ def check_silence(path='/home/aden/urop2019', file='pre_no_sound.csv'):
     #get maximum lengths of individual silent sections:
     df['max_duration'] = df.silence_duration.apply(get_max)
     
-    df.to_csv(os.path.join(path, 'ultimate_csv_size2.csv'), index=False)
+    df.to_csv(os.path.join(path_ult, 'ultimate_csv_size2.csv'), index=False)
     
     
 
@@ -288,17 +356,6 @@ def filter_max_silence_duration(df, max_duration):
     return ID.track_id.tolist()
 
 
-'''
-EXAMPLE
--------
-
-a = filter_tot_silence_duration(df, 1)
-b = filter_max_silence_duration(df, 1)
-c = filter_trim_length(df, 15)
-
-list of track_id: set(a).intersection(set(b), set(c))
-
-'''
         
         
     
