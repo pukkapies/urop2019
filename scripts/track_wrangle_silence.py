@@ -99,50 +99,6 @@ def set_path_ult_get_faulty_mp3(new_path):
     '''
     global path_ult
     path_ult = new_path
-    
-    
-    
-
-#path='D://UROP/millionsongsubset_full/MillionSongSubset'
-def get_faulty_mp3(file='ultimate_csv_size.csv', track_id=True):
-    
-    '''
-    Parameters
-    ----------
-    file: str
-        The name of the input csv. Default--'ultimate_csv_size.csv'
-        
-    track_id: bool
-        If True, the function will return track_ids of tracks, ortherwise
-        track_7digitalid.
-    
-    
-    
-    Returns
-    -------
-    LIST: list
-        A list of track_ids (or track_7digitalids) which could not be opened
-        or have size zero.
-        
-    '''
-
-
-    
-    DIR = os.path.join(path_ult, file)
-    df_size = pd.read_csv(DIR)
-    
-    #select tracks that were not opened correctly
-    BOOL1 = df_size.loc[:,'lengths']>=999999999999
-    
-    #select tracks that have zero size
-    BOOL2 = df_size.loc[:,'sizes']==0
-    
-    if track_id:
-        LIST = df_size[BOOL1 | BOOL2].loc[:,"track_id"].tolist()
-    else:
-        LIST = df_size[BOOL1 | BOOL2].loc[:,"track_7digitalid"].tolist()
-        
-    return LIST
 
 
 
