@@ -82,7 +82,8 @@ Examples
 import os
 import pandas as pd
 import numpy as np
-import no_sound
+
+MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 
 if 'path_ult' not in globals():
     path_ult = '/srv/data/urop'
@@ -100,7 +101,13 @@ def set_path_ult_get_faulty_mp3(new_path):
     global path_ult
     path_ult = new_path
 
-
+def add_length(df):
+    lengths = []
+    for path in df['path']:
+        mp3 = mutagen.mp3.MP3(os.path.join(MP3_ROOT_DIR, path))
+        lengths.append(mp3.info.length)
+    df['track_length'] = pd.Series(lenghts, index=df.index)
+    return df
 
 def check_silence(df):
     
