@@ -86,7 +86,7 @@ def create_folder_structure():
         else:
             raise OSError("Directory " + structure + " already exits!!")
 
-def no_sound(start, end, file='ultimate_csv_size.csv'):
+def no_sound(df):
     '''
     Parameters
     ----------
@@ -120,16 +120,11 @@ def no_sound(start, end, file='ultimate_csv_size.csv'):
             represent one section -- starting position and ending position of 
             array respectively.
     '''
- 
+    
+    start = time.time()
 
-    df = pre_no_sound(file)
-
-    paths = df.path.tolist()[start:end]
-
-
-
-    for i, path in enumerate(paths):
-        path_np = npz_root_dir[:-1] +path[:-9]
+    for idx, path in enumerate(df['path'], verbose=False):
+        path_npz = npz_root_dir[:-1] + path[:-9]
         start_time = time.time()
         if os.path.isfile(path_np+'.npz'):
             print('Already Exist')
@@ -145,12 +140,12 @@ def no_sound(start, end, file='ultimate_csv_size.csv'):
     
             np.savez(path_np, array=array, sr=sr, split=array_split)
         
-        if i%100==0:
-            print(time.time()-start_time)
-            print(i)
+        if verbose == True:
+            if idx % 100 == 0:
+                print("{:5d} - TIME ELAPSED: {}".format(idx, time.time()-start))
                 
 
-def count(final_check=False, file='ultimate_csv_size.csv'):
+def count(df, final_check=False):
     '''
     Parameters
     ----------
@@ -171,29 +166,24 @@ def count(final_check=False, file='ultimate_csv_size.csv'):
         The number of mp3s that have been loaded and saved as numpy array.
     '''
     
-    df = pre_no_sound(file)
-    paths = df.path.tolist()
-    counter = 0
-    LIST=[]
+    count = 0
+    l = []
      
-    for i, path in enumerate(paths):
-        path_np = npz_root_dir[:-1] +path[:-9]
-        if os.path.isfile(path_np+'.npz'):
-            counter+=1
-        else:
-            if final_check==True:
-                LIST.append(path)
+    for idx, path in enumerate(df['path']):
+        path_npz = npz_root_dir[:-1] +path[:-9]
+        if os.path.isfile(path_np + '.npz'):
+            count += 1
+        elif final_check == True:
+            l.append(path)
     
-    if final_check==True:
-        print(counter)
-        return(LIST)
+    if final_check == True:
+        print("{} OUT OF {} CONVERTED.".format(count, len(df)))
+        return l
     else:
-        if counter==len(df):
-            print("all_done")
-        return(counter)
+        print("{} OUT OF {} CONVERTED.".format(count, len(df)))
         
         
-def zip_correction(track_7digitalid):
+def zip_correction(track_7did):
     '''
     
     Parameters
@@ -209,14 +199,14 @@ def zip_correction(track_7digitalid):
     
     '''
     
-    
-    path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3'
-    path_np = npz_root_dir[:-1] +path[:-9]
-    _ = mp3_root_dir[:-1] +path
-    array, sr = librosa.core.load(_, sr=None, mono=False)
-    array_mono = librosa.core.to_mono(array)
-    array_split = librosa.effects.split(array_mono)
-    np.savez(path_np, array=array, sr=sr, split=array_split)
+    track_7did = str(track_7did)
+
+    path = '/' + track_7did[0] + '/' track_7did[1] + '/' + track_7did + '.clip.mp3'
+    path_npz = npz_root_dir[:-1] + path[:-9]
+    path = os.path.join(mp3_root_dir, path)
+    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
+    array_split = librosa.effects.split(librosa.core.to_mono(array))
+    np.savez(path_np, array=array, sr=sample_rate, split=array_split)
 
 
 
