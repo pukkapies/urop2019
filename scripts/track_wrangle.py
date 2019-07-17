@@ -38,8 +38,6 @@ Functions
 - ultimate_output            Combine the previous functions and produces a dataframe accoring to the given parameters
 '''
 
-import h5py
-import mutagen.mp3 as mg
 import os
 import pandas as pd
 import sys
@@ -54,7 +52,6 @@ else:
 import query_lastfm as db
 
 mp3_root_dir = '/srv/data/msd/7digital/'
-path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
 path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
 
@@ -76,28 +73,7 @@ def set_path_txt_duplicates(new_path):
 
 ### functions to fetch MP3 files on server and remove mismatches
 
-def extract_ids_from_summary():
-    with h5py.File(path_h5, 'r') as h5:
-        dataset_1 = h5['metadata']['songs']
-        dataset_2 = h5['analysis']['songs']
-        df_summary = pd.DataFrame(data={'track_7digitalid': dataset_1['track_7digitalid'], 'track_id': dataset_2['track_id']})
-        df_summary['track_id'] = df_summary['track_id'].apply(lambda x: x.decode('UTF-8'))
-        return df_summary
 
-def find_tracks():
-    paths = []
-    for folder, subfolders, files in os.walk(mp3_root_dir):
-        for file in files:
-            path = os.path.join(os.path.abspath(folder), file)
-            paths.append(path)
-    paths = [path for path in paths if path[-4:] == '.mp3']
-    return paths
-
-def find_tracks_with_7dids():
-    paths = find_tracks()
-    paths_7dids = [int(os.path.basename(path)[:-9]) for path in paths]
-    df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'path': paths})
-    return df
 
 def df_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
     our_df = pd.merge(track_summary_df, track_df, on='track_7digitalid', how='inner')
