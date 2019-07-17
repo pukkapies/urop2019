@@ -39,6 +39,7 @@ Functions
 '''
 
 import h5py
+import mutagen.mp3 as mg
 import os
 import pandas as pd
 import sys
@@ -119,7 +120,7 @@ def df_purge_mismatches(track_df: pd.DataFrame):
 
 def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: bool = False):
         sizes = []
-        for idx, path in enumerate(df['path']):
+        for idx, path in enumerate(track_df['path']):
             path = os.path.join(mp3_root_dir, path)
             size = os.path.getsize(path)
             if size <= threshold:
@@ -131,17 +132,17 @@ def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: b
             # sanity check
             assert len(track_df) == len(sizes)
             
-            track_df['size'] = pd.Series(sizes, index=df.index)
+            track_df['size'] = pd.Series(sizes, index=track_df.index)
         
         return track_df
 
 def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):
         lengths = []
-        for idx, path in enumerate(df['path']):
+        for idx, path in enumerate(track_df['path']):
             path = os.path.join(mp3_root_dir, path)
             try:
-                mp3 = MP3(path)
-                length = mp3.info.length
+                f = mg.MP3(path)
+                length = f.info.length
                 lengths.append(length)
             except:
                 track_df.drop(idx, inplace=True)
@@ -150,7 +151,7 @@ def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):
             # sanity check
             assert len(track_df) == len(lengths)
             
-            track_df['length'] = pd.Series(lenghts, index=df.index)
+            track_df['length'] = pd.Series(lengths, index=track_df.index)
         
         return track_df
 
@@ -290,6 +291,8 @@ def die_with_usage():
     print("Usage:     python data_wrangle.py <csv filename or path> [options]")
     print()
     print("General Options:")
+    print("  --add-length           Add column to output file containing track lengths.")
+    print("  --add-size             Add column to output file containing file sizes.")
     print("  --discard-no-tag       Choose to discard tracks with no tags.")
     print("  --discard-dupl <mode>  Choose to discard duplicate tracks.") # <mode> not currently supported
     print("  --help                 Show this help message and exit.")
@@ -327,6 +330,8 @@ if __name__ == "__main__":
         threshold = 0 
         discard_no_tag = False
         discard_dupl = False
+        add_length = False
+        add_size = False
 
         while True:
             if len(sys.argv) == 2:
@@ -339,7 +344,13 @@ if __name__ == "__main__":
                 del sys.argv[2]
             elif sys.argv[2] == '--discard-dupl':
                 discard_dupl = True
-                del sys.argv[2]      
+                del sys.argv[2]   
+            elif sys.argv[2] == '--add-length':
+                add_length = True
+                del sys.argv[2]
+            elif sys.argv[2] == '--add-size':
+                add_size = True
+                del sys.argv[2]     
             else:
                 print("???")
                 sys.exit(0)
