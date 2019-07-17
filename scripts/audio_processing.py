@@ -60,7 +60,7 @@ if __name__ == '__main__':
                    
                     # Getting log-mel-spectrogram
                     # Could probably do have a if arg == "spectrogram" here (maybe also MFCC?)
-                    spectrogram = np.log(librosa.feature.melspectrogram(array_mono, sr))
+                    spectrogram = np.log(librosa.feature.melspectrogram(array_mono, 16000))
 
                     tags = q_fm.get_tags(tid) 
                     
