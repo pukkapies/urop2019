@@ -115,32 +115,42 @@ def df_purge_mismatches(track_df: pd.DataFrame):
 
 ### functions to find tracks with too small a file size and purge them
 
-def get_idx_mp3_size_zero(track_df: pd.DataFrame):
-    output = []
-    for idx, path in enumerate(track_df['path']):
-        path = os.path.join(MP3_ROOT_DIR, path)
-        if os.path.getsize(path) == 0:
-            output.append(idx)
-        else:
-            continue
-    return output
+def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: bool = False):
+        sizes = []
+        for idx, path in enumerate(df['path']):
+            path = os.path.join(MP3_ROOT_DIR, path)
+            size = os.path.getsize(path)
+            if size <= threshold:
+                track_df.drop(idx, inplace=True)
+            else:
+                sizes.append(size)
 
-def get_idx_mp3_size_less_than(track_df: pd.DataFrame, threshold: int = 50000):
-    output = []
-    for idx, path in enumerate(track_df['path']):
-        path = os.path.join(MP3_ROOT_DIR, path)
-        if os.path.getsize(path) < threshold:
-            output.append(idx)
-        else:
-            continue
-    return output
+        if add_col == True:
+            # sanity check
+            assert len(track_df) == len(sizes)
+            
+            track_df['size'] = pd.Series(sizes, index=df.index)
+        
+        return track_df
 
-def df_purge_faulty_mp3(track_df: pd.DataFrame, threshold: int = 50000):
-    if threshold == 0:
-        return track_df.drop(get_idx_mp3_size_zero(track_df))
-    else:
-        return track_df.drop(get_idx_mp3_size_less_than(track_df, threshold))
+def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):
+        lengths = []
+        for idx, path in enumerate(df['path']):
+            path = os.path.join(MP3_ROOT_DIR, path)
+            try:
+                mp3 = MP3(path)
+                length = mp3.info.length
+                lengths.append(length)
+            except:
+                track_df.drop(idx, inplace=True)
 
+        if add_col == True:
+            # sanity check
+            assert len(track_df) == len(lengths)
+            
+            track_df['length'] = pd.Series(lenghts, index=df.index)
+        
+        return track_df
 
 ### functions to find tracks with no tags and purge them
     
@@ -191,7 +201,7 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
 
 ### output functions
 
-def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
+def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False, add_length: bool = False, add_size: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid' and 'path'.
     
     Parameters
@@ -212,36 +222,31 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
         - entries are all the tracks on our server which are not mismatched and satisfy the given parameters
     '''
 
-    print('Fetching mp3 files from root directory...', end=' ')
+    print("Fetching mp3 files from root directory...", end=" ")
     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
-    print('done')
+    print("done")
 
-    print('Purging mismatches...', end=' ')
+    print("Purging mismatches...", end=" ")
     df = df_purge_mismatches(df)
-    print('done')
+    print("done")
 
-    print('Purging faulty MP3 files...', end=' ')
-    df = df_purge_faulty_mp3(df, threshold=threshold)
-    print('done')
+    print("Purging faulty MP3 files...")
+    print("    Checking files with size less than threshold...", end=" ")
+    df = df_purge_faulty_mp3_1(df, threshold=threshold, add_col=add_size)
+    print("done")
+    print("    Checking files that can't be opened...", end=" ")
+    df = df_purge_faulty_mp3_2(df, add_col=add_length)
+    print("done")
     
     if discard_no_tag == True:
-        print('Purging tracks with no tags...', end=' ')
+        print("Purging tracks with no tags...", end=" ")
         df = df_purge_no_tag(df)
-        print('done')
+        print("done")
     
     if discard_dupl == True:
-        print('Purging duplicate tracks...', end=' ')
+        print("Purging duplicate tracks...", end=" ")
         df = df_purge_duplicates(df)
-        print('done')
-
-#     if add_length == True:
-#         print('Checking length of audio tracks...', end=' ')
-#         lengths = []
-#         for path in df['path']:
-#             mp3 = mutagen.mp3.MP3(os.path.join(MP3_ROOT_DIR, path))
-#             lengths.append(mp3.info.length)
-#         df['track_length'] = pd.Series(lenghts, index=df.index)
-#         print('done')
+        print("done")
     
     return df
 
@@ -303,7 +308,7 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
             die_with_usage()
         else:
-            print('???')
+            print("???")
             sys.exit(0)
     
     if sys.argv[1][-4:] == '.csv':
@@ -334,7 +339,7 @@ if __name__ == "__main__":
                 discard_dupl = True
                 del sys.argv[2]      
             else:
-                print('???')
+                print("???")
                 sys.exit(0)
 
         df = ultimate_output(threshold, discard_no_tag, discard_dupl)
