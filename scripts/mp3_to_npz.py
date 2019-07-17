@@ -67,6 +67,7 @@ import librosa
 import numpy as np
 import os
 import pandas as pd
+import sys
 import time
 
 mp3_root_dir = '/srv/data/msd/7digital/'
@@ -89,9 +90,9 @@ def create_folder_structure():
         if not os.path.isdir(structure):
             os.mkdir(structure)
         else:
-            raise OSError("Directory " + structure + " already exits!!")
+            print("Directory " + structure + " already exits. Are you sure it is empty?")
 
-def no_sound(df):
+def no_sound(df, verbose=False):
     '''
     Parameters
     ----------
@@ -128,22 +129,17 @@ def no_sound(df):
     
     start = time.time()
 
-    for idx, path in enumerate(df['path'], verbose=False):
-        path_npz = npz_root_dir[:-1] + path[:-9]
+    for idx, path in enumerate(df['path']):
+        path_npz = os.path.join(npz_root_dir, os.path.basename(path)[:-9])
         start_time = time.time()
-        if os.path.isfile(path_np+'.npz'):
-            print('Already Exist')
+        if os.path.isfile(path_npz + '.npz'):
+            print("File " + path_npz + " already exists. Ignoring.")
         
         else:
-            
-            _ = mp3_root_dir[:-1] +path
-    
-            array, sr = librosa.core.load(_, sr=None, mono=False)
-    
-            array_mono = librosa.core.to_mono(array)
-            array_split = librosa.effects.split(array_mono)
-    
-            np.savez(path_np, array=array, sr=sr, split=array_split)
+            path = os.path.join(mp3_root_dir, path)
+            array, sample_rate = librosa.core.load(path, sr=None, mono=False)
+            array_split = librosa.effects.split(librosa.core.to_mono(array))
+            np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
         
         if verbose == True:
             if idx % 100 == 0:
@@ -175,8 +171,8 @@ def no_sound_count(df, final_check=False):
     l = []
      
     for idx, path in enumerate(df['path']):
-        path_npz = npz_root_dir[:-1] +path[:-9]
-        if os.path.isfile(path_np + '.npz'):
+        path_npz = npz_root_dir[:-1] + path[:-9]
+        if os.path.isfile(path_npz + '.npz'):
             count += 1
         elif final_check == True:
             l.append(path)
@@ -206,12 +202,12 @@ def zip_correction(track_7did):
     
     track_7did = str(track_7did)
 
-    path = '/' + track_7did[0] + '/' track_7did[1] + '/' + track_7did + '.clip.mp3'
+    path = '/' + track_7did[0] + '/' + track_7did[1] + '/' + track_7did + '.clip.mp3'
     path_npz = npz_root_dir[:-1] + path[:-9]
     path = os.path.join(mp3_root_dir, path)
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
     array_split = librosa.effects.split(librosa.core.to_mono(array))
-    np.savez(path_np, array=array, sr=sample_rate, split=array_split)
+    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 def die_with_usage():
     print()
@@ -221,7 +217,7 @@ def die_with_usage():
     print()
     print("General Options:")
     print("  --root-dir-npz         Set different directory to save npz files.")
-    print("  --root-dir-mp3         Set different directory to find mp3 files (only needed if input file does NOT contain full paths).")
+    print("  --root-dir-mp3         Set different directory to find mp3 files.")
     print("  --help                 Show this help message and exit.")
     print("  --verbose              Show progress.")
     print()
@@ -261,7 +257,7 @@ if __name__ == "__main__":
             print("???")
             sys.exit(0)
 
-        df = pd.read_csv(sys.argv[1])
-        create_folder_structure()
-        no_sound(df)
-        no_sound_count(df)
+    df = pd.read_csv(sys.argv[1])
+    create_folder_structure()
+    no_sound(df, verbose)
+    no_sound_count(df, verbose)
