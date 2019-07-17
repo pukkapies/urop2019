@@ -1,5 +1,4 @@
 '''
-
 '''
 
 import os
@@ -40,6 +39,3 @@ if __name__ == '__main__':
                 array = np.log(array)
 
                 # TODO: Output this to where????
-
-
-
