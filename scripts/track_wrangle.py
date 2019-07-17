@@ -119,41 +119,43 @@ def df_purge_mismatches(track_df: pd.DataFrame):
 ### functions to find tracks with too small a file size and purge them
 
 def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: bool = False):
+        df = track_df
         sizes = []
-        for idx, path in enumerate(track_df['path']):
+        for idx, path in enumerate(df['path']):
             path = os.path.join(mp3_root_dir, path)
             size = os.path.getsize(path)
             if size <= threshold:
-                track_df.drop(idx, inplace=True)
+                df.drop(idx, inplace=True)
             else:
                 sizes.append(size)
 
         if add_col == True:
             # sanity check
-            assert len(track_df) == len(sizes)
+            assert len(df) == len(sizes)
             
-            track_df['size'] = pd.Series(sizes, index=track_df.index)
+            df['size'] = pd.Series(sizes, index=df.index)
         
-        return track_df
+        return df
 
 def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):
+        df = track_df
         lengths = []
-        for idx, path in enumerate(track_df['path']):
+        for idx, path in enumerate(df['path']):
             path = os.path.join(mp3_root_dir, path)
             try:
                 f = mg.MP3(path)
                 length = f.info.length
                 lengths.append(length)
             except:
-                track_df.drop(idx, inplace=True)
+                df.drop(idx, inplace=True)
 
         if add_col == True:
             # sanity check
-            assert len(track_df) == len(lengths)
+            assert len(df) == len(lengths)
             
-            track_df['length'] = pd.Series(lengths, index=track_df.index)
+            df['length'] = pd.Series(lengths, index=df.index)
         
-        return track_df
+        return df
 
 ### functions to find tracks with no tags and purge them
     
