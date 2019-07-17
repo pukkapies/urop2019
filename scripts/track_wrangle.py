@@ -50,7 +50,7 @@ if os.path.basename(os.getcwd()) == 'scripts':
 else:
     sys.path.insert(0, os.path.join(os.getcwd(), 'modules'))
 
-import lastfm_query as db
+import query_lastfm as db
 
 MP3_ROOT_DIR = '/srv/data/msd/7digital/'
 
