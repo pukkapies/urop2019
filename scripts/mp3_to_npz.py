@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jul  9 23:21:48 2019
-
-@author: MacBook Pro
-"""
-
 '''
 Notes
 -----
@@ -68,8 +61,6 @@ Functions
 - zip_correction           
     Searches for zip files errors and is an error handling tool used in 
     get_faulty_mp3.py
-
-
 '''
 
 import librosa
@@ -78,41 +69,24 @@ import os
 import pandas as pd
 import time
 
-MP3_ROOT_DIR = '/srv/data/msd/7digital/'
-NUMPY_ROOT_DIR = '/srv/data/urop/7digital_numpy/'
+mp3_root_dir = '/srv/data/msd/7digital/'
+npz_root_dir = '/srv/data/urop/7digital_numpy/'
+
 if 'path_ult' not in globals():
     path_ult = '/srv/data/urop'
 
-def set_path_ult_no_sound(new_path):
-    '''
-    Parameters
-    ----------
-    
-    
-    new_path: str
-        The path where 'ultimate_csv.csv' is stored.
-        
-    '''
-    global path_ult
-    path_ult = new_path
-
 def create_folder_structure():
-    
     '''
-    Returns
-    -------
-    
-    New folder structure in the NUMPY_ROOT_DIR
+    Generate folder structure to store npz files.
     '''
-    for dirpath, dirnames, filenames in os.walk(MP3_ROOT_DIR):
-        structure = os.path.join(NUMPY_ROOT_DIR, dirpath[len(MP3_ROOT_DIR):])
+    for dirpath, dirnames, filenames in os.walk(mp3_root_dir):
+        structure = os.path.join(npz_root_dir, dirpath[len(mp3_root_dir):])
         if not os.path.isdir(structure):
             os.mkdir(structure)
         else:
-            print("Folder does already exits!")
+            raise OSError("Directory " + structure + " already exits!!")
 
 def no_sound(start, end, file='ultimate_csv_size.csv'):
-    
     '''
     Parameters
     ----------
@@ -145,7 +119,6 @@ def no_sound(start, end, file='ultimate_csv_size.csv'):
             information is saved in the form: n*2 numpy.ndarray, and each row
             represent one section -- starting position and ending position of 
             array respectively.
-    
     '''
  
 
@@ -156,14 +129,14 @@ def no_sound(start, end, file='ultimate_csv_size.csv'):
 
 
     for i, path in enumerate(paths):
-        path_np = NUMPY_ROOT_DIR[:-1] +path[:-9]
+        path_np = npz_root_dir[:-1] +path[:-9]
         start_time = time.time()
         if os.path.isfile(path_np+'.npz'):
             print('Already Exist')
         
         else:
             
-            _ = MP3_ROOT_DIR[:-1] +path
+            _ = mp3_root_dir[:-1] +path
     
             array, sr = librosa.core.load(_, sr=None, mono=False)
     
@@ -178,7 +151,6 @@ def no_sound(start, end, file='ultimate_csv_size.csv'):
                 
 
 def count(final_check=False, file='ultimate_csv_size.csv'):
-    
     '''
     Parameters
     ----------
@@ -197,8 +169,6 @@ def count(final_check=False, file='ultimate_csv_size.csv'):
         
     Counter: int
         The number of mp3s that have been loaded and saved as numpy array.
-        
-    
     '''
     
     df = pre_no_sound(file)
@@ -207,7 +177,7 @@ def count(final_check=False, file='ultimate_csv_size.csv'):
     LIST=[]
      
     for i, path in enumerate(paths):
-        path_np = NUMPY_ROOT_DIR[:-1] +path[:-9]
+        path_np = npz_root_dir[:-1] +path[:-9]
         if os.path.isfile(path_np+'.npz'):
             counter+=1
         else:
@@ -241,8 +211,8 @@ def zip_correction(track_7digitalid):
     
     
     path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3'
-    path_np = NUMPY_ROOT_DIR[:-1] +path[:-9]
-    _ = MP3_ROOT_DIR[:-1] +path
+    path_np = npz_root_dir[:-1] +path[:-9]
+    _ = mp3_root_dir[:-1] +path
     array, sr = librosa.core.load(_, sr=None, mono=False)
     array_mono = librosa.core.to_mono(array)
     array_split = librosa.effects.split(array_mono)
