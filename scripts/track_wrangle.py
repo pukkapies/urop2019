@@ -52,11 +52,14 @@ else:
 
 import query_lastfm as db
 
-MP3_ROOT_DIR = '/srv/data/msd/7digital/'
-
+mp3_root_dir = '/srv/data/msd/7digital/'
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
 path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
+
+def set_mp3_root_dir(new_path):
+    global mp3_root_dir
+    mp3_root_dir = new_path
 
 def set_path_h5(new_path):
     global path_h5
@@ -70,7 +73,6 @@ def set_path_txt_duplicates(new_path):
     global path_txt_duplicates
     path_txt_duplicates = new_path
 
-
 ### functions to fetch MP3 files on server and remove mismatches
 
 def extract_ids_from_summary():
@@ -83,7 +85,7 @@ def extract_ids_from_summary():
 
 def find_tracks():
     paths = []
-    for folder, subfolders, files in os.walk(MP3_ROOT_DIR):
+    for folder, subfolders, files in os.walk(mp3_root_dir):
         for file in files:
             path = os.path.join(os.path.abspath(folder), file)
             paths.append(path)
@@ -118,7 +120,7 @@ def df_purge_mismatches(track_df: pd.DataFrame):
 def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: bool = False):
         sizes = []
         for idx, path in enumerate(df['path']):
-            path = os.path.join(MP3_ROOT_DIR, path)
+            path = os.path.join(mp3_root_dir, path)
             size = os.path.getsize(path)
             if size <= threshold:
                 track_df.drop(idx, inplace=True)
@@ -136,7 +138,7 @@ def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: b
 def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):
         lengths = []
         for idx, path in enumerate(df['path']):
-            path = os.path.join(MP3_ROOT_DIR, path)
+            path = os.path.join(mp3_root_dir, path)
             try:
                 mp3 = MP3(path)
                 length = mp3.info.length
