@@ -40,7 +40,7 @@ def process_array(array, sr, audio_format):
     Summary
     -------
     The array is processed by the following steps:
-    1. Converted to mono
+    1. Converted to mono (if not already)
     2. Resampling to 16 kHz
     3. Array is converted to a desired audio format
 
@@ -138,7 +138,7 @@ if __name__ == '__main__':
             encoded_tags = encode_tags(tags) 
 
             # TODO: Refine get_example() 
-            example = get_example(array, tid, encoded_tags)
+            example = get_example(processed_array, tid, encoded_tags)
             writer.write(example.SerializeToString())
 
 "These scripts are still fairly untested and should only be used after we sort out the couple of points"
