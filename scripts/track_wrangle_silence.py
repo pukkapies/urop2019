@@ -1,12 +1,14 @@
+"""
+
+"""
 '''
 Note
 ----
-This module interprets the result obtained from no_sound.py. The structure can
-be divided into two steps:
+This module interprets the result obtained from mp3_to_npz.py. The structure 
+can be divided into two steps:
     
--Analyse result: get_faulty_mp3() checks for broken mp3 tracks, and 
-check_silence analyse silent sections within the tracks and return a detail 
-analysis dataframe.
+-Analyse result: Check_silence analyse silent sections within the tracks and 
+return a detail analysis dataframe.
 -Filter result: Return a DataFrame by filtering out tracks that are below 
 a minimum trimmed length threshold, tracks that have total mid-silent section
 above a maximum threshold, and tracks that have length of maximum mid=silent
@@ -17,15 +19,16 @@ section above a maximum threshold. See Glossary for what the terms mean.
 Functions
 ---------
 
-- set_path_ult
-    Tell the script the path of where 'ultimate_csv.csv' was stored.
+- set_mp3_root_dir
+    Tell the script the root directory of where mp3s were stored.
     
-- get_faulty_mp3
-    Return a list of mp3 which cannot be opened or have size zero.
+- set_npz_root_dir
+    Tell the script the root directory of where numpy arrays will be stored.
+    
 
 - check_silence
     Interpret the csv obtained from no_sound.py and add extra columns to the 
-    output csv.
+    input csv and return a new csv.
                               
 - filter_trim_length          
     Return the track_id of tracks that satisfy the condition: 
@@ -58,7 +61,7 @@ Examples
 --------
     import pd
     
-    df_pre = no_sound.pre_no_sound()
+    df_pre = track_wrangle.read_duplicates_and_purge()
     
     df = check_silence(df_pre)   /or/   
     df = pd.read_csv(os.path.join(path_ult, 'ultimate_csv_size2.csv'))
@@ -82,33 +85,53 @@ from mp3_to_npz import savez
 mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
 
-def set_mp3_root_dir(new_root_dir):
+def set_mp3_root_dir(new_root_dir): #better change it to another name, or will mess up with mp3_to_mpz when using from xx import *, please change
+    '''
+    Parameters
+    ----------
+    
+    new_path: str
+        The root directory of where mp3s were stored.
+        
+    '''
+
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
-def set_npz_root_dir(new_root_dir):
+def set_npz_root_dir(new_root_dir): #better change it to another name, or will mess up with mp3_to_mpz when using from xx import *, please change
+    '''
+    Parameters
+    ----------
+    
+    new_path: str
+        The root directory of where numpy arrays will be stored.
+        
+    '''
+    
+    
     global npz_root_dir
     npz_root_dir = new_root_dir
 
-def check_silence(df):
+def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size2.csv'): 
+    #You will want to save a csv in here after the heavy computation and take a break...
     
     '''
     Parameters
     ----------
     path: str
-        The path where the csv returned by the function pre_no_sound is saved.
+        The path of the input dataframe.
+        Recommendation: df = track_wrangle.read_duplicates_and_purge() 
     
-    file: str
-        The saved name of the csv returned by the function pre_no_sound.
         
     Returns
     -------
-    csv:
-        The csv is saved under the path provided in the Parameters. This
-        function extracts features from the npz files saved by the no_sound.py.
-        It combines several new columns based on the features extracted and
-        appended to the dataframe provided by the Parameters and return a new 
-        csv with the extra columns.
+    
+    df: pd.DataFrame
+        The dataframe is produced under the path provided in the Parameters. 
+        This function extracts features from the npz files saved by the 
+        mp3_to_npz.py. It combines several new columns based on the features 
+        extracted and appended to the dataframe provided by the Parameters and 
+        return a new csv with the extra columns.
         
         
         Extra columns:
@@ -142,6 +165,9 @@ def check_silence(df):
         'max_duration': float
                 maximum length of individual mid-silent sections from the 
                 'silence_duration' column.
+                
+    csv: 
+        The df is saved as csv if save_csv is True.
     
                 
     '''
@@ -150,14 +176,18 @@ def check_silence(df):
     audio_end = []
     mid_silence_length = []
     silence = []
+    paths = df['path'] #
     
-    for idx, path in enumerate(df['path']):
-        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
+    for idx, path in enumerate(paths):
+        #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # was wrong, fixed it.
+        path_npz = npz_root_dir[:-1]+ path[:-9] + '.npz'
         try:
             npz = np.load(path_npz)
         except:
             print(idx)
-            savez(path, path_npz)
+            track_7digitalid = int(os.path.basename(path)[:-9])  #since I changed savez
+            #savez(path, path_npz)
+            savez(track_7digitalid)
             npz = np.load(path_npz)
             
         sr = npz['sr']
@@ -193,27 +223,32 @@ def check_silence(df):
     df['silence_percentage'] = df['non_silence_length'] / df['effective_length'] * 100
     df['silence_detail'] = pd.Series(silence, index=df.index)
 
-    return df
+    
           
-    # def get_duration(x):
-    #     LIST = []
-    #     for i in x:
-    #         if i != None:
-    #             _ = i[1] - i[0]
-    #             LIST.append(_)
-    #     return LIST
+    def get_duration(x): #These are needed for other functions
+        LIST = []
+        for i in x:
+            if i != None:
+                _ = i[1] - i[0]
+                LIST.append(_)
+        return LIST
 
-    # # get lengths of silent sections:
-    # df['silence_duration'] = df.silence.apply(get_duration)
+     # get lengths of silent sections:
+    df['silence_duration'] = df.silence.apply(get_duration)
     
-    # def get_max(x):
-    #     if x:
-    #         return np.max(x)
-    #     else:
-    #         return None
+    def get_max(x):
+        if x:
+            return np.max(x)
+        else:
+            return None
     
-    # #get maximum lengths of individual silent sections:
-    # df['max_duration'] = df.silence_duration.apply(get_max)
+     #get maximum lengths of individual silent sections:
+    df['max_duration'] = df.silence_duration.apply(get_max)
+    
+    if save_csv:   #added
+            df.to_csv(output_path, index=False)
+            
+    return df
     
     
 
@@ -223,7 +258,7 @@ def filter_trim_length(df, min_duration):
     Parameters
     ---------
     df: pd.DataFrame
-        The datafram from the function filter_mp3.
+        The dataframe from the function check_silence.
     
     min_duration: float
         If the length of tracks AFTER TRIMMING >= min_duration, keep the track 
@@ -248,7 +283,7 @@ def filter_tot_silence_duration(df, max_duration):
     Parameters
     ---------
     df: pd.DataFrame
-        The datafram from the function filter_mp3.
+        The dataframe from the function check_silence.
     
     max_duration: float
         If the sum of the length of mid-silent sections <= min_duration, 
@@ -274,7 +309,7 @@ def filter_max_silence_duration(df, max_duration):
     Parameters
     ---------
     df: pd.DataFrame
-        The datafram from the function filter_mp3.
+        The dataframe from the function check_silence.
     
     max_duration: float
         If the maximum length amongst the individual mid-silent sections 

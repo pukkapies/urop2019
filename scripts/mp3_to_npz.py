@@ -1,3 +1,6 @@
+"""
+
+"""
 '''
 Notes
 -----
@@ -5,62 +8,60 @@ This module will create tools that can be used to analyse different features of
 the mp3 tracks by get_faulty_mp3.py ---length, file size, sections that are 
 silent. The procedure can be summarised into three categories:
     
--Preparation of dataset: Prepare a dataset to identify broken mp3 files by 
-mp3_length(). Then filter the tracks so that all track has at least on tag 
-using pre_no_sound().
+-Preparation of directory: Please see create_folder_structure for more detail.
 
 -Saving information on silent details: no_sound() saves the information of the 
 silent details as npz files, and also the converted arrays and sampling
 rate of the original MP3 to speed up the loading process in the future.
 
--Progress check: count() can be used to check progress of no_sound() on
-seperate window.
+-Progress check: no_sound+count() can be used to check progress of 
+no_sound() on seperate window.
 
 Examples
 --------
     create_folder_structure()
     
-    mp3_length()
+    df = track_wrangle.read_duplicates_and_purge()
     
-    no_sound(start=0, end=40000)
+    no_sound(df, start=0, end=40000)
     
-    On a seperate window: count()
+    On a seperate window: no_sound_count()
     
 
 
 Functions
 ---------
-- set_path_ult
-    Tell the script the path of where 'ultimate_csv.csv' was stored.
+- set_mp3_root_dir
+    Tell the script the root directory of where mp3s were stored.
+    
+- set_mpz_root_dir
+    Tell the script the root directory of where numpy arrays will be stored.
 
 - create_folder_structure  
     This copies the folder structure of how the mp3 files are saved and produce 
     the same folder structure under a new directory, which will be used 
     to save the converted numpy arrays later.
     
-- mp3_length
-    Extend the columns of ultimate_csv to identify tracks and return the 
-    lengths and sizes of tracks
-                           
-- pre_no_sound 
-    Prepare a dataframe that will be used by no_sound.  
-                           
-- no_sound                 
-    Save three numpy arrays per track:
+- savez
+    Convert a mp3 files into three numpy arrays as an npz file:
     1. loaded mp3 arrays    2. sampling rate 
     3. start and end positoin of arrays in 1 when volume of track is above 
     60dB (non-silent). See the librosa documentation on librosa.effect.split 
-    for more details. 
+    for more details.   
+    
+- mp3_length
+    Extend the columns of ultimate_csv to identify tracks and return the 
+    lengths and sizes of tracks
+                                               
+- no_sound                 
+    Apply savez() to the provided provided by a dataframe
                            
                               
-- count                    
+- no_sound_count                    
     Return the number of mp3 files that have been saved as npz files. Return 
     the path of tracks that have not been converted yet if final_check mode 
     is enabled.
                            
-- zip_correction           
-    Searches for zip files errors and is an error handling tool used in 
-    get_faulty_mp3.py
 '''
 
 import librosa
@@ -92,15 +93,49 @@ def create_folder_structure():
         else:
             print("Directory " + structure + " already exits. Are you sure it is empty?")
 
-def savez(path, path_npz):
-    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
-    array_split = librosa.effects.split(librosa.core.to_mono(array))
-    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
-
-def no_sound(df, verbose=False):
+def savez(track_7digitalid):
     '''
     Parameters
     ----------
+    track_7digitalid: int
+        The track_7digitalid of the track 
+        
+    Returns
+    -------
+    npz files:
+        The npz file is of the form ['array', 'sr', 'split']
+        'array': 
+            The loaded mp3 files in numpy-array form by library -- librosa.
+            The array represent the mp3s in its original sampling rate, and 
+            multi-channel is preserved. (each row represents one channel)
+            
+        'sr':
+            The sampling rate of the mp3 file.
+            
+        'split':
+            All the sections of the track which is non-silent (>=60dB). The
+            information is saved in the form: n*2 numpy.ndarray, and each row
+            represent one section -- starting position and ending position of 
+            array respectively.
+    
+    '''
+    #the original code will make it more useful -- I actually used this for checking and fixing some individual errors a
+    path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
+    path_npz = npz_root_dir[:-1] +path[:-9] #
+    path = mp3_root_dir[:-1] +path #
+    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
+    array_split = librosa.effects.split(librosa.core.to_mono(array))
+    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
+    
+
+
+def no_sound(df, start=0, end=501070, verbose=True): #trust me you will want to see the progress.. and you need start, end for tmux
+    '''
+    Parameters
+    ----------
+        df: pd.DataFrame
+            The input dataframe that stores the path of mp3s that will be converted to npz files.
+            Recommendation: df = track_wrangle.read_duplicates_and_purge()
     
         start: int
             The index of starting point in the pre_no_sound.csv.
@@ -131,49 +166,58 @@ def no_sound(df, verbose=False):
             represent one section -- starting position and ending position of 
             array respectively.
     '''
+    #
+    #start = time.time()
     
-    start = time.time()
-
-    for idx, path in enumerate(df['path']):
-        path_npz = os.path.join(npz_root_dir, os.path.basename(path)[:-9] + '.npz')
+    
+    
+    paths = df['path'].tolist()[start:end]  #tmux,and this is probably more efficient
+    for idx, path in enumerate(paths): #
+        
+        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #I think this is wrong
         start_time = time.time()
         if os.path.isfile(path_npz):
             print("File " + path_npz + " already exists. Ignoring.")
         
         else:
             path = os.path.join(mp3_root_dir, path)
-            savez(path, path_npz)
+            track_7digitalid = int(os.path.basename(path)[:-9])  #since I changed savez
+            savez(track_7digitalid)
         
         if verbose == True:
             if idx % 100 == 0:
-                print("{:5d} - TIME ELAPSED: {}".format(idx, time.time()-start))
+                print("{:5d} - TIME TAKEN BY {}: {}".format(idx, path, time.time()-start_time)) #this is what you want to see
                 
 
 def no_sound_count(df, final_check=False):
     '''
     Parameters
     ----------
+    df: pd.DataFrame
+        The input dataframe that stores the path of mp3s that will be converted to npz files.
+        Recommendation: df = track_wrangle.read_duplicates_and_purge() 
+    
     final_check: bool
         final check mode.
         
-    file: str
-        File name of input csv. Default-Ultimate_csv_size.csv.
 
         
     Returns
     -------
-    LIST: list
+    l: list
         If it is in final check mode, it returns the list of path of the tracks
-        whose mp3 has not been loaded and saved to numpy array
+        whose mp3 has not been loaded and saved to numpy array.
         
-    Counter: int
-        The number of mp3s that have been loaded and saved as numpy array.
+    count: int
+        Print progress.    
     '''
     
     count = 0
     l = []
      
-    for idx, path in enumerate(df['path']):
+    paths = df['path'].tolist()  #This is probability more efficient
+    
+    for idx, path in enumerate(paths): #
         path_npz = npz_root_dir[:-1] + path[:-9]
         if os.path.isfile(path_npz + '.npz'):
             count += 1
@@ -185,6 +229,8 @@ def no_sound_count(df, final_check=False):
         return l
     else:
         print("{} OUT OF {} CONVERTED.".format(count, len(df)))
+        
+        
 
 def die_with_usage():
     print()
@@ -216,7 +262,7 @@ if __name__ == "__main__":
             print("???")
             sys.exit(0)
 
-    verbose = False
+    #verbose = False      #You will want to see the progress, and no need for this since it's already pre-defined in function
 
     while True:
         if len(sys.argv) == 2:

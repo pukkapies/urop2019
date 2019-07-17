@@ -1,3 +1,31 @@
+"""
+
+"""
+'''
+Note
+----
+
+Functions
+---------
+- set_mp3_root_dir
+    Tell the script the root directory of where mp3s were stored.
+    
+- extract_ids_from_summary
+
+- find_tracks
+
+- find_tracks_with_7dids
+
+- check_size
+    Extend the column of the given dataframe to identify sizes of tracks.
+
+- check_mutagen_info
+    Extend the columns of the given dataframe to identify if a track can be 
+    opened and the duration and number of channels of a track.
+    
+
+
+'''
 import h5py
 import mutagen.mp3
 import os
@@ -6,7 +34,15 @@ import sys
 
 root_dir = '/srv/data/msd/7digital/'
 
-def set_mp3_root_dir(new_root_dir):
+def set_mp3_root_dir(new_root_dir):   #better change it to another name, or will mess up with mp3_to_mpz when using from xx import *, please change
+    '''
+    Parameters
+    ----------
+    
+    new_path: str
+        The root directory of where mp3s were stored.
+        
+    '''
     global root_dir
     root_dir = new_root_dir
 
@@ -34,37 +70,110 @@ def find_tracks_with_7dids():
     return df
 
 def check_size(df):
+    
+    '''
+    Parameters
+    ----------
+    df: pd.DataFrame
+        The input dataframe which you want extra information (length and number 
+        of channel of tracks).
+        
+    Returns
+    -------
+    df: pd.DataFrame
+        A dataframe that has one extra column:
+        'size': float
+            The file size of the mp3 file.
+        
+    
+    '''
     s = []
-    for path in df['path']:
-        path = os.path.join(root_dir, path)
+    paths = df['path'] #more efficient
+    for path in paths: 
+        #path = os.path.join(root_dir, path)
+        path = root_dir[:-1]+ path #was wrong, now fixed
         s.append(os.path.getsize(path))
-    df['size'] = pd.Series(s, index=df.index)
+    #df['size'] = pd.Series(s, index=df.index) # sizes is better since df.size is ambiguous...
+    df['sizes'] = pd.Series(s, index=df.index)
     return df
 
-def check_mutagen_info(df, add_length=True, add_channels=True, verbose=False):
+def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True,
+                       save_csv=True, output_path='/srv/data/urop/ultimate_csv_size.csv'): 
+    # You will want to see the progress, and after this long conversion, you may want to save it.
+    '''
+    Parameters
+    ----------
+    df: pd.DataFrame
+        The input dataframe which you want extra information (length and number 
+        of channel of tracks).
+    
+    add_length: bool
+        If true, the computed lengths column is appended to the df.
+    
+    add_channels: bool
+        If true, the computed number of channels column is appended to the df.
+        
+    verbose: bool
+        If true, progress of running the program is printed.
+        
+    save_csv: bool
+        If true, the resulting dataframe is saved as a csv file.
+        
+    output_dir: str
+        The output path of the csv saved if save_csv is True.
+        
+        
+    Returns
+    -------
+    df: pd.DataFrame
+        A dataframe that has two extra columns if add_length and add_channels
+        are set to be True:
+        'lengths': float
+            The duration of the mp3 tracks.
+            
+        'channels': float
+            The number of channels of the mp3 tracks.
+            
+        NOTE: empty cell is returned to the corresponding rows for lengths 
+        and channels if the script cannot read the size of the tracks or cannot 
+        open the tracks (i.e. broken tracks).
+        
+    csv: 
+        The df is saved as csv if save_csv is True.
+        
+    
+    '''
+    
     tot = len(df)
-    mod = len(df) // 100
+    #mod = len(df) // 100    #len(df) is not divisiable by 100..
     l = []
     c = []
     for idx, path in enumerate(df['path']):
-        path = os.path.join(root_dir, path)
+        #path = os.path.join(root_dir, path)
+        path = root_dir[:-1]+ path #was wrong, now fixed
         try:
             audio = mutagen.mp3.MP3(path)
+            l.append(audio.info.length)  #
+            c.append(audio.info.channels) #
         except:
             l.append('')
             c.append('')
             continue
-        l.append(audio.info.length)
-        c.append(audio.info.channels)
+        #l.append(audio.info.length)
+        #c.append(audio.info.channels) This is wrong I think
         
         if verbose == True:
-            if idx % mod == 0:
+            if idx % 1000 == 0: # change based on comment above
                 print('PROGRESS: {:6d}/{:6d}'.format(idx, tot))
 
     if add_length == True: 
-        df['length'] = pd.Series(l, index=df.index)
+        #df['length'] = pd.Series(l, index=df.index)
+        df['lengths'] = pd.Series(l, index=df.index) # sizes is better since df.length is ambiguous...
     if add_channels == True:
         df['channels'] = pd.Series(c, index=df.index)
+        
+        if save_csv:   #added
+            df.to_csv(output_path, index=False)
     return df
 
 def die_with_usage():
