@@ -38,21 +38,26 @@ if __name__ == '__main__':
                 for file_name in os.listdir(dir):
 
                     path = os.path.join(dir, file_name)
+                    
+                    
                     # TODO: Get TID using Davides+Adens new database
                     # id_7digital = file_name[:-4]
                     tid = ""
-                                    
-                    file = np.load(path)
-                    sr = int(file['sr']) 
+
+                    #loading the unsampled file from path of npz file   
+                    unsampled_file = np.load(path)
+                    
+                    #resampling the file to 16kHz 
+                    sampled_file = librosa.resample(unsampled_file["array"], unsampled_file["sr"], 16000)
+
+                    
 
                     # Converting to mono if 2 channels (all files either 1 or 2)
-                    if file['array'].shape[0] == 2:
-                        array_mono = librosa.core.to_mono(file['array'])
+                    if sampled_file.shape[0] == 2:
+                        array_mono = librosa.core.to_mono(sampled_file)
                     else:
-                        array_mono = file['array']
+                        array_mono = sampled_file
                    
-                    # TODO: "Up-sample/down-sample?"
-
                     # Getting log-mel-spectrogram
                     # Could probably do have a if arg == "spectrogram" here (maybe also MFCC?)
                     spectrogram = np.log(librosa.feature.melspectrogram(array_mono, sr))
@@ -69,9 +74,12 @@ if __name__ == '__main__':
                     example = tf.train.Example(
                             features=tf.train.Features(
                                 feature={
-                                    'spectrogram' : _bytes_feature(spectrogram_str)
-                                    'tid' :         _bytes_feature(bytes(tid)) 
+                                    'spectrogram' : _bytes_feature(spectrogram_str),
+                                    'tid' :         _bytes_feature(bytes(tid)),
                                     'tags' :        # TODO: After knowing encoding?
                             }))
 
                     writer.write(example.SerializeToString())
+
+"these scripts are still fairly untested and should only be used after we sort out the couple of points"
+
