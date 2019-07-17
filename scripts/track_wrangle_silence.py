@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jul  8 22:19:15 2019
-
-@author: MacBook Pro
-"""
 '''
 Note
 ----
@@ -78,38 +72,22 @@ Examples
     set(a).intersection(set(b), set(c))  #return list of track_ids
 '''
 
-
+import numpy as np
 import os
 import pandas as pd
-import numpy as np
 
-from mutagen.mp3 import MP3
+from mp3_to_npz import savez
 
-MP3_ROOT_DIR = '/srv/data/msd/7digital/'
+mp3_root_dir = '/srv/data/msd/7digital/'
+npz_root_dir = '/srv/data/urop/7digital_numpy/'
 
-if 'path_ult' not in globals():
-    path_ult = '/srv/data/urop'
+def set_mp3_root_dir(new_root_dir):
+    global mp3_root_dir
+    mp3_root_dir = new_root_dir
 
-def set_path_ult_get_faulty_mp3(new_path):
-    '''
-    Parameters
-    ----------
-    
-    
-    new_path: str
-        The path where 'ultimate_csv.csv' is stored.
-        
-    '''
-    global path_ult
-    path_ult = new_path
-
-def add_length(df):
-    lengths = []
-    for path in df['path']:
-        mp3 = mutagen.mp3.MP3(os.path.join(MP3_ROOT_DIR, path))
-        lengths.append(mp3.info.length)
-    df['track_length'] = pd.Series(lenghts, index=df.index)
-    return df
+def set_npz_root_dir(new_root_dir):
+    global npz_root_dir
+    npz_root_dir = new_root_dir
 
 def check_silence(df):
     
@@ -167,23 +145,19 @@ def check_silence(df):
                 
     '''
     
-    df = no_sound.pre_no_sound()
-    path_list = df.path.tolist()
-    df_len = len(df)
+    audio_start = []
+    audio_end = []
+    mid_silence_length = []
+    silence = []
     
-    start_column = np.zeros(df_len)
-    end_column = np.zeros(df_len)
-    mid_silence_len = np.zeros(df_len)
-    silence_detail = [None]*df_len
-    
-    for num, i in enumerate(path_list):
-        path_np = '/srv/data/urop/7digital_numpy'+i[:-9]+'.npz'
+    for idx, path in enumerate(df['path']):
+        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
         try:
-            npz = np.load(path_np)
+            npz = np.load(path_npz)
         except:
-            print(i)
-            no_sound.zip_correction(int(i[5:-9]))
-            npz = np.load(path_np)
+            print(idx)
+            savez(path, path_npz)
+            npz = np.load(path_npz)
             
         sr = npz['sr']
         split = npz['split']
@@ -191,53 +165,52 @@ def check_silence(df):
         #convert to seconds
         split = split/sr
         
-        start_column[num] = split[0,0]
-        end_column[num] = split[-1,-1]
+        audio_start.append(split[0,0])
+        audio_end.append(split[-1,-1])
+
         #calculate the total length of silence after starting and before ending
-        mid_len = 0
+        bits = []
+        bits_sum = 0
+
+        for i in range(len(split) - 1):
+            # silence section
+            bit = (split[i,1], split[i+1,0])
+            bits.append(bit)
+            bit_sum += bit[1] - bit[0]
         
-        silence = []
-        for j in range(len(split)-1):
-            #silence section
-            bit = (split[j,1], split[j+1,0])
-            silence.append(bit)
-            mid_len += bit[1]-bit[0]
-        
-        silence_detail[num] = silence
-        mid_silence_len[num] = mid_len
+        silence.append(bits)
+        mid_silence_length.append(bit_sum)
         
         if num%100 ==0:
             print(num)
         
-    df.loc[:,'start'] = start_column
-    df.loc[:,'end'] = end_column
-    df.loc[:,'silence_detail'] = silence_detail
-    df.loc[:,'mid_silence_length'] = mid_silence_len
-    df.loc[:, 'lengths(after_trim)'] = df.loc[:,'end']- df.loc[:,'start']
-    df.loc[:,'non_silence_length'] = df.loc[:, 'lengths(after_trim)'] \
-    - df.loc[:,'mid_silence_length']
-    df.loc[:,'perc_after_trim'] = (df.loc[:,'non_silence_length'] \
-          / df.loc[:, 'lengths(after_trim)'])*100
+    df['audio_start'] = pd.Series(audio_start, index=df.index)
+    df['audio_end'] = pd.Series(audio_end, index=df.index)
+    df['mid_silence_length'] = pd.Series(mid_silence_length, index=df.index)
+    df['effective_length'] = df['end'] - df['start']
+    df['non_silence_length'] = df['effective_length'] - df['mid_silence_length']
+    df['silence_percentage'] = df['non_silence_length'] / df['effective_length'] * 100
+    df['silence_detail'] = pd.Series(silence, index=df.index)
           
-    def get_duration(x):
-        LIST = []
-        for i in x:
-            if i != None:
-                _ = i[1] - i[0]
-                LIST.append(_)
-        return LIST
+    # def get_duration(x):
+    #     LIST = []
+    #     for i in x:
+    #         if i != None:
+    #             _ = i[1] - i[0]
+    #             LIST.append(_)
+    #     return LIST
 
-    # get lengths of silent sections:
-    df['silence_duration'] = df.silence_detail.apply(get_duration)
+    # # get lengths of silent sections:
+    # df['silence_duration'] = df.silence.apply(get_duration)
     
-    def get_max(x):
-        if x:
-            return np.max(x)
-        else:
-            return None
+    # def get_max(x):
+    #     if x:
+    #         return np.max(x)
+    #     else:
+    #         return None
     
-    #get maximum lengths of individual silent sections:
-    df['max_duration'] = df.silence_duration.apply(get_max)
+    # #get maximum lengths of individual silent sections:
+    # df['max_duration'] = df.silence_duration.apply(get_max)
     
     df.to_csv(os.path.join(path_ult, 'ultimate_csv_size2.csv'), index=False)
     

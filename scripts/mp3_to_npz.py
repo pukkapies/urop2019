@@ -92,6 +92,11 @@ def create_folder_structure():
         else:
             print("Directory " + structure + " already exits. Are you sure it is empty?")
 
+def savez(path, path_npz):
+    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
+    array_split = librosa.effects.split(librosa.core.to_mono(array))
+    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
+
 def no_sound(df, verbose=False):
     '''
     Parameters
@@ -130,16 +135,14 @@ def no_sound(df, verbose=False):
     start = time.time()
 
     for idx, path in enumerate(df['path']):
-        path_npz = os.path.join(npz_root_dir, os.path.basename(path)[:-9])
+        path_npz = os.path.join(npz_root_dir, os.path.basename(path)[:-9] + '.npz')
         start_time = time.time()
-        if os.path.isfile(path_npz + '.npz'):
+        if os.path.isfile(path_npz):
             print("File " + path_npz + " already exists. Ignoring.")
         
         else:
             path = os.path.join(mp3_root_dir, path)
-            array, sample_rate = librosa.core.load(path, sr=None, mono=False)
-            array_split = librosa.effects.split(librosa.core.to_mono(array))
-            np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
+            savez(path, path_npz)
         
         if verbose == True:
             if idx % 100 == 0:
@@ -182,32 +185,6 @@ def no_sound_count(df, final_check=False):
         return l
     else:
         print("{} OUT OF {} CONVERTED.".format(count, len(df)))
-        
-        
-def zip_correction(track_7did):
-    '''
-    
-    Parameters
-    ----------
-    track_7digitalid: int
-        The track_7digitalid of the track.
-        
-        
-    Returns
-    -------
-    npz file:
-        The npz file described in the function no_sound()
-    
-    '''
-    
-    track_7did = str(track_7did)
-
-    path = '/' + track_7did[0] + '/' + track_7did[1] + '/' + track_7did + '.clip.mp3'
-    path_npz = npz_root_dir[:-1] + path[:-9]
-    path = os.path.join(mp3_root_dir, path)
-    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
-    array_split = librosa.effects.split(librosa.core.to_mono(array))
-    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 def die_with_usage():
     print()
