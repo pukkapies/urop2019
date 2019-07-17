@@ -1,9 +1,13 @@
 ''' Script for converting waveforms into spectrograms and saving as TFRecords file
 
 '''
-
-# TODO: Maybe "recycle" this script to also create TFRecords from raw waveforms.
-# Could utilize arguments for this
+# General TODO: 
+# 1. Maybe "recycle" this script to also create TFRecords from raw waveforms (and MFCC?).
+# We could probably use script arguments for this (or whatever its called)
+# 2. Add support for train/val/test split. I have no idea how this should be done yet,
+# as each entry is added separately, and Im not sure if the folder have distributed the data
+# well enough so that we can just pick the first x files to be in the training set. Maybe its
+# possible to make one TFRecords file and then split it?
 
 import os
 
@@ -54,7 +58,7 @@ if __name__ == '__main__':
                     # TODO: "Up-sample/down-sample?"
 
                     # Getting log-mel-spectrogram
-                    # Could probably do have a if arg == "spectrogram" here (maybe also MFCC?)
+                    # TODO: find the right parameters from paper and use them.
                     spectrogram = np.log(librosa.feature.melspectrogram(array_mono, sr))
 
                     tags = q_fm.get_tags(tid) 
