@@ -53,7 +53,8 @@ if __name__ == '__main__':
                    
                     # TODO: "Up-sample/down-sample?"
 
-                    # Getting log-mel-spectrogram, and turning it into a tensor
+                    # Getting log-mel-spectrogram
+                    # Could probably do have a if arg == "spectrogram" here (maybe also MFCC?)
                     spectrogram = np.log(librosa.feature.melspectrogram(array_mono, sr))
 
                     tags = q_fm.get_tags(tid) 
@@ -64,7 +65,6 @@ if __name__ == '__main__':
                     # We just need a function to get the TAGS.
 
                     # TODO: Refine following outline of the saving to TFRecords procedure
-                    # TODO: Decide on using Example or SequenceExample
                     spectrogram_str = tf.io.serialize_tensor(tf.convert_to_tensor(spectrogram))
                     example = tf.train.Example(
                             features=tf.train.Features(
@@ -74,16 +74,4 @@ if __name__ == '__main__':
                                     'tags' :        # TODO: After knowing encoding?
                             }))
 
-                    seq = tf.train.SequenceExample(
-                            context=tf.train.Features(
-                                feature={
-                                    'tid' :         _bytes_feature(tid) 
-                                    'tags' :        # TODO: After knowing encoding?
-                            }),
-                            feature_list=tf.train.FeatureLists(
-                                feature_list={
-                                    'spectrogram' : # TODO: ???
-                            }))
-                    # TODO: Again, SequenceExample vs Example
-                    writer.write(seq.SerializeToString())
                     writer.write(example.SerializeToString())
