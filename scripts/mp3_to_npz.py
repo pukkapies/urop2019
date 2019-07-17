@@ -205,7 +205,7 @@ def die_with_usage():
 if __name__ == "__main__":
 
     # show help
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         die_with_usage()
     
     # show help, if user did not input something weird

@@ -75,6 +75,7 @@ Examples
 import numpy as np
 import os
 import pandas as pd
+import sys
 
 from mp3_to_npz import savez
 
@@ -176,21 +177,23 @@ def check_silence(df):
             # silence section
             bit = (split[i,1], split[i+1,0])
             bits.append(bit)
-            bit_sum += bit[1] - bit[0]
+            bits_sum += bit[1] - bit[0]
         
         silence.append(bits)
-        mid_silence_length.append(bit_sum)
+        mid_silence_length.append(bits_sum)
         
-        if num%100 ==0:
-            print(num)
+        if idx % 100 == 0:
+            print(idx)
         
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
     df['mid_silence_length'] = pd.Series(mid_silence_length, index=df.index)
-    df['effective_length'] = df['end'] - df['start']
+    df['effective_length'] = df['audio_end'] - df['audio_start']
     df['non_silence_length'] = df['effective_length'] - df['mid_silence_length']
     df['silence_percentage'] = df['non_silence_length'] / df['effective_length'] * 100
     df['silence_detail'] = pd.Series(silence, index=df.index)
+
+    return df
           
     # def get_duration(x):
     #     LIST = []
@@ -211,8 +214,6 @@ def check_silence(df):
     
     # #get maximum lengths of individual silent sections:
     # df['max_duration'] = df.silence_duration.apply(get_max)
-    
-    df.to_csv(os.path.join(path_ult, 'ultimate_csv_size2.csv'), index=False)
     
     
 
@@ -293,9 +294,59 @@ def filter_max_silence_duration(df, max_duration):
             | (np.isnan(df['max_duration']))]
     return ID.track_id.tolist()
 
+def die_with_usage():
+    print()
+    print("NOOOOO: mp3_to_npz.py - Script to convert MP3 files into waveform NumPy arrays.")
+    print()
+    print("Usage:     python track_fetch.py <input filename> [options]")
+    print()
+    print("General Options:")
+    print("  --root-dir-npz         Set different directory to save npz files.")
+    print("  --root-dir-mp3         Set different directory to find mp3 files.")
+    print("  --help                 Show this help message and exit.")
+    print("  --verbose              Show progress.")
+    print()
+    print("Example:   python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
+    print()
+    sys.exit(0)
 
-        
-        
-    
+if __name__ == "__main__":
 
+    # show help
+    if len(sys.argv) < 3:
+        die_with_usage()
     
+    # show help, if user did not input something weird
+    if '--help' in sys.argv:
+        if len(sys.argv) == 2:
+            die_with_usage()
+        else:
+            print("???")
+            sys.exit(0)
+
+    if sys.argv[2][-4:] == '.csv':
+        output = sys.argv[2]
+    else:
+        output = sys.argv[2] + '.csv'
+    
+    verbose = False
+
+    while True:
+        if len(sys.argv) == 3:
+            break
+        elif sys.argv[3] == '--root-dir-mp3':
+            set_mp3_root_dir(sys.argv[4])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--root-dir-npz':
+            set_npz_root_dir(sys.argv[4])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--verbose':
+            verbose = True
+            del sys.argv[3]     
+        else:
+            print("???")
+            sys.exit(0)
+
+    df = pd.read_csv(sys.argv[1])
+    df = check_silence(df)
+    df.to_csv(output, index=False)
