@@ -9,13 +9,13 @@ provide the output of that script as an input argument for this one.
 
 This script performs the following operations:
     
-- preparing the directory: see create_folder_structure
+- preparing the directory: see create_folder_structure;
 
 - saving information on silence: no_sound() saves the information about silence in npz files, as well
                                  as the converted arrays and sampling rate of the original mp3 to speed up 
-                                 the loading process in the future
+                                 the loading process in the future;
 
-- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window
+- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window;
 
 
 Examples
@@ -31,36 +31,23 @@ Examples
 
 Functions
 ---------
-- set_mp3_root_dir
-    Tell the script the root directory of where mp3s were stored
-    
-- set_mpz_root_dir
-    Tell the script the root directory of where numpy arrays will be stored
+- set_mp3_root_dir              Tells the script the root directory of where mp3s were stored
 
-- create_folder_structure  
-    This copies the folder structure of how the mp3 files are saved and produce 
-    the same folder structure under a new directory, which will be used 
-    to save the converted numpy arrays later
-    
-- savez
-    Convert a mp3 files into three numpy arrays as an npz file:
-    1. loaded mp3 arrays    2. sampling rate 
-    3. start and end positoin of arrays in 1 when volume of track is above 
-    60dB (non-silent). See the librosa documentation on librosa.effect.split 
-    for more details
-    
-- mp3_length
-    Extend the columns of ultimate_csv to identify tracks and return the 
-    lengths and sizes of tracks
-                                               
-- no_sound                 
-    Apply savez() to the provided provided by a dataframe
-                           
-                              
-- no_sound_count                    
-    Return the number of mp3 files that have been saved as npz files. Return 
-    the path of tracks that have not been converted yet if final_check mode 
-    is enabled
+- set_mpz_root_dir              Tells the script the root directory of where numpy arrays will be stored
+
+- create_folder_structure       Copies the folder structure of how the mp3 files are saved and produce 
+                                the same folder structure under a new directory, which will be used to save
+                                the converted numpy arrays
+
+- savez                         Converts a mp3 files into three numpy arrays as a single npz file:
+                                    1. loaded mp3 arrays
+                                    2. sampling rate 
+                                    3. start and end position of arrays in 1. when volume of track is above 60dB (see librosa documentation on librosa.effect.split)
+
+- no_sound                      Applies savez() to the provided provided by a dataframe
+
+- no_sound_count                Returns the number of mp3 files that have been saved as npz files
+                                Returns the path of tracks that have not been converted yet if final_check mode is True
                            
 '''
 

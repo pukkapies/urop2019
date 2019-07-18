@@ -28,9 +28,13 @@ path, which is the path to the database on Boden.
 Functions
 ---------
 - set_path_h5                   Sets path to the msd_summary_file.h5
+
 - set_path_db                   Sets path to the track_metadata.db
+
 - get_trackid_from_7digitalid   Returns a (list of) tid(s) given a (list of) 7digital_id(s)
+
 - get_7digitalid_from_trackid   Returns a (list of) 7digital_id(s) given a (list of) tid(s)
+
 - get_attribute                 Returns a (list of) attribute(s) such as title or artist_id given a (list of )track_id(s), song_id(s) or 7digital_id(s)
 '''
 

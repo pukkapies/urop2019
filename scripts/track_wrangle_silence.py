@@ -21,28 +21,17 @@ threshold. See Glossary for what these terms mean.
 Functions
 ---------
 
-- set_mp3_root_dir
-    Tell the script the root directory of where mp3s were stored.
+- set_mp3_root_dir              Tells the script the root directory of where mp3s were stored
     
-- set_npz_root_dir
-    Tell the script the root directory of where numpy arrays will be stored.
+- set_npz_root_dir              Tells the script the root directory of where numpy arrays will be stored
     
-- check_silence
-    Interpret the csv obtained from no_sound.py and add extra columns to the 
-    input csv and return a new csv.
+- check_silence                 Interprets the dataframe obtained from no_sound.py and add extra columns to return a new dataframe
                               
-- filter_trim_length          
-    Return the track_id of tracks that satisfy the condition: 
-    duration after trimming >= threshold.
+- filter_trim_length            Returns the dataframe of tracks that satisfy the condition: tot length after trimming start/end silence >= threshold
                               
-- filter_tot_silence_duration 
-    Return the track_id of tracks that satisfy the condition: 
-    total length of mid-silent duration <= threshold.
+- filter_tot_silence_duration   Returns the dataframe of tracks that satisfy the condition: tot length of mid-silence <= threshold
                               
-- filter_max_silence_duration 
-    Return the track_id of tracks that satisfy the condition: 
-    the maximum length amongst the individual mid-silent 
-    sections <= threshold.
+- filter_max_silence_duration   Returns the dataframe of tracks that satisfy the condition: max length of mid-silence section <= threshold
 
 
 Glossary
@@ -50,11 +39,11 @@ Glossary
 
     trim:
         The total duration of tracks excluding the starting and ending section 
-        if they are silent respectively.
+        if they are silent.
         
     mid-silent section:
-        Any section in the track which is silent, but it is neither the 
-        starting silent section nor the ending silent section.
+        Any section in the track which is silent, but it is neither the starting silent section
+        nor the ending silent section.
         
 
 Examples

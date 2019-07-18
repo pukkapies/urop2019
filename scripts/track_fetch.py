@@ -13,11 +13,15 @@ set the directory in which the 7Digital mp3 files are stored.
 Functions
 ---------
 - set_mp3_root_dir              Tells the script where mp3 files are stored
+
 - find_tracks                   Performs an os.walk to find all the mp3 files within mp3_root_dir
+
 - find_tracks_with_7dids        Extracts the 7Digital ID from the mp3 filenames
+
 - check_size                    Extends the columns of the given dataframe to identify the size of the tracks
-- check_mutagen_info            Extends the columns of the given dataframe to identify if the tracks 
-                                can be opened and the duration and number of channels of the tracks
+
+- check_mutagen_info            Extends the columns of the given dataframe to identify whether the tracks can be
+                                opened and the duration and number of channels of the tracks
 '''
 
 import mutagen.mp3
