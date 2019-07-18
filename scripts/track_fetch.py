@@ -196,7 +196,7 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
             break
         elif sys.argv[2] == '--root-dir':
-            set_mp3_root_dir(sys.argv[3])
+            set_mp3_root_dir(os.path.expanduser(sys.argv[3]))
             del sys.argv[2:4]
         elif sys.argv[2] == '--abs-path':
             abs_path = True

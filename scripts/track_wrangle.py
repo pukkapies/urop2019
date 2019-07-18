@@ -242,13 +242,13 @@ if __name__ == "__main__":
         if len(sys.argv) == 3:
             break
         elif sys.argv[3] == '--path-h5':
-            set_path_h5(sys.argv[4])
+            set_path_h5(os.path.expanduser(sys.argv[4]))
             del sys.argv[3:5]
         elif sys.argv[3] == '--path-txt-mism':
-            set_path_txt_mismatches(sys.argv[4])
+            set_path_txt_mismatches(os.path.expanduser(sys.argv[4]))
             del sys.argv[3:5]
         elif sys.argv[3] == '--path-txt-dupl':
-            set_path_txt_duplicates(sys.argv[4])
+            set_path_txt_duplicates(os.path.expanduser(sys.argv[4]))
             del sys.argv[3:5]
         elif sys.argv[3] == '--min-size':
             min_size = int(sys.argv[3])
