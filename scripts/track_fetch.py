@@ -134,10 +134,6 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
         if verbose == True:
             if idx % 1000 == 0:
                 print('Processed {:6d} out of {:6d}...'.format(idx, tot))
-    
-    if verbose == True:
-        print('Processed {:6d} out of {:6d}...'.format(tot, tot))
-
 
     if add_length == True: 
         #df['length'] = pd.Series(l, index=df.index)
@@ -145,6 +141,10 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
         df['track_length'] = pd.Series(l, index=df.index) # DAVIDE: it is a column name, I'm not happy with plural. 'track_length'? 
     if add_channels == True:
         df['channels'] = pd.Series(c, index=df.index) # DAVIDE: 'channels' though must necessarily be plural, since 'channel' makes no sense
+
+    if verbose == True:
+        print('Processed {:6d} out of {:6d}...'.format(tot, tot))
+    
     return df
 
 def die_with_usage():

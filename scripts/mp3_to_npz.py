@@ -78,7 +78,7 @@ def create_folder_structure():
         if not os.path.isdir(structure):
             os.mkdir(structure)
         else:
-            print("Directory " + structure + " already exits. Are you sure it is empty?")
+            print("WARNING directory " + structure + " already exits; are you sure it is empty?")
 
 def mp3_path_to_npz_path(path):
     ''' Given the path of an mp3 file, returns the path of the npz file associated with it.
@@ -184,11 +184,12 @@ def no_sound(df, start=0, end=None, verbose=True):
         end = len(df)
     # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
     # for idx, path in enumerate(paths)
+    tot = len(df)
     for idx, path in enumerate(df['path'][start:end]): # DAVIDE: the efficience gain is in milliseconds
         start = time.time()
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #ADEN: I think this is wrong # DAVIDE: it works
         if os.path.isfile(path_npz):
-            print("File " + path_npz + " already exists. Ignoring.") 
+            print("WARNING file " + path_npz + " already exists!") 
         else:
             path = os.path.join(mp3_root_dir, path)
             # track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez
@@ -197,8 +198,8 @@ def no_sound(df, start=0, end=None, verbose=True):
         
         if verbose == True:
             if idx % 100 == 0:
-                print("{:6d} - time taken by {}: {}".format(idx, path, time.time() - start))
-                
+                print("Processed {:6d} out of {:6d}...".format(idx, tot))
+                print("Time consumed by {}: {:6.5f}".format(path, time.time() - start))
 
 def no_sound_count(df, final_check=False):
     '''
@@ -236,10 +237,10 @@ def no_sound_count(df, final_check=False):
             l.append(path)
     
     if final_check == True:
-        print("    {} out of {} converted...".format(count, len(df)))
+        print("Processed {:6d} out of {:6d}...".format(count, len(df)))
         return l
     else:
-        print("    {} out of {} converted...".format(count, len(df)))
+        print("Processed {:6d} out of {:6d}...".format(count, len(df)))
         
         
 

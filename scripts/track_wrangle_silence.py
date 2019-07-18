@@ -82,7 +82,7 @@ import sys
 #     npz_root_dir = new_root_dir
 
 # def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size2.csv'): # ADEN: You will want to save a csv in here after the heavy computation and take a break...
-def check_silence(df): # DAVIDE: same as in track_fetch.py...
+def check_silence(df, verbose=True): # DAVIDE: same as in track_fetch.py...
                        #         check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
     
     '''
@@ -142,6 +142,8 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
                 
     '''
     
+    tot = len(df)
+
     audio_start = []
     audio_end = []
     mid_silence_length = []
@@ -155,7 +157,7 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
         try:
             ar = np.load(path_npz)
         except:
-            print(idx)
+            print("WARNING at {:6d} out of {:6d}: {} was not savez'd correctly!".format(idx, len(df), path))
             #track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez..
             #savez(path, path_npz) # DAVIDE: I still believe this sintax is more clear...
             #savez(track_7digitalid)
@@ -180,8 +182,9 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
         silence.append(bits)
         mid_silence_length.append(bits_sum)
         
-        if idx % 100 == 0:
-            print(idx)
+        if verbose == True:
+            if idx % 100 == 0:
+                print('Processed {:6d} out of {:6d}...'.format(idx, tot))
         
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
@@ -192,7 +195,10 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
     df['silence_detail'] = pd.Series(silence, index=df.index)
     df['silence_detail_length'] = df['silence_detail'].apply(lambda l: [i[1] - i[0] for i in l])
     df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l)) # DAVIDE: check them out, both one-liner's ;)
-          
+        
+    if verbose == True:
+        print('Processed {:6d} out of {:6d}...'.format(tot, tot))
+
     # def get_duration(x): # DAVIDE: both added above...
     #     for i in x:
     #         if i != None:
@@ -288,7 +294,7 @@ def filter_max_silence_duration(df, threshold):
 
 def die_with_usage():
     print()
-    print("NOOOOO: mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.")
+    print("track_wrangle_silence.py - Script to analyze npz arrays to extract information about silence.")
     print()
     print("Usage:     python track_wrangle_silence.py <input csv filename or path> <output csv filename or path> [options]")
     print()
