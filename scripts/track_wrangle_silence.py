@@ -148,7 +148,7 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
     mid_silence_length = []
     silence = []
     
-    for idx, path in enumerate(df['paths']):
+    for idx, path in enumerate(df['path']):
         #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # ADEN: was wrong, fixed it.
         #path_npz = npz_root_dir[:-1]+ path[:-9] + '.npz'
         #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # DAVIDE: it works! and os.path.join is ALWAYS safer than string concatenation
