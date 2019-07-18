@@ -261,9 +261,14 @@ if __name__ == "__main__":
             sys.exit(0)
 
     df = pd.read_csv(sys.argv[1])
-    print(mp3_path_to_npz_path('1098708.clip.mp3'))
-    print(mp3_path_to_npz_path(df['path'][0]))
-    sys.exit(0)
+
+    mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
+    
+    if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
+        print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
+        print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
+        set_mp3_root_dir(mp3_root_dir_infer)
+    
     create_folder_structure()
     no_sound(df, verbose)
     no_sound_count(df, verbose)
