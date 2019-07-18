@@ -1,3 +1,6 @@
+"""
+
+"""
 ''' Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
 
 
@@ -15,40 +18,37 @@ This script performs the following operations:
                                  as the converted arrays and sampling rate of the original mp3 to speed up 
                                  the loading process in the future;
 
-- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window;
+- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window.
 
-
-Examples
---------
-    create_folder_structure()
-    
-    df = track_wrangle.read_duplicates_and_purge()
-    
-    no_sound(df, start=0, end=40000)
-    
-    no_sound_count()
-    
 
 Functions
 ---------
-- set_mp3_root_dir              Tells the script the root directory of where mp3s were stored
+- set_mp3_root_dir
+    Tell the script the root directory of where mp3s were stored.
+    
+- set_npz_root_dir
+    Tell the script the root directory of where numpy arrays will be stored.
 
-- set_mpz_root_dir              Tells the script the root directory of where numpy arrays will be stored
+- create_folder_structure  
+    Copy the folder structure of how the mp3 files are saved and produce 
+    the same folder structure under a new directory, which will be used to save
+    the converted numpy arrays.
 
-- create_folder_structure       Copies the folder structure of how the mp3 files are saved and produce 
-                                the same folder structure under a new directory, which will be used to save
-                                the converted numpy arrays
+- mp3_path_to_npz_path
+    Convert the path of a mp3 file into the path of the corresponding npz file.
 
-- savez                         Converts a mp3 files into three numpy arrays as a single npz file:
-                                    1. loaded mp3 arrays
-                                    2. sampling rate 
-                                    3. start and end position of arrays in 1. when volume of track is above 60dB (see librosa documentation on librosa.effect.split)
-
-- no_sound                      Applies savez() to the provided provided by a dataframe
-
-- no_sound_count                Returns the number of mp3 files that have been saved as npz files
-                                Returns the path of tracks that have not been converted yet if final_check mode is True
-                           
+- savez
+    Convert a mp3 files into three numpy arrays as an npz file:
+    1. loaded mp3 arrays;
+    2. sample rate;
+    3. start and end positoin of arrays when volume of track is above 60dB (non-silent).
+                                 
+- no_sound                 
+    Apply savez() to the tracks provided provided by the input dataframe.
+                                         
+- no_sound_count                    
+    Return the number of mp3 files that have been correctly saved as npz files. 
+    Return the paths of the tracks that have not been saved yet if final_check is True.
 '''
 
 import librosa

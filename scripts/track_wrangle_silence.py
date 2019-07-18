@@ -1,3 +1,6 @@
+"""
+
+"""
 ''' Contains tools for discarding mp3 files that are entirely or in major part silent
 
 
@@ -20,18 +23,17 @@ threshold. See Glossary for what these terms mean.
 
 Functions
 ---------
-
-- set_mp3_root_dir              Tells the script the root directory of where mp3s were stored
-    
-- set_npz_root_dir              Tells the script the root directory of where numpy arrays will be stored
-    
-- check_silence                 Interprets the dataframe obtained from no_sound.py and add extra columns to return a new dataframe
+- check_silence
+    Interpret the dataframe obtained from no_sound.py and add extra columns to return a new dataframe.
                               
-- filter_trim_length            Returns the dataframe of tracks that satisfy the condition: tot length after trimming start/end silence >= threshold
+- filter_trim_length
+    Return the dataframe of tracks that satisfy the condition: tot length after trimming start/end silence >= threshold.
                               
-- filter_tot_silence_duration   Returns the dataframe of tracks that satisfy the condition: tot length of mid-silence <= threshold
+- filter_tot_silence_duration
+    Return the dataframe of tracks that satisfy the condition: tot length of mid-silence <= threshold.
                               
-- filter_max_silence_duration   Returns the dataframe of tracks that satisfy the condition: max length of mid-silence section <= threshold
+- filter_max_silence_duration
+    Return the dataframe of tracks that satisfy the condition: max length of mid-silence section <= threshold.
 
 
 Glossary
@@ -44,24 +46,6 @@ Glossary
     mid-silent section:
         Any section in the track which is silent, but it is neither the starting silent section
         nor the ending silent section.
-        
-
-Examples
---------
-    import pd
-    
-    df_pre = track_wrangle.read_duplicates_and_purge()
-    
-    df = check_silence(df_pre)   /or/   
-    df = pd.read_csv(os.path.join(path_ult, 'ultimate_csv_size2.csv'))
-
-    a = filter_tot_silence_duration(df, 1)
-    
-    b = filter_max_silence_duration(df, 1)
-    
-    c = filter_trim_length(df, 15)
-
-    set(a).intersection(set(b), set(c))  #return list of track_ids
 '''
 
 import mp3_to_npz as npz
