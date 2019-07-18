@@ -82,10 +82,10 @@ def extract_ids_from_summary(path = '/srv/data/msd/msd_summary_file.h5'): # my m
         return df_summary
 
 def df_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
-    our_df = pd.merge(track_summary_df, track_df, on='track_7digitalid', how='inner')
-    our_df = our_df[-our_df.duplicated('track_7digitalid', keep=False)]
-    our_df = our_df[-our_df.duplicated('track_id', keep=False)]
-    return our_df
+    df = pd.merge(track_summary_df, track_df, on='track_7digitalid', how='inner')
+    df = df[-df.duplicated('track_7digitalid', keep=False)]
+    df = df[-df.duplicated('track_id', keep=False)]
+    return df
 
 def df_purge_mismatches(track_df: pd.DataFrame):
     df = track_df.set_index('track_id')
@@ -97,44 +97,15 @@ def df_purge_mismatches(track_df: pd.DataFrame):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-# def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: bool = False):
-#         df = track_df
-#         sizes = []
-#         for idx, path in enumerate(df['path']):
-#             path = os.path.join(mp3_root_dir, path)
-#             size = os.path.getsize(path)
-#             if size <= threshold:
-#                 df.drop(idx, inplace=True)
-#             else:
-#                 sizes.append(size)
+def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0):
+    df = track_df[track_df['file_size'] > threshold]
+    return df
 
-#         if add_col == True:
-#             # sanity check
-#             assert len(df) == len(sizes)
-            
-#             df['size'] = pd.Series(sizes, index=df.index)
-        
-#         return df
-
-# def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):
-#         df = track_df
-#         lengths = []
-#         for idx, path in enumerate(df['path']):
-#             path = os.path.join(mp3_root_dir, path)
-#             try:
-#                 f = mg.MP3(path)
-#                 length = f.info.length
-#                 lengths.append(length)
-#             except:
-#                 df.drop(idx, inplace=True)
-
-#         if add_col == True:
-#             # sanity check
-#             assert len(df) == len(lengths)
-            
-#             df['length'] = pd.Series(lengths, index=df.index)
-        
-#         return df
+def df_purge_faulty_mp3_2(track_df: pd.DataFrame, threshold: int = 0):
+    df = track_df[-track_df.isna(track_df['track_length'])]
+    if threshold:
+        df = df[df['track_length'] > threshold]
+    return df
 
 def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
     if lastfm_db:
