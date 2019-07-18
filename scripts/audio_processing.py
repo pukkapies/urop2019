@@ -213,7 +213,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
-    parser.add_argument("-s", "--split", help"train/val/test split, supply as TRAIN/VAL/TEST")
+    parser.add_argument("-s", "--split", help"train/val/test split, supply as TRAIN/VAL/TEST. Defaults to 0.7/0.2/0.1")
     parser.add_argument("--root-dir", help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     
     args = parser.parse_args()
