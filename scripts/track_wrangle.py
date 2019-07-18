@@ -1,4 +1,4 @@
-''' Contains tools for fetching MP3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty MP3 files, tracks without tags or duplicates
+''' Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
 
 
 Notes
@@ -8,7 +8,7 @@ page should contain all the options you might possibly need. You will first need
 provide the output of that script as an input argument for this one.
 
 IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
-set the directory in which the 7Digital MP3 files are stored.
+set the directory in which the 7Digital mp3 files are stored.
 
 
 Functions
@@ -17,9 +17,9 @@ Functions
 - set_path_txt_mismatches    Sets path to the msd_mismatches.txt file
 - set_path_txt_duplicates    Sets path to the msd_duplicates.txt file
 - extract_ids_from_summary   Produces a dataframe with 7digitalid's and tid's of all tracks in the dataset
-- find_tracks                Gets a list of paths of MP3 files on our server
-- find_tracks_with_7dids     Produces a dataframe with 7digitalid's and paths of MP3 files on our server
-- df_merge                   Produces a dataframe wiht 7digitalid's, tid's and paths of MP3 files on our server
+- find_tracks                Gets a list of paths of mp3 files on our server
+- find_tracks_with_7dids     Produces a dataframe with 7digitalid's and paths of mp3 files on our server
+- df_merge                   Produces a dataframe wiht 7digitalid's, tid's and paths of mp3 files on our server
 - df_purge_mismatches        Removes mismatches from previously generated dataset
 - df_purge_faulty_mp3_1      Removes tracks whose file size is less than the threshold (or have file size 0)
 - df_purge_faulty_mp3_2      Removes tracks which can't be opened and therefore have NaN length
@@ -161,7 +161,7 @@ def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool
     df = df_purge_mismatches(df)
     print("done")
 
-    print("Purging faulty MP3 files...")
+    print("Purging faulty mp3 files...")
     print("    Checking files with size less than threshold...", end=" ")
     df = df_purge_faulty_mp3_1(df, threshold=min_size)
     print("done")
@@ -183,7 +183,7 @@ def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool
 
 def die_with_usage():
     print()
-    print("track_wrangle.py - Script to merge the list of MP3 files obtained with track_fetch.py with the MSD summary file, remove")
+    print("track_wrangle.py - Script to merge the list of mp3 files obtained with track_fetch.py with the MSD summary file, remove")
     print("                   unwanted entries such as mismatches, faulty files or duplicates, and output a CSV file with the")
     print("                   following columns: 'track_id', 'track_7digitalid', 'path', track_length', 'file_size', 'channels'")
     print()

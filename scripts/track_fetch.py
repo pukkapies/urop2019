@@ -1,4 +1,4 @@
-''' Contains tools to fetch MP3 files on our server and analyze their size, length and number of channels
+''' Contains tools to fetch mp3 files on our server and analyze their size, length and number of channels
 
 
 Notes
@@ -7,14 +7,14 @@ This file can be run as a script. To do so, just type 'python track_fetch.py' in
 page should contain all the options you might possibly need.
 
 IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
-set the directory in which the 7Digital MP3 files are stored.
+set the directory in which the 7Digital mp3 files are stored.
 
 
 Functions
 ---------
-- set_mp3_root_dir              Tells the script where MP3 files are stored
-- find_tracks                   Performs an os.walk to find all the MP3 files within mp3_root_dir
-- find_tracks_with_7dids        Extracts the 7Digital ID from the MP3 filenames
+- set_mp3_root_dir              Tells the script where mp3 files are stored
+- find_tracks                   Performs an os.walk to find all the mp3 files within mp3_root_dir
+- find_tracks_with_7dids        Extracts the 7Digital ID from the mp3 filenames
 - check_size                    Extends the columns of the given dataframe to identify the size of the tracks
 - check_mutagen_info            Extends the columns of the given dataframe to identify if the tracks 
                                 can be opened and the duration and number of channels of the tracks
@@ -60,7 +60,7 @@ def check_size(df):
         A dataframe that has one extra column:
         
         'file_size': float
-            The file size of the MP3 file.
+            The file size of the mp3 file.
         
     
     '''
@@ -116,7 +116,7 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
         path = os.path.join(mp3_root_dir, path)
         # path = mp3_root_dir[:-1]+ path # DAVIDE: same comment as above...
         try:
-            audio = mutagen.mp3.MP3(path)
+            audio = mutagen.mp3.mp3(path)
             l.append(audio.info.length)
             c.append(audio.info.channels)
         except:
@@ -138,7 +138,7 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
 
 def die_with_usage():
     print()
-    print("track_fetch.py - Script to search for MP3 files within mp3_root_dir and output a CSV file with (optionally) the")
+    print("track_fetch.py - Script to search for mp3 files within mp3_root_dir and output a CSV file with (optionally) the")
     print("                 following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'")
     print()
     print("Usage:     python track_fetch.py <output filename> [options]")

@@ -1,4 +1,4 @@
-''' Contains tools for fetching MP3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty MP3 files, tracks without tags or duplicates
+''' Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
 
 
 Notes
@@ -12,7 +12,7 @@ This script performs the following operations:
 - preparing the directory: see create_folder_structure
 
 - saving information on silence: no_sound() saves the information about silence in npz files, as well
-                                 as the converted arrays and sampling rate of the original MP3 to speed up 
+                                 as the converted arrays and sampling rate of the original mp3 to speed up 
                                  the loading process in the future
 
 - progress check: no_sound_count() can be used to check progress of no_sound() on seperate window
@@ -233,7 +233,7 @@ def no_sound_count(df, final_check=False):
 
 def die_with_usage():
     print()
-    print("mp3_to_npz.py - Script to convert MP3 files into waveform NumPy arrays.")
+    print("mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.")
     print()
     print("Usage:     python track_fetch.py <input filename> [options]")
     print()

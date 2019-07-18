@@ -6,7 +6,7 @@ Notes
 The lastfm_tags database contains 3 tables: tids, tags, tid_tag.
 - tids, 1-column table containing the track ids.
 - tid_tags, contains 3 columns:
-    - tid: rowid of the track id in the tids table
+    - tid: rowid of the track id in the tids table.
     - tag: rowid of the tag that belongs to the tid in the same row.
     - val: number between 0 and 100 (guessing this is how accurate the tag is?)
 - tags, 1-column table containing the tags.

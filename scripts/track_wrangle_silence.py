@@ -1,4 +1,4 @@
-''' Contains tools for discarding MP3 files that are entirely or in major part silent
+''' Contains tools for discarding mp3 files that are entirely or in major part silent
 
 
 Notes
@@ -302,7 +302,7 @@ def filter_max_silence_duration(df, threshold):
 
 def die_with_usage():
     print()
-    print("NOOOOO: mp3_to_npz.py - Script to convert MP3 files into waveform NumPy arrays.")
+    print("NOOOOO: mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.")
     print()
     print("Usage:     python track_wrangle_silence.py <input csv filename or path> <output csv filename or path> [options]")
     print()
