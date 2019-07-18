@@ -143,7 +143,7 @@ def savez(path):
 
 # DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
 
-def no_sound(df, start=0, end=501070, verbose=True):
+def no_sound(df, start=0, end=None, verbose=True):
     '''
     Parameters
     ----------
@@ -180,6 +180,8 @@ def no_sound(df, start=0, end=501070, verbose=True):
             represent one section -- starting position and ending position of 
             array respectively.
     '''
+    if end == None:
+        end = len(df)
     # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
     # for idx, path in enumerate(paths)
     for idx, path in enumerate(df['path'][start:end]): # DAVIDE: the efficience gain is in milliseconds
