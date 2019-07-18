@@ -1,4 +1,25 @@
-''' Script for converting waveforms into spectrograms and saving as TFRecords file
+''' Script for processing .npz files and saving as a TFRecords file
+
+Notes
+-----
+This file can be run as a script, for more information on possible arguments type 
+audio_processing -h in the terminal.
+
+IMPORTANT: If using this script elsewhere than on boden then remember to use the option --root-dir
+to set directory where the .npz files are stored. The directory needs to have a given layout:
+Under the directory, all non-folders must be .npz files. The name of a file is given by the
+7digital id and it will be located under "root_dir/digit 1/digit 2/7digital id.npz", where digit 1
+and 2 are the first and second digits of the 7digital id
+
+Functions
+---------
+- get_filepaths             Gets paths to all .npz files contained under root_dir.
+- process_array             Process array and apply desired audio format.
+- get_tid_from_path         Gets tid associated to file, given path.
+- filter_tags               TODO
+- encode_tags               TODO
+- _bytes_feature            Creates a BytesList feature.
+- get_example               Gets a tf.train.Example object given array, tid and encoded_tags.
 
 '''
 
@@ -7,13 +28,19 @@
 
 import os
 import sys
+import argparse
 
 import librosa
 import numpy as np
 import tensorflow as tf
 
-from .modules import query_lastfm as q_fm
-from .modules import query_msd_summary as q_msd
+if os.path.basename(os.getcwd()) == 'scripts':
+    sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
+else:
+    sys.path.insert(0, os.path.join(os.getcwd(), 'modules'))
+
+import query_lastfm as q_fm
+import query_msd_summary as q_msd
 
 
 root_dir = '/srv/data/urop/7digital_numpy/'
@@ -21,7 +48,20 @@ TAGS = [] # Allowed tags
 
 
 def get_filepaths():
-    ''' Gets paths to all .npz files and returns them in a list '''
+    ''' Gets paths to all .npz files 
+    
+    Returns
+    -------
+    list
+        list containing paths (str) to every file under the root_dir directory.
+    
+    Notes
+    -----
+    All of the .npz files are located in the root_dir directory by the following structure:
+    The name of each file is given by its 7digital_id, it is then located under the path
+    "root_dir/digit 1/digit 2/7digital id.npz". Digit 1 and 2 refers to the first and second
+    digit in the 7digital id.
+    '''
 
     paths = [] 
     for i in range(10):
@@ -35,10 +75,8 @@ def get_filepaths():
 
 def process_array(array, sr, audio_format):
     # TODO: Change name of audio format
-    ''' Returns processed array with desired audio format 
+    ''' Processesing array and applying desired audio format 
     
-    Summary
-    -------
     The array is processed by the following steps:
     1. Converted to mono (if not already)
     2. Resampling to 16 kHz
@@ -50,8 +88,8 @@ def process_array(array, sr, audio_format):
         unprocessed array, directly from the .npz file
     sr : int
         sample rate
-    audio_format : str
-        desired audio format
+    audio_format : {"log-mel-spectrogram", "MFCC", "waveform"}
+        desired audio format, if none of the above it defaults to "waveform"
 
 
     Returns
@@ -71,10 +109,11 @@ def process_array(array, sr, audio_format):
     
     # Something along these lines?? Very likely to be changed given
     # how we choose to incorporate sysarg
-    if audio_format == "log-mel-spectrogram"
+    if audio_format == "log-mel-spectrogram":
         array = np.log(librosa.feature.melspectrogram(array, 16000))
     elif audio_format == "MFCC":
         # TODO: Maybe some MFCCs??
+        array = "???"
     
     return array
 
@@ -103,7 +142,23 @@ def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 def get_example(array, tid, encoded_tags):
-    '''  '''
+    ''' Gets a tf.train.Example object
+    
+    Parameters
+    ----------
+    array : ndarray
+        ndarray containing audio data.
+
+    tid : str
+
+    encoded_tags : ???
+        ???
+
+    
+    Returns
+    -------
+    A tf.train.Example object
+    '''
     # TODO: Refine following outline of the saving to TFRecords procedure
     array_str = tf.io.serialize_tensor(tf.convert_to_tensor(array))
     example = tf.train.Example(
@@ -111,23 +166,32 @@ def get_example(array, tid, encoded_tags):
                 feature={
                     'spectrogram' : _bytes_feature(array_str),
                     'tid' :         _bytes_feature(bytes(tid)),
-                    'tags' :        # TODO: After knowing encoding?
+                    'tags' :        encoded_tags # TODO: After knowing encoding?
             }))
     return example
 
-
 if __name__ == '__main__':
 
-    # TODO: Fix sys args, need to get audio_format 
+    # TODO: Maybe add more arguments?? train/val/test maybe?
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
+    parser.add_argument("--root-dir", help="Set absolute path to directory containing the .npz files, defaults to path on boden")
+    
+    args = parser.parse_args()
 
+    if args.root_dir:
+       root_dir = args.path 
+    
+
+    
     paths = get_filepaths()
-        
+    
     with tf.python_io.TFRecordWriter(tf_filename) as writer: # TODO: Decide filename 
         for path in paths:
             # Loading the unsampled file from path of npz file   
             unsampled_file = np.load(path)
             processed_array = process_array(unsampled_file['array'], 
-                                            unsampled_file['sr'], audio_format)
+                                            unsampled_file['sr'], args.format)
 
             # TODO: make get_tid_from_path()
             tid = get_tid_from_path(path)
