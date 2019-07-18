@@ -213,40 +213,32 @@ if __name__ == '__main__':
 
     # TODO: Maybe add more arguments?? train/val/test maybe?
     parser = argparse.ArgumentParser()
+    parser.add_argument("split", help"train/val/test split, supply as TRAIN/VAL/TEST")
     parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
     parser.add_argument("--root-dir", help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     
     args = parser.parse_args()
 
+    train = 0.7
+    val = 0.2
+    test = 0.1
+
     if args.root_dir:
        root_dir = args.path 
-    
-
+    if args.split 
+        values = [float(_) for _ in args.split.split("/") ]
+        tot = sum(values)
+        train, val, test = [val/tot for val in values]
     
     paths = get_filepaths()
+    np.random.seed(1)
+    paths = np.random.shuffle(paths)
+    size = len(paths)
 
-    #Here declare the ratio's of train test val split, they must add up to 100
-    train_test_val = [70, 20, 10]
-    train_paths = []
-    test_paths = []
-    val_paths = []
+    train_paths = paths[:size*train]
+    test_paths = paths[size*train:size*(train+val)]
+    val_paths = paths[size*(train+val):]
 
-    for path in paths:
-        number = random.randint(1,101)
-        if number < train_test_val[0]+1:
-            train_paths.append(path)
-        elif number < train_test_val[0] + train_test_val[1] +1:
-            test_paths.append(path)
-        else:
-            val_paths.append(path)
-    
-
-    
     save_examples_to_tffile(train_paths, "tf_train_"+args.format, args.format)
     save_examples_to_tffile(test_paths, "tf_test_"+args.format, args.format)
     save_examples_to_tffile(val_paths, "tf_val_"+args.format, args.format)
-    
-
-
-"These scripts are still fairly untested and should only be used after we sort out the couple of points"
-
