@@ -33,6 +33,7 @@ import argparse
 import librosa
 import numpy as np
 import tensorflow as tf
+import random
 
 if os.path.basename(os.getcwd()) == 'scripts':
     sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
@@ -170,6 +171,44 @@ def get_example(array, tid, encoded_tags):
             }))
     return example
 
+
+
+
+
+def save_examples_to_tffile(paths, tf_filename, audio_format):
+
+    """
+    Given paths to the unsampled files, this function saves the examples(processed array, tid and tags) to a tf_record file
+    
+    Inupts:
+    1) paths - list of paths to unsampled tracks
+    2) tf_filename - name of TFRecord file you want to save to
+    3) audio_format - format we want to save in check process array for more details
+    """
+
+    with tf.python_io.TFRecordWriter(tf_filename) as writer: # TODO: Decide filename 
+        for path in paths:
+
+            # Loading the unsampled file from path of npz file   
+            unsampled_file = np.load(path)
+            processed_array = process_array(unsampled_file['array'], 
+                                            unsampled_file['sr'], audio_format)
+
+            # TODO: make get_tid_from_path()
+            tid = get_tid_from_path(path)
+            tags = q_fm.get_tags(tid) 
+            # TODO: make filter_tags() (when we decide how)
+            tags = filter_tags(tags)
+            # TODO: make encode_tags() (when we decide how)
+            encoded_tags = encode_tags(tags) 
+
+            # TODO: Refine get_example() 
+            example = get_example(processed_array, tid, encoded_tags)
+            writer.write(example.SerializeToString())
+
+
+
+
 if __name__ == '__main__':
 
     # TODO: Maybe add more arguments?? train/val/test maybe?
@@ -185,25 +224,29 @@ if __name__ == '__main__':
 
     
     paths = get_filepaths()
+
+    #Here declare the ratio's of train test val split, they must add up to 100
+    train_test_val = [70, 20, 10]
+    train_paths = []
+    test_paths = []
+    val_paths = []
+
+    for path in paths:
+        number = random.randint(1,101)
+        if number < train_test_val[0]+1:
+            train_paths.append(path)
+        elif number < train_test_val[0] + train_test_val[1] +1:
+            test_paths.append(path)
+        else:
+            val_paths.append(path)
     
-    with tf.python_io.TFRecordWriter(tf_filename) as writer: # TODO: Decide filename 
-        for path in paths:
-            # Loading the unsampled file from path of npz file   
-            unsampled_file = np.load(path)
-            processed_array = process_array(unsampled_file['array'], 
-                                            unsampled_file['sr'], args.format)
 
-            # TODO: make get_tid_from_path()
-            tid = get_tid_from_path(path)
-            tags = q_fm.get_tags(tid) 
-            # TODO: make filter_tags() (when we decide how)
-            tags = filter_tags(tags)
-            # TODO: make encode_tags() (when we decide how)
-            encoded_tags = encode_tags(tags) 
+    
+    save_examples_to_tffile(train_paths, "tf_train_"+args.format, args.format)
+    save_examples_to_tffile(test_paths, "tf_test_"+args.format, args.format)
+    save_examples_to_tffile(val_paths, "tf_val_"+args.format, args.format)
+    
 
-            # TODO: Refine get_example() 
-            example = get_example(processed_array, tid, encoded_tags)
-            writer.write(example.SerializeToString())
 
 "These scripts are still fairly untested and should only be used after we sort out the couple of points"
 
