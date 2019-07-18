@@ -42,11 +42,13 @@ Functions
 - ultimate_output            Combine all the previous functions and produces a dataframe accoring to the given parameters
 '''
 
+import os
+import sys
+import argparse
+
 import h5py
 import numpy as np
-import os
 import pandas as pd
-import sys
 # from mutagen import mp3 as mg
 # from track_fetch import * # I am not importing a module, but rather taking the output of the script
 
@@ -194,75 +196,41 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, min_length: int = 0, di
     
     return merged_df
 
-def die_with_usage():
-    print()
-    print("track_wrangle.py - Script to merge the list of mp3 files obtained with track_fetch.py with")
-    print("                   the MSD summary file, remove unwanted entries such as mismatches, faulty")
-    print("                   files or duplicates, and output a csv file with the following columns:")
-    print("                   'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size', 'channels'")
-    print()
-    print("Usage:     python track_wrangle.py <input csv filename or path> <output csv filename or path> [options]")
-    print()
-    print("General Options:")
-    print("  --path-h5              Set path to msd_summary_file.h5.")
-    print("  --path-txt-mism        Set path to mismatches info file.")
-    print("  --path-txt-dupl        Set path to duplicates info file.")
-    print("  --discard-no-tag       Choose to discard tracks with no tags.")
-    print("  --discard-dupl         Choose to discard duplicate tracks.")
-    print("  --help                 Show this help message and exit.")
-    print("  --min-size             Set the minimum size (in bytes) to allow (default 0).")
-    print()
-    print("Example:   python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag")
-    print()
-    sys.exit(0)
-
 if __name__ == "__main__":
-
-    if len(sys.argv) < 3:
-        die_with_usage()
     
-    if '--help' in sys.argv:
-        if len(sys.argv) == 2:
-            die_with_usage()
-        else:
-            print("???")
-            sys.exit(0)
+    description = """Script to merge the list of mp3 files obtained with track_fetch.py with
+                     the MSD summary file, remove unwanted entries such as mismatches, faulty
+                     files or duplicates, and output a csv file with the following columns:
+                     'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size', 'channels'"""
+
+    epilog = "Example:   python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag"
+
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
+    parser.add_argument("input", help="Input csv filename or path")
+    parser.add_argument("output", help="Input csv filename or path")
+    parser.add_argument("--path-h5", help="Set path to msd_summary_file.h5.")
+    parser.add_argument("--path-txt-dupl", help="Set path to duplicates info file.")
+    parser.add_argument("--path-txt-mism", help="Set path to mismatches info file.")
+    parser.add_argument("--min-size", type=int, default=0, help="Set the minimum size (in bytes) to allow (default 0).")
+    parser.add_argument("--discard-no-tag", action="store_true", help="Choose to discard tracks with no tags.")
+    parser.add_argument("--discard-dupl", action="store_true", help="Choose to discard duplicate tracks.")
     
-    if sys.argv[2][-4:] == '.csv':
-        output = sys.argv[2]
-    else:
-        output = sys.argv[2] + '.csv'
-        
-    min_size = 0
-    discard_no_tag = False
-    discard_dupl = False
-
-
-    while True:
-        if len(sys.argv) == 3:
-            break
-        elif sys.argv[3] == '--path-h5':
-            set_path_h5(os.path.expanduser(sys.argv[4]))
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--path-txt-mism':
-            set_path_txt_mismatches(os.path.expanduser(sys.argv[4]))
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--path-txt-dupl':
-            set_path_txt_duplicates(os.path.expanduser(sys.argv[4]))
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--min-size':
-            min_size = int(sys.argv[3])
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--discard-no-tag':
-            discard_no_tag = True
-            del sys.argv[3]
-        elif sys.argv[3] == '--discard-dupl':
-            discard_dupl = True
-            del sys.argv[3]     
-        else:
-            print("???")
-            sys.exit(0)
-
-    df = pd.read_csv(sys.argv[1])
-    df = ultimate_output(df, min_size, discard_no_tag, discard_dupl)
-    df.to_csv(output, index=False)
+    args = parser.parse_args()
+    
+    if args.input[-4:] != '.csv':
+        args.input = args.input + '.csv'
+    if args.output[-4:] != '.csv':
+        args.output = args.output + '.csv'
+    # Setting paths
+    if args.path_h5:
+        path_h5 = args.path_h5
+    if args.path_txt_mism:
+        path_txt_mismatches = args.path_txt_mism
+    if args.path_txt_dupl:
+        path_txt_duplicates = args.path_txt_dupl
+    print(args)
+    """
+    df = pd.read_csv(args.input)
+    df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
+    df.to_csv(args.output, index=False)
+    """

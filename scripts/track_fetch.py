@@ -12,8 +12,6 @@ set the directory in which the 7Digital mp3 files are stored.
 
 Functions
 ---------
-- set_mp3_root_dir              Tells the script where mp3 files are stored
-
 - find_tracks                   Performs an os.walk to find all the mp3 files within mp3_root_dir
 
 - find_tracks_with_7dids        Extracts the 7Digital ID from the mp3 filenames
@@ -32,10 +30,6 @@ import mutagen.mp3
 import pandas as pd
 
 mp3_root_dir = '/srv/data/msd/7digital/'
-
-def set_mp3_root_dir(new_root_dir): # DAVIDE: now same function name and var name across all modules, to avoid errors
-    global mp3_root_dir
-    mp3_root_dir = new_root_dir
 
 def find_tracks(abs_path = False):
     paths = []
@@ -168,6 +162,8 @@ if __name__ == "__main__":
    
     if args.output[-4:] != '.csv':
         args.output = args.output + '.csv' 
+    if args.root_dir:
+        mp3_root_dir = args.root_dir    
     
     add_length = not args.no_length 
     add_channels = not args.no_channels
