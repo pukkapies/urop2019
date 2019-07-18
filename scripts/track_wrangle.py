@@ -65,18 +65,6 @@ path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
 path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
 
-def set_path_h5(new_path):
-    global path_h5
-    path_h5 = new_path
-
-def set_path_txt_mismatches(new_path):
-    global path_txt_mismatches
-    path_txt_mismatches = new_path
-
-def set_path_txt_duplicates(new_path):
-    global path_txt_duplicates
-    path_txt_duplicates = new_path
-
 def extract_ids_from_summary(): # my mistake, this function should have always been here
     with h5py.File(path_h5, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
@@ -228,9 +216,8 @@ if __name__ == "__main__":
         path_txt_mismatches = args.path_txt_mism
     if args.path_txt_dupl:
         path_txt_duplicates = args.path_txt_dupl
-    print(args)
-    """
+    
+    
     df = pd.read_csv(args.input)
     df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
     df.to_csv(args.output, index=False)
-    """

@@ -154,9 +154,9 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="store_true", help="Show progress.")
     parser.add_argument("--root-dir", help="Set different mp3_root_dir.")
     parser.add_argument("--abs-path", action="store_true", help="Use absolute paths in output file.")
-    parser.add_argument("--no-size", action="store_true", help="Do not add column containing file sizes to output file.")
-    parser.add_argument("--no-length",action="store_true", help="Do not add column containing track lengths to output file.")
-    parser.add_argument("--no-channels", action="store_true", help="Do not add column containing track number of channels to output file.")
+    parser.add_argument("--no-size", action="store_false", dest="add_size", help="Do not add column containing file sizes to output file.")
+    parser.add_argument("--no-length", action="store_false", dest="add_length", help="Do not add column containing track lengths to output file.")
+    parser.add_argument("--no-channels", action="store_false", dest="add_channels", help="Do not add column containing track number of channels to output file.")
 
     args = parser.parse_args()
    
@@ -165,13 +165,9 @@ if __name__ == "__main__":
     if args.root_dir:
         mp3_root_dir = args.root_dir    
     
-    add_length = not args.no_length 
-    add_channels = not args.no_channels
-
-
     df = find_tracks_with_7dids(args.abs_path)
-    if add_length == True or add_channels == True:
-        df = check_mutagen_info(df, add_length, add_channels, args.verbose)
-    if args.no_size != True:
+    if args.add_length == True or args.add_channels == True:
+        df = check_mutagen_info(df, args.add_length, args.add_channels, args.verbose)
+    if args.add_size == True:
         df = check_size(df)
     df.to_csv(args.output, index=False)
