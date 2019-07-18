@@ -149,7 +149,7 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
 
 def die_with_usage():
     print()
-    print("track_fetch.py - Script to search for mp3 files within mp3_root_dir and output a CSV file with (optionally) the")
+    print("track_fetch.py - Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the")
     print("                 following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'")
     print()
     print("Usage:     python track_fetch.py <output filename> [options]")

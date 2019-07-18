@@ -196,9 +196,10 @@ def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool
 
 def die_with_usage():
     print()
-    print("track_wrangle.py - Script to merge the list of mp3 files obtained with track_fetch.py with the MSD summary file, remove")
-    print("                   unwanted entries such as mismatches, faulty files or duplicates, and output a CSV file with the")
-    print("                   following columns: 'track_id', 'track_7digitalid', 'path', track_length', 'file_size', 'channels'")
+    print("track_wrangle.py - Script to merge the list of mp3 files obtained with track_fetch.py with")
+    print("                   the MSD summary file, remove unwanted entries such as mismatches, faulty")
+    print("                   files or duplicates, and output a csv file with the following columns:")
+    print("                   'track_id', 'track_7digitalid', 'path', 'track_length','file_size', 'channels'")
     print()
     print("Usage:     python track_wrangle.py <input csv filename or path> <output csv filename or path> [options]")
     print()
