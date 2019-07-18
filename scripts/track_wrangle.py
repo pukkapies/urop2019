@@ -128,12 +128,13 @@ def read_duplicates():
         l.append(t)
     return l
 
-def df_purge_duplicates(track_df: pd.DataFrame):
+def df_purge_duplicates(track_df: pd.DataFrame, randomness: bool = False):
     df = track_df.set_index('track_id')
     dups = read_duplicates()
     idxs = df.index
     to_drop = [[tid for tid in sublist if tid in idxs] for sublist in dups]
-    np.random.seed(42)
+    if not randomness:
+        np.random.seed(42)
     for sublist in to_drop:
             if len(sublist) > 1:
                 sublist.pop(np.random.randint(len(sublist)))
