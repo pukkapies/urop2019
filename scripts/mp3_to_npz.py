@@ -83,6 +83,12 @@ def create_folder_structure():
 def mp3_path_to_npz_path(path):
     return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
 
+def savez(path):
+    path_npz = mp3_path_to_npz_path(path)
+    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
+    array_split = librosa.effects.split(librosa.core.to_mono(array))
+    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
+
 # def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
 #     '''
 #     Parameters
@@ -117,11 +123,6 @@ def mp3_path_to_npz_path(path):
 #     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 # DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
-def savez(path):
-    path_npz = mp3_path_to_npz_path(path)
-    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
-    array_split = librosa.effects.split(librosa.core.to_mono(array))
-    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 def no_sound(df, start=0, end=501070, verbose=True):
     '''
