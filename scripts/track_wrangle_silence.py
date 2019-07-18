@@ -188,10 +188,10 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
     df['effective_track_length'] = df['audio_end'] - df['audio_start']
     df['mid_silence_length'] = pd.Series(mid_silence_length, index=df.index)
     df['non_silence_length'] = df['effective_track_length'] - df['mid_silence_length']
-    df['silence_percentage'] = df['non_silence_length'] / df['effective_track_length'] * 100
+    df['silence_percentage'] = df['mid_silence_length'] / df['effective_track_length'] * 100
     df['silence_detail'] = pd.Series(silence, index=df.index)
-    df['silence_detail_length'] = df['silence_detail'].apply(lambda l: [i[1] - i[0] for i in l]) #
-    df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: np.max(l)) # DAVIDE: check them out, both one-liner's ;)
+    df['silence_detail_length'] = df['silence_detail'].apply(lambda l: [i[1] - i[0] for i in l])
+    df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l)) # DAVIDE: check them out, both one-liner's ;)
           
     # def get_duration(x): # DAVIDE: both added above...
     #     for i in x:
