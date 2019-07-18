@@ -69,7 +69,7 @@ def check_size(df):
     
     '''
     s = []
-    for path in df['paths']: 
+    for path in df['path']: 
         # path = mp3_root_dir[:-1] + path # DAVIDE: what's wrong with os.path.join? string concatenation is more dangerous, what if path is an absolute path?
         path = os.path.join(mp3_root_dir, path)
         s.append(os.path.getsize(path))
@@ -120,12 +120,13 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
         path = os.path.join(mp3_root_dir, path)
         # path = mp3_root_dir[:-1]+ path # DAVIDE: same comment as above...
         try:
-            audio = mutagen.mp3.mp3(path)
+            audio = mutagen.mp3.MP3(path)
             l.append(audio.info.length)
             c.append(audio.info.channels)
         except:
             l.append('')
             c.append('')
+            print('ERROR opening ' + path)
             continue
         
         if verbose == True:
