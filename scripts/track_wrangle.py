@@ -42,6 +42,7 @@ Functions
 '''
 
 import h5py
+import numpy as np
 import os
 import pandas as pd
 import sys
@@ -129,24 +130,20 @@ def read_duplicates():
         l.append(t)
     return l
 
-def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
+def df_purge_duplicates(track_df: pd.DataFrame):
+    df = track_df.set_index('track_id')
     dups = read_duplicates()
-    idxs = track_df.set_index('track_id').index
-    dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
-
-    if mode == 'random': # the only mode currently supported
-        df = track_df.set_index('track_id')
-        to_drop = dups_purged
-        for subset in to_drop:
-            if len(subset) > 1:
-                subset.pop()
+    idxs = df.index
+    to_drop = [[tid for tid in sublist if tid in idxs] for sublist in dups]
+    np.random.seed(42)
+    for sublist in to_drop:
+            if len(sublist) > 1:
+                sublist.pop(np.random.randint(len(sublist)))
             else:
                 continue
-        to_drop = [tid for sublist in to_drop for tid in sublist]
-        df.drop(to_drop, inplace=True)
-        return df.reset_index()
-    else:
-        raise NameError("mode '" + mode + "' is not defined")
+    to_drop = [tid for sublist in to_drop for tid in sublist]
+    df.drop(to_drop, inplace=True)
+    return df.reset_index()
 
 def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False, add_length: bool = False, add_size: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid' and 'path'.
@@ -196,35 +193,6 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
         print("done")
     
     return df
-
-# def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False):
-#     ''' Produces a list containing ONLY tracks on our server where each sublists contains all the duplicates for a song
-    
-#     Parameters
-#     ----------
-#     threshold : int
-#         the tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value)
-    
-#     discard_no_tag : bool
-#         if True, discards tracks which are not matched to any tag
-
-#     Returns
-#     -------
-#     dups_purged : list of lists
-#         - elements are all the 53471 sets of duplicates as given in the msd_duplicates.txt file (some might now be empty)
-#         - elements within lists are all the duplicate tids of some specific song - discarding inexistent tracks, mismatches and faulty audio files 
-#     '''
-#     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
-#     df = df_purge_mismatches(df)
-#     df = df_purge_faulty_mp3(df, threshold=threshold)      #this is wrong, please change it.
-    
-#     if discard_no_tag == True:
-#         df = df_purge_no_tag(df)
-
-#     dups = read_duplicates()
-#     idxs = df.set_index('track_id').index
-#     dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
-#     return dups_purged
 
 def die_with_usage():
     print()
