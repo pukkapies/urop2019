@@ -357,8 +357,6 @@ if __name__ == "__main__":
         print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
         set_mp3_root_dir(mp3_root_dir_infer)
 
-    
-
     df = check_silence(df)
     if filt_trim_length:
         df = filter_trim_length(df, filt_trim_length)
