@@ -229,7 +229,7 @@ if __name__ == "__main__":
     else:
         output = sys.argv[2] + '.csv'
         
-    min-size = 0
+    min_size = 0
     discard_no_tag = False
     discard_dupl = False
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
         if len(sys.argv) == 3:
             break
         elif sys.argv[3] == '--min-size':
-            min-length = int(sys.argv[3])
+            min_size = int(sys.argv[3])
             del sys.argv[3:5]
         elif sys.argv[3] == '--discard-no-tag':
             discard_no_tag = True
