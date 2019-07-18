@@ -147,9 +147,8 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
     audio_end = []
     mid_silence_length = []
     silence = []
-    paths = df['path'] #
     
-    for idx, path in enumerate(paths):
+    for idx, path in enumerate(df['paths']):
         #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # ADEN: was wrong, fixed it.
         #path_npz = npz_root_dir[:-1]+ path[:-9] + '.npz'
         #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # DAVIDE: it works! and os.path.join is ALWAYS safer than string concatenation
@@ -357,6 +356,8 @@ if __name__ == "__main__":
         print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
         print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
         set_mp3_root_dir(mp3_root_dir_infer)
+
+    
 
     df = check_silence(df)
     if filt_trim_length:
