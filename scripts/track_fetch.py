@@ -24,10 +24,12 @@ Functions
                                 opened and the duration and number of channels of the tracks
 '''
 
-import mutagen.mp3
 import os
-import pandas as pd
 import sys
+import argparse
+
+import mutagen.mp3
+import pandas as pd
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 
@@ -147,79 +149,33 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
         df['channels'] = pd.Series(c, index=df.index) # DAVIDE: 'channels' though must necessarily be plural, since 'channel' makes no sense
     return df
 
-def die_with_usage():
-    print()
-    print("track_fetch.py - Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the")
-    print("                 following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'")
-    print()
-    print("Usage:     python track_fetch.py <output filename> [options]")
-    print()
-    print("General Options:")
-    print("  --abs-path             Use absolute paths in output file.")
-    print("  --no-size              Do not add column containing file sizes to output file.")
-    print("  --no-length            Do not add column containing track lengths to output file.")
-    print("  --no-channels          Do not add column containing track number of channels to output file.")
-    print("  --root-dir             Set different mp3_root_dir.")
-    print("  --help                 Show this help message and exit.")
-    print("  --verbose              Show progress.")
-    print()
-    print("Example:   python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --no-channels --verbose")
-    print()
-    sys.exit(0)
-
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
-        die_with_usage()
+    description = """Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the 
+                     following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'"""
+    epilog = "Example:   python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --no-channels --verbose"
+
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
+    parser.add_argument("output", help="Output filename")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show progress.")
+    parser.add_argument("--root-dir", help="Set different mp3_root_dir.")
+    parser.add_argument("--abs-path", action="store_true", help="Use absolute paths in output file.")
+    parser.add_argument("--no-size", action="store_true", help="Do not add column containing file sizes to output file.")
+    parser.add_argument("--no-length",action="store_true", help="Do not add column containing track lengths to output file.")
+    parser.add_argument("--no-channels", action="store_true", help="Do not add column containing track number of channels to output file.")
+
+    args = parser.parse_args()
+   
+    if args.output[-4:] != '.csv':
+        args.output = args.output + '.csv' 
     
-    if '--help' in sys.argv:
-        if len(sys.argv) == 2:
-            die_with_usage()
-        else:
-            print("???")
-            sys.exit(0)
-    
-    if sys.argv[1][-4:] == '.csv':
-        output = sys.argv[1]
-    else:
-        output = sys.argv[1] + '.csv'
+    add_length = not args.no_length 
+    add_channels = not args.no_channels
 
-    abs_path = False
 
-    add_size = True
-    add_length = True
-    add_channels = True
-    
-    verbose = False
-
-    while True:
-        if len(sys.argv) == 2:
-            break
-        elif sys.argv[2] == '--root-dir':
-            set_mp3_root_dir(os.path.expanduser(sys.argv[3]))
-            del sys.argv[2:4]
-        elif sys.argv[2] == '--abs-path':
-            abs_path = True
-            del sys.argv[2]
-        elif sys.argv[2] == '--no-size':
-            add_size = False
-            del sys.argv[2]
-        elif sys.argv[2] == '--no-length':
-            add_length = False
-            del sys.argv[2]   
-        elif sys.argv[2] == '--no-channels':
-            add_channels = False
-            del sys.argv[2]
-        elif sys.argv[2] == '--verbose':
-            verbose = True
-            del sys.argv[2]     
-        else:
-            print("???")
-            sys.exit(0)
-
-        df = find_tracks_with_7dids(abs_path)
-        if add_length == True or add_channels == True:
-            df = check_mutagen_info(df, add_length, add_channels, verbose)
-        if add_size == True:
-            df = check_size(df)
-        df.to_csv(output, index=False)
+    df = find_tracks_with_7dids(args.abs_path)
+    if add_length == True or add_channels == True:
+        df = check_mutagen_info(df, add_length, add_channels, args.verbose)
+    if args.no_size != True:
+        df = check_size(df)
+    df.to_csv(args.output, index=False)

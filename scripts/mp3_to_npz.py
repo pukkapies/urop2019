@@ -31,10 +31,6 @@ Examples
 
 Functions
 ---------
-- set_mp3_root_dir              Tells the script the root directory of where mp3s were stored
-
-- set_mpz_root_dir              Tells the script the root directory of where numpy arrays will be stored
-
 - create_folder_structure       Copies the folder structure of how the mp3 files are saved and produce 
                                 the same folder structure under a new directory, which will be used to save
                                 the converted numpy arrays
@@ -51,23 +47,17 @@ Functions
                            
 '''
 
-import librosa
-import numpy as np
 import os
-import pandas as pd
 import sys
 import time
+import argparse
+
+import librosa
+import numpy as np
+import pandas as pd
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
-
-def set_mp3_root_dir(new_root_dir):
-    global mp3_root_dir
-    mp3_root_dir = new_root_dir
-
-def set_npz_root_dir(new_root_dir):
-    global npz_root_dir
-    npz_root_dir = new_root_dir
 
 def create_folder_structure():
     '''
@@ -203,7 +193,7 @@ def no_sound_count(df, final_check=False):
      
     # paths = df['path'].tolist()  # ADEN: This is probability more efficient. # DAVIDE the efficience gain is in milliseconds, and it is one line more of code
     # for idx, path in enumerate(paths):
-    for idx, path in enumerate(df['path'])
+    for idx, path in enumerate(df['path']):
         path_npz = npz_root_dir[:-1] + path[:-9]
         if os.path.isfile(path_npz + '.npz'):
             count += 1
@@ -234,29 +224,16 @@ def die_with_usage():
     sys.exit(0)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.",
+                                     epilog= "Example: python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
+    parser.add_argument("--root-dir-npz", help="Set different directory to save npz files.")
+    parser.add_argument("--root-dir-mp3", help="Set different directory to find mp3 files.")
 
-    if len(sys.argv) < 2:
-        die_with_usage()
-    
-    if '--help' in sys.argv:
-        if len(sys.argv) == 2:
-            die_with_usage()
-        else:
-            print("???")
-            sys.exit(0)
-
-    while True:
-        if len(sys.argv) == 2:
-            break
-        elif sys.argv[2] == '--root-dir-mp3':
-            set_mp3_root_dir(sys.argv[3])
-            del sys.argv[2:4]
-        elif sys.argv[2] == '--root-dir-npz':
-            set_npz_root_dir(sys.argv[3])
-            del sys.argv[2:4]  
-        else:
-            print("???")
-            sys.exit(0)
+    args = parser.parse_args()
+    if args.root_dir_npz:
+        npz_root_dir = args.root_dir_npz
+    if args.root_dir_mp3:
+        mp3_root_dir = args.root_dir_mp3
 
     df = pd.read_csv(sys.argv[1])
     create_folder_structure()
