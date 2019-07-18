@@ -1,20 +1,22 @@
-"""
+''' Contains tools for discarding MP3 files that are entirely or in major part silent
 
-"""
-'''
-Note
-----
-This module interprets the result obtained from mp3_to_npz.py. The structure 
-can be divided into two steps:
+
+Notes
+-----
+This file can be run as a script. To do so, just type 'python mp3_to_npz.py' in the terminal. The help 
+page should contain all the options you might possibly need. You will first need to run track_fetch.py (or
+track_wrangle.py) in order have the right input file for this script, and mp3_to_npz.py in order to have
+the right npz files ready.
+
+This script performs the following operations:
     
--Analyse result: Check_silence analyse silent sections within the tracks and 
+- analysing results: check_silence analyse silent sections within the tracks and 
 return a detail analysis dataframe.
--Filter result: Return a DataFrame by filtering out tracks that are below 
-a minimum trimmed length threshold, tracks that have total mid-silent section
-above a maximum threshold, and tracks that have length of maximum mid=silent
-section above a maximum threshold. See Glossary for what the terms mean.
+- filtering results: return a DataFrame by filtering out tracks that are below a minimum 
+trimmed length threshold, tracks that have total mid-silent section above a maximum 
+threshold, and tracks that have length of maximum mid-silent section above a maximum 
+threshold. See Glossary for what these terms mean.
     
-
 
 Functions
 ---------
@@ -25,7 +27,6 @@ Functions
 - set_npz_root_dir
     Tell the script the root directory of where numpy arrays will be stored.
     
-
 - check_silence
     Interpret the csv obtained from no_sound.py and add extra columns to the 
     input csv and return a new csv.
@@ -42,7 +43,6 @@ Functions
     Return the track_id of tracks that satisfy the condition: 
     the maximum length amongst the individual mid-silent 
     sections <= threshold.
-
 
 
 Glossary

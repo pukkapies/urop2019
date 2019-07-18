@@ -1,30 +1,23 @@
-"""
+''' Contains tools to fetch MP3 files on our server and analyze their size, length and number of channels
 
-"""
-'''
-Note
-----
+
+Notes
+-----
+This file can be run as a script. To do so, just type 'python track_fetch.py' in the terminal. The help 
+page should contain all the options you might possibly need.
+
+IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
+set the directory in which the 7Digital MP3 files are stored.
+
 
 Functions
 ---------
-- set_mp3_root_dir
-    Tell the script the root directory of where mp3s were stored.
-    
-- extract_ids_from_summary
-
-- find_tracks
-
-- find_tracks_with_7dids
-
-- check_size
-    Extend the column of the given dataframe to identify sizes of tracks.
-
-- check_mutagen_info
-    Extend the columns of the given dataframe to identify if a track can be 
-    opened and the duration and number of channels of a track.
-    
-
-
+- set_mp3_root_dir              Tells the script where MP3 files are stored
+- find_tracks                   Performs an os.walk to find all the MP3 files within mp3_root_dir
+- find_tracks_with_7dids        Extracts the 7Digital ID from the MP3 filenames
+- check_size                    Extends the columns of the given dataframe to identify the size of the tracks
+- check_mutagen_info            Extends the columns of the given dataframe to identify if the tracks 
+                                can be opened and the duration and number of channels of the tracks
 '''
 
 import mutagen.mp3
@@ -54,7 +47,6 @@ def find_tracks_with_7dids():
     return df
 
 def check_size(df):
-    
     '''
     Parameters
     ----------
@@ -66,8 +58,9 @@ def check_size(df):
     -------
     df: pd.DataFrame
         A dataframe that has one extra column:
-        'size': float
-            The file size of the mp3 file.
+        
+        'file_size': float
+            The file size of the MP3 file.
         
     
     '''
@@ -91,40 +84,29 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
         of channel of tracks).
     
     add_length: bool
-        If true, the computed lengths column is appended to the df.
+        If True, the computed lengths column is appended to the df.
     
     add_channels: bool
-        If true, the computed number of channels column is appended to the df.
+        If True, the computed number of channels column is appended to the df.
         
     verbose: bool
-        If true, progress of running the program is printed.
-        
-    save_csv: bool
-        If true, the resulting dataframe is saved as a csv file.
-        
-    output_dir: str
-        The output path of the csv saved if save_csv is True.
+        If True, the progress of running the program is printed.
         
         
     Returns
     -------
     df: pd.DataFrame
-        A dataframe that has two extra columns if add_length and add_channels
-        are set to be True:
-        'lengths': float
+        A dataframe that has two extra columns if add_length and add_channels are True:
+        
+        'track_length': float
             The duration of the mp3 tracks.
             
         'channels': float
             The number of channels of the mp3 tracks.
             
-        NOTE: empty cell is returned to the corresponding rows for lengths 
-        and channels if the script cannot read the size of the tracks or cannot 
+        NOTE: an empty cell is returned to the corresponding rows for 'track_length' 
+        and 'channels' if the script cannot read the size of the tracks or cannot 
         open the tracks (i.e. broken tracks).
-        
-    csv: 
-        The df is saved as csv if save_csv is True.
-        
-    
     '''
     
     tot = len(df)

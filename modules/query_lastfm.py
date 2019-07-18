@@ -14,9 +14,9 @@ The lastfm_tags database contains 3 tables: tids, tags, tid_tag.
 The row number of the tid in the tids table will be refered to as as tid_num.
 Similarly tag_num will refer to the row number of the tag in the tags table.
 
-IMPORTANT: If using this script elsewhere than on boden then run set_path(db_path) to
+IMPORTANT: If using this script elsewhere than on Boden then run set_path(db_path) to
 set the path of the database. Otherwise it will use the default path, which is the path
-to the database on boden.
+to the database on Boden.
 
 
 Functions

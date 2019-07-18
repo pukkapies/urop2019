@@ -1,21 +1,22 @@
-"""
+''' Contains tools for fetching MP3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty MP3 files, tracks without tags or duplicates
 
-"""
-'''
+
 Notes
 -----
-This module will create tools that can be used to analyse different features of
-the mp3 tracks by get_faulty_mp3.py ---length, file size, sections that are 
-silent. The procedure can be summarised into three categories:
+This file can be run as a script. To do so, just type 'python mp3_to_npz.py' in the terminal. The help 
+page should contain all the options you might possibly need. You will first need to run track_fetch.py and
+provide the output of that script as an input argument for this one.
+
+This script performs the following operations:
     
--Preparation of directory: Please see create_folder_structure for more detail.
+- preparing the directory: see create_folder_structure
 
--Saving information on silent details: no_sound() saves the information of the 
-silent details as npz files, and also the converted arrays and sampling
-rate of the original MP3 to speed up the loading process in the future.
+- saving information on silence: no_sound() saves the information about silence in npz files, as well
+                                 as the converted arrays and sampling rate of the original MP3 to speed up 
+                                 the loading process in the future
 
--Progress check: no_sound+count() can be used to check progress of 
-no_sound() on seperate window.
+- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window
+
 
 Examples
 --------
@@ -25,29 +26,28 @@ Examples
     
     no_sound(df, start=0, end=40000)
     
-    On a seperate window: no_sound_count()
+    no_sound_count()
     
-
 
 Functions
 ---------
 - set_mp3_root_dir
-    Tell the script the root directory of where mp3s were stored.
+    Tell the script the root directory of where mp3s were stored
     
 - set_mpz_root_dir
-    Tell the script the root directory of where numpy arrays will be stored.
+    Tell the script the root directory of where numpy arrays will be stored
 
 - create_folder_structure  
     This copies the folder structure of how the mp3 files are saved and produce 
     the same folder structure under a new directory, which will be used 
-    to save the converted numpy arrays later.
+    to save the converted numpy arrays later
     
 - savez
     Convert a mp3 files into three numpy arrays as an npz file:
     1. loaded mp3 arrays    2. sampling rate 
     3. start and end positoin of arrays in 1 when volume of track is above 
     60dB (non-silent). See the librosa documentation on librosa.effect.split 
-    for more details.   
+    for more details
     
 - mp3_length
     Extend the columns of ultimate_csv to identify tracks and return the 
@@ -60,7 +60,7 @@ Functions
 - no_sound_count                    
     Return the number of mp3 files that have been saved as npz files. Return 
     the path of tracks that have not been converted yet if final_check mode 
-    is enabled.
+    is enabled
                            
 '''
 
@@ -247,7 +247,7 @@ def die_with_usage():
     sys.exit(0)
 
 if __name__ == "__main__":
-    
+
     if len(sys.argv) < 2:
         die_with_usage()
     

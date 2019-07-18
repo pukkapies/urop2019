@@ -20,9 +20,9 @@ called behind the scenes (therefore making the execution much slower). The funct
 extremely flexible, and can receive multiple id's as input, both as a single tuple/list 
 or as multiple arguments.
 
-IMPORTANT: If using this script elsewhere than on boden then run set_path_h5(path) or
+IMPORTANT: If using this script elsewhere than on Boden then run set_path_h5(path) or
 set_path_db(path) to set the path of the summary files. Otherwise it will use the default 
-path, which is the path to the database on boden.
+path, which is the path to the database on Boden.
 
 
 Functions

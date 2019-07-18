@@ -1,24 +1,14 @@
-"""
-
-"""
 ''' Contains tools for fetching MP3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty MP3 files, tracks without tags or duplicates
+
 
 Notes
 -----
-The purpose of this module is to provide an ultimate_output() function returning a
-dataframe with three columns: track_id, track_7digitalid and path.
+This file can be run as a script. To do so, just type 'python track_wrangle.py' in the terminal. The help 
+page should contain all the options you might possibly need. You will first need to run track_fetch.py and
+provide the output of that script as an input argument for this one.
 
-The only function which does not contribute to the above-mentioned purpose is 
-read_duplicates_and_purge(), which returns a list of sublists where each sublists contains the
-duplicate tracks for a particular songs, discarding all the tracks which are damaged or not
-on our server.
-
-When running the ultimate_output() function, one can choose whether or not to exclude tracks with
-no tags, whether or not to exclude duplicates, and what the minimum size (in bytes) of the MP3
-files should be. With all the parameters left to their default value, the function takes slightly
-less than a minute to run on our server. Nevertheless, in order not to have to run the same 
-function every time such a dataset is needed, a CLI script mp3_wrangler.py is provided, which 
-relies on the functions contained in this modules and produces a CSV file. 
+IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
+set the directory in which the 7Digital MP3 files are stored.
 
 
 Functions
@@ -31,14 +21,12 @@ Functions
 - find_tracks_with_7dids     Produces a dataframe with 7digitalid's and paths of MP3 files on our server
 - df_merge                   Produces a dataframe wiht 7digitalid's, tid's and paths of MP3 files on our server
 - df_purge_mismatches        Removes mismatches from previously generated dataset
-- get_idx_mp3_size_zero      Gets a list of indexes in the dataset of tracks whose size is 0
-- get_idx_mp3_size_less_than Gets a list of indexes in the dataset of tracks whose size is less than a threshold
-- df_purge_faulty_mp3        Removes tracks whose size is less than a certain threshold
+- df_purge_faulty_mp3_1      Removes tracks whose file size is less than the threshold (or have file size 0)
+- df_purge_faulty_mp3_2      Removes tracks which can't be opened and therefore have NaN length
 - df_purge_no_tag            Removes tracks which are not matched to any tag
 - read_duplicates            Reads the msd_duplicates.txt file and produces a list (of lists) of duplicates
-- read_duplicates_and_purge  Reads the msd_duplicates.txt file and keeps only "good" tracks
 - df_purge_duplicates        Retains only one track for each set of duplicates
-- ultimate_output            Combine the previous functions and produces a dataframe accoring to the given parameters
+- ultimate_output            Combine all the previous functions and produces a dataframe accoring to the given parameters
 '''
 
 import h5py
@@ -145,11 +133,11 @@ def df_purge_duplicates(track_df: pd.DataFrame, randomness: bool = False):
     return df.reset_index()
 
 def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
-    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid' and 'path'.
+    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'track_length', 'channels'.
     
     Parameters
     ----------
-    threshold : int
+    min_size : int
         the tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value)
     
     discard_no_tag : bool
@@ -161,8 +149,8 @@ def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool
     Returns
     -------
     df : pd.DataFrame
-        - columns are 'track_id', 'track_7digitalid' and 'path'
-        - entries are all the tracks on our server which are not mismatched and satisfy the given parameters
+        The columns are the ones listed above.
+        The entries are the ones specified by the given parameters.
     '''
 
     print("Fetching mp3 files from root directory...", end=" ")
