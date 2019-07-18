@@ -83,44 +83,45 @@ def create_folder_structure():
 def mp3_path_to_npz_path(path):
     return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
 
-def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
-    '''
-    Parameters
-    ----------
-    track_7digitalid: int
-        The track_7digitalid of the track 
+# def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
+#     '''
+#     Parameters
+#     ----------
+#     track_7digitalid: int
+#         The track_7digitalid of the track 
         
-    Returns
-    -------
-    npz files:
-        The npz file is of the form ['array', 'sr', 'split']
-        'array': 
-            The loaded mp3 files in numpy-array form by library -- librosa.
-            The array represent the mp3s in its original sampling rate, and 
-            multi-channel is preserved. (each row represents one channel)
+#     Returns
+#     -------
+#     npz files:
+#         The npz file is of the form ['array', 'sr', 'split']
+#         'array': 
+#             The loaded mp3 files in numpy-array form by library -- librosa.
+#             The array represent the mp3s in its original sampling rate, and 
+#             multi-channel is preserved. (each row represents one channel)
             
-        'sr':
-            The sampling rate of the mp3 file.
+#         'sr':
+#             The sampling rate of the mp3 file.
             
-        'split':
-            All the sections of the track which is non-silent (>=60dB). The
-            information is saved in the form: n*2 numpy.ndarray, and each row
-            represent one section -- starting position and ending position of 
-            array respectively.
+#         'split':
+#             All the sections of the track which is non-silent (>=60dB). The
+#             information is saved in the form: n*2 numpy.ndarray, and each row
+#             represent one section -- starting position and ending position of 
+#             array respectively.
     
-    '''
-    path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
-    path_npz = npz_root_dir[:-1] +path[:-9] #
-    path = mp3_root_dir[:-1] +path #
-    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
-    array_split = librosa.effects.split(librosa.core.to_mono(array))
-    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
-
-# DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
-# def savez(path, path_npz):
+#     '''
+#     path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
+#     path_npz = npz_root_dir[:-1] +path[:-9] #
+#     path = mp3_root_dir[:-1] +path #
 #     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
 #     array_split = librosa.effects.split(librosa.core.to_mono(array))
 #     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
+
+# DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
+def savez(path):
+    path_npz = mp3_path_to_npz_path(path)
+    array, sample_rate = librosa.core.load(path, sr=None, mono=False)
+    array_split = librosa.effects.split(librosa.core.to_mono(array))
+    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 def no_sound(df, start=0, end=501070, verbose=True):
     '''
@@ -162,19 +163,19 @@ def no_sound(df, start=0, end=501070, verbose=True):
     # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
     # for idx, path in enumerate(paths)
     for idx, path in enumerate(df['path'][start:end]): # DAVIDE: the efficience gain is in milliseconds
-        time = time.time()
+        start = time.time()
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #ADEN: I think this is wrong # DAVIDE: it works
         if os.path.isfile(path_npz):
             print("File " + path_npz + " already exists. Ignoring.") 
         else:
             path = os.path.join(mp3_root_dir, path)
-            track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez
-            savez(track_7digitalid)
-            # savez(path, path_npz) # DAVIDE: if we use my savez...
+            # track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez
+            # savez(track_7digitalid)
+            savez(path) # DAVIDE: if we use my savez...
         
         if verbose == True:
             if idx % 100 == 0:
-                print("{:6d} - time taken by {:6d}: {}".format(idx, path, time.time()-time))
+                print("{:6d} - time taken by {}: {}".format(idx, path, time.time() - start))
                 
 
 def no_sound_count(df, final_check=False):
@@ -270,5 +271,5 @@ if __name__ == "__main__":
         set_mp3_root_dir(mp3_root_dir_infer)
     
     create_folder_structure()
-    no_sound(df, verbose)
-    no_sound_count(df, verbose)
+    no_sound(df)
+    no_sound_count(df)
