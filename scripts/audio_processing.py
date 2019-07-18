@@ -176,14 +176,18 @@ def get_example(array, tid, encoded_tags):
 
 
 def save_examples_to_tffile(paths, tf_filename, audio_format):
+    """ Given paths to .npz files, this function processes them and then creates and saves them to a tf_record file 
 
-    """
-    Given paths to the unsampled files, this function saves the examples(processed array, tid and tags) to a tf_record file
-    
-    Inupts:
-    1) paths - list of paths to unsampled tracks
-    2) tf_filename - name of TFRecord file you want to save to
-    3) audio_format - format we want to save in check process array for more details
+    TODO: More documentation here
+
+    Parameters
+    ----------
+    paths : list
+        list of paths to unsampled tracks
+    tf_filename : str
+        name of TFRecord file to save to
+    audio_format : {"log-mel-spectrogram", "MFCC", "waveform"}
+        desired audio format, if none of the above it defaults to "waveform"
     """
 
     with tf.python_io.TFRecordWriter(tf_filename) as writer: # TODO: Decide filename 
