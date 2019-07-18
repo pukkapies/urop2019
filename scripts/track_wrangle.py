@@ -75,22 +75,22 @@ def set_path_txt_duplicates(new_path):
     global path_txt_duplicates
     path_txt_duplicates = new_path
 
-def extract_ids_from_summary(path = '/srv/data/msd/msd_summary_file.h5'): # my mistake, this function should have always been here
-    with h5py.File(path, 'r') as h5:
+def extract_ids_from_summary(): # my mistake, this function should have always been here
+    with h5py.File(path_h5, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
         dataset_2 = h5['analysis']['songs']
         df_summary = pd.DataFrame(data={'track_7digitalid': dataset_1['track_7digitalid'], 'track_id': dataset_2['track_id']})
         df_summary['track_id'] = df_summary['track_id'].apply(lambda x: x.decode('UTF-8'))
         return df_summary
 
-def df_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
-    df = pd.merge(track_summary_df, track_df, on='track_7digitalid', how='inner')
+def df_merge(track_summary_df: pd.DataFrame, merged_df: pd.DataFrame):
+    df = pd.merge(track_summary_df, merged_df, on='track_7digitalid', how='inner')
     df = df[-df.duplicated('track_7digitalid', keep=False)]
     df = df[-df.duplicated('track_id', keep=False)]
     return df
 
-def df_purge_mismatches(track_df: pd.DataFrame):
-    df = track_df.set_index('track_id')
+def df_purge_mismatches(merged_df: pd.DataFrame):
+    df = merged_df.set_index('track_id')
     to_drop = []
     with open(path_txt_mismatches, 'r') as file: # I don't mind having regex here... I am happy with either
         for line in file:
@@ -99,22 +99,22 @@ def df_purge_mismatches(track_df: pd.DataFrame):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0):
-    df = track_df[track_df['file_size'] > threshold]
+def df_purge_faulty_mp3_1(merged_df: pd.DataFrame, threshold: int = 0):
+    df = merged_df[merged_df['file_size'] > threshold]
     return df
 
-def df_purge_faulty_mp3_2(track_df: pd.DataFrame):
-    df = track_df[-track_df.isna(track_df['track_length'])]
+def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
+    df = merged_df[-merged_df['track_length'].isna()]
     return df
 
-def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
+def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
     if lastfm_db:
         db.set_path(lastfm_db)
 
     tids_with_tag = db.get_tids_with_tag()
     tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
     
-    return pd.merge(track_df, tids_with_tag_df, on='track_id', how='inner')
+    return pd.merge(merged_df, tids_with_tag_df, on='track_id', how='inner')
 
 def read_duplicates():      
     l = []
@@ -129,8 +129,8 @@ def read_duplicates():
         l.append(t)
     return l
 
-def df_purge_duplicates(track_df: pd.DataFrame, randomness: bool = False):
-    df = track_df.set_index('track_id')
+def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
+    df = merged_df.set_index('track_id')
     dups = read_duplicates()
     idxs = df.index
     to_drop = [[tid for tid in sublist if tid in idxs] for sublist in dups]
@@ -145,7 +145,7 @@ def df_purge_duplicates(track_df: pd.DataFrame, randomness: bool = False):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
+def ultimate_output(df: pd.DataFrame, min_size: int = 0, min_length: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'track_length', 'channels'.
     
     Parameters
@@ -167,43 +167,46 @@ def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool
     '''
 
     print("Fetching mp3 files from root directory...", end=" ")
-    df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
+    merged_df = df_merge(extract_ids_from_summary(), df)
     print("done")
 
     print("Purging mismatches...", end=" ")
-    df = df_purge_mismatches(df)
+    merged_df = df_purge_mismatches(merged_df)
     print("done")
 
     print("Purging faulty mp3 files...")
     print("    Checking files with size less than threshold...", end=" ")
-    df = df_purge_faulty_mp3_1(df, threshold=min_size)
+    merged_df = df_purge_faulty_mp3_1(merged_df, threshold=min_size)
     print("done")
     print("    Checking files that can't be opened...", end=" ")
-    df = df_purge_faulty_mp3_2(df)
+    merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
     if discard_no_tag == True:
         print("Purging tracks with no tags...", end=" ")
-        df = df_purge_no_tag(df)
+        merged_df = df_purge_no_tag(merged_df)
         print("done")
     
     if discard_dupl == True:
         print("Purging duplicate tracks...", end=" ")
-        df = df_purge_duplicates(df)
+        df = df_purge_duplicates(merged_df)
         print("done")
     
-    return df
+    return merged_df
 
 def die_with_usage():
     print()
     print("track_wrangle.py - Script to merge the list of mp3 files obtained with track_fetch.py with")
     print("                   the MSD summary file, remove unwanted entries such as mismatches, faulty")
     print("                   files or duplicates, and output a csv file with the following columns:")
-    print("                   'track_id', 'track_7digitalid', 'path', 'track_length','file_size', 'channels'")
+    print("                   'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size', 'channels'")
     print()
     print("Usage:     python track_wrangle.py <input csv filename or path> <output csv filename or path> [options]")
     print()
     print("General Options:")
+    print("  --path-h5              Set path to msd_summary_file.h5.")
+    print("  --path-txt-mism        Set path to mismatches info file.")
+    print("  --path-txt-dupl        Set path to duplicates info file.")
     print("  --discard-no-tag       Choose to discard tracks with no tags.")
     print("  --discard-dupl         Choose to discard duplicate tracks.")
     print("  --help                 Show this help message and exit.")
@@ -238,6 +241,15 @@ if __name__ == "__main__":
     while True:
         if len(sys.argv) == 3:
             break
+        elif sys.argv[3] == '--path-h5':
+            set_path_h5(sys.argv[4])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--path-txt-mism':
+            set_path_txt_mismatches(sys.argv[4])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--path-txt-dupl':
+            set_path_txt_duplicates(sys.argv[4])
+            del sys.argv[3:5]
         elif sys.argv[3] == '--min-size':
             min_size = int(sys.argv[3])
             del sys.argv[3:5]
@@ -252,5 +264,5 @@ if __name__ == "__main__":
             sys.exit(0)
 
     df = pd.read_csv(sys.argv[1])
-    df = ultimate_output(min_size, discard_no_tag, discard_dupl)
+    df = ultimate_output(df, min_size, discard_no_tag, discard_dupl)
     df.to_csv(output, index=False)
