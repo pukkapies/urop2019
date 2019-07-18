@@ -211,7 +211,6 @@ def save_examples_to_tffile(paths, tf_filename, audio_format):
 
 if __name__ == '__main__':
 
-    # TODO: Maybe add more arguments?? train/val/test maybe?
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
     parser.add_argument("-s", "--split", help"train/val/test split, supply as TRAIN/VAL/TEST")
@@ -225,7 +224,7 @@ if __name__ == '__main__':
 
     if args.root_dir:
        root_dir = args.path 
-    if args.split 
+    if args.split:
         values = [float(_) for _ in args.split.split("/") ]
         tot = sum(values)
         train, val, test = [val/tot for val in values]
