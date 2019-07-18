@@ -69,7 +69,7 @@ import os
 import pandas as pd
 import sys
 
-from mp3_to_npz import savez
+from mp3_to_npz import mp3_path_to_npz_path, savez
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
@@ -152,14 +152,16 @@ def check_silence(df): # DAVIDE: same as in track_fetch.py...
     for idx, path in enumerate(paths):
         #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # ADEN: was wrong, fixed it.
         #path_npz = npz_root_dir[:-1]+ path[:-9] + '.npz'
-        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # DAVIDE: it works! and os.path.join is ALWAYS safer than string concatenation
+        #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # DAVIDE: it works! and os.path.join is ALWAYS safer than string concatenation
+        path_npz = mp3_path_to_npz_path(path)
         try:
             npz = np.load(path_npz)
         except:
             print(idx)
-            track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez..
+            #track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez..
             #savez(path, path_npz) # DAVIDE: I still believe this sintax is more clear...
-            savez(track_7digitalid)
+            #savez(track_7digitalid)
+            savez(path)
             npz = np.load(path_npz)
             
         sr = npz['sr']
@@ -260,9 +262,6 @@ def filter_tot_silence_duration(df, threshold):
     #return ID.track_id.tolist()
     return df[df'mid_silence_length' <= threshold] # DAVIDE: same as above
 
-
-#This functions takes the dataframe and threshold of an individual mid-silent section (e.g. 1s)
-#return the track_id that SATISFIES the condition -- the maximum length of an indiviual mid-silent section <= threshold
 def filter_max_silence_duration(df, threshold):
     '''
     Parameters
@@ -332,10 +331,10 @@ if __name__ == "__main__":
         if len(sys.argv) == 3:
             break
         elif sys.argv[3] == '--root-dir-mp3':
-            set_mp3_root_dir(sys.argv[4])
+            set_mp3_root_dir(os.path.expanduser(sys.argv[4]))
             del sys.argv[3:5]
         elif sys.argv[3] == '--root-dir-npz':
-            set_npz_root_dir(sys.argv[4])
+            set_npz_root_dir(os.path.expanduser(sys.argv[3]))
             del sys.argv[3:5]
         elif sys.argv[3] == '--filter-trim-length':
             filt_trim_length = int(sys.argv[4])
@@ -351,6 +350,14 @@ if __name__ == "__main__":
             sys.exit(0)
 
     df = pd.read_csv(sys.argv[1])
+
+    mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
+    
+    if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
+        print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
+        print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
+        set_mp3_root_dir(mp3_root_dir_infer)
+
     df = check_silence(df)
     if filt_trim_length:
         df = filter_trim_length(df, filt_trim_length)
