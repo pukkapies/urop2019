@@ -41,11 +41,12 @@ Functions
 - ultimate_output            Combine the previous functions and produces a dataframe accoring to the given parameters
 '''
 
+import h5py
 import os
 import pandas as pd
 import sys
-from mutagen import mp3 as mg # you forgot this
-from track_fetch import * #you forgot this
+# from mutagen import mp3 as mg
+# from track_fetch import * # I am not importing a module, but rather taking the output of the script
 
 from itertools import islice
 
@@ -56,22 +57,9 @@ else:
 
 import query_lastfm as db
 
-mp3_root_dir = '/srv/data/msd/7digital/'
+path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
 path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
-
-def set_mp3_root_dir(new_path):
-    '''
-    Parameters
-    ----------
-    
-    new_path: str
-        The root directory of where mp3s were stored.
-        
-    '''
-
-    global mp3_root_dir
-    mp3_root_dir = new_path
 
 def set_path_h5(new_path):
     global path_h5
@@ -85,9 +73,13 @@ def set_path_txt_duplicates(new_path):
     global path_txt_duplicates
     path_txt_duplicates = new_path
 
-### functions to fetch MP3 files on server and remove mismatches
-
-
+def extract_ids_from_summary(path = '/srv/data/msd/msd_summary_file.h5'): # my mistake, this function should have always been here
+    with h5py.File(path, 'r') as h5:
+        dataset_1 = h5['metadata']['songs']
+        dataset_2 = h5['analysis']['songs']
+        df_summary = pd.DataFrame(data={'track_7digitalid': dataset_1['track_7digitalid'], 'track_id': dataset_2['track_id']})
+        df_summary['track_id'] = df_summary['track_id'].apply(lambda x: x.decode('UTF-8'))
+        return df_summary
 
 def df_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
     our_df = pd.merge(track_summary_df, track_df, on='track_7digitalid', how='inner')
@@ -98,58 +90,52 @@ def df_merge(track_summary_df: pd.DataFrame, track_df: pd.DataFrame):
 def df_purge_mismatches(track_df: pd.DataFrame):
     df = track_df.set_index('track_id')
     to_drop = []
-    with open(path_txt_mismatches, 'r') as file:     #Do you want to use regular expression for this, this is not necessary but guarentee correct
-        #let me know if you want me to implement this for you. please change (don't change if you don't want to)
+    with open(path_txt_mismatches, 'r') as file: # I don't mind having regex here... I am happy with either
         for line in file:
             to_drop.append(line[27:45])
     to_drop = [tid for tid in to_drop if tid in df.index]
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
+# def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: bool = False):
+#         df = track_df
+#         sizes = []
+#         for idx, path in enumerate(df['path']):
+#             path = os.path.join(mp3_root_dir, path)
+#             size = os.path.getsize(path)
+#             if size <= threshold:
+#                 df.drop(idx, inplace=True)
+#             else:
+#                 sizes.append(size)
 
-### functions to find tracks with too small a file size and purge them
-
-def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0, add_col: bool = False):
-        df = track_df
-        sizes = []
-        for idx, path in enumerate(df['path']):
-            path = os.path.join(mp3_root_dir, path)
-            size = os.path.getsize(path)
-            if size <= threshold:
-                df.drop(idx, inplace=True)
-            else:
-                sizes.append(size)
-
-        if add_col == True:
-            # sanity check
-            assert len(df) == len(sizes)
+#         if add_col == True:
+#             # sanity check
+#             assert len(df) == len(sizes)
             
-            df['size'] = pd.Series(sizes, index=df.index)
+#             df['size'] = pd.Series(sizes, index=df.index)
         
-        return df
+#         return df
 
-def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):   #You have already calculated that in track_fetch, please change
-        df = track_df
-        lengths = []
-        for idx, path in enumerate(df['path']):
-            path = os.path.join(mp3_root_dir, path) #This is wrong, please see track_fetch, please change
-            try:
-                f = mg.MP3(path)
-                length = f.info.length
-                lengths.append(length)
-            except:
-                df.drop(idx, inplace=True)
+# def df_purge_faulty_mp3_2(track_df: pd.DataFrame, add_col: bool = False):
+#         df = track_df
+#         lengths = []
+#         for idx, path in enumerate(df['path']):
+#             path = os.path.join(mp3_root_dir, path)
+#             try:
+#                 f = mg.MP3(path)
+#                 length = f.info.length
+#                 lengths.append(length)
+#             except:
+#                 df.drop(idx, inplace=True)
 
-        if add_col == True:
-            # sanity check
-            assert len(df) == len(lengths)
+#         if add_col == True:
+#             # sanity check
+#             assert len(df) == len(lengths)
             
-            df['length'] = pd.Series(lengths, index=df.index)
+#             df['length'] = pd.Series(lengths, index=df.index)
         
-        return df
+#         return df
 
-### functions to find tracks with no tags and purge them
-    
 def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
     if lastfm_db:
         db.set_path(lastfm_db)
@@ -158,9 +144,6 @@ def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
     tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
     
     return pd.merge(track_df, tids_with_tag_df, on='track_id', how='inner')
-
-
-### functions to tackle duplicates
 
 def read_duplicates():      
     l = []
@@ -193,9 +176,6 @@ def df_purge_duplicates(track_df: pd.DataFrame, mode: str = 'random'):
         return df.reset_index()
     else:
         raise NameError("mode '" + mode + "' is not defined")
-
-
-### output functions
 
 def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False, add_length: bool = False, add_size: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid' and 'path'.
@@ -246,36 +226,34 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
     
     return df
 
-def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False):
-    ''' Produces a list containing ONLY tracks on our server where each sublists contains all the duplicates for a song
+# def read_duplicates_and_purge(threshold: int = 0, discard_no_tag: bool = False):
+#     ''' Produces a list containing ONLY tracks on our server where each sublists contains all the duplicates for a song
     
-    Parameters
-    ----------
-    threshold : int
-        the tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value)
+#     Parameters
+#     ----------
+#     threshold : int
+#         the tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value)
     
-    discard_no_tag : bool
-        if True, discards tracks which are not matched to any tag
+#     discard_no_tag : bool
+#         if True, discards tracks which are not matched to any tag
 
-    Returns
-    -------
-    dups_purged : list of lists
-        - elements are all the 53471 sets of duplicates as given in the msd_duplicates.txt file (some might now be empty)
-        - elements within lists are all the duplicate tids of some specific song - discarding inexistent tracks, mismatches and faulty audio files 
-    '''
-    df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
-    df = df_purge_mismatches(df)
-    df = df_purge_faulty_mp3(df, threshold=threshold)      #this is wrong, please change it.
+#     Returns
+#     -------
+#     dups_purged : list of lists
+#         - elements are all the 53471 sets of duplicates as given in the msd_duplicates.txt file (some might now be empty)
+#         - elements within lists are all the duplicate tids of some specific song - discarding inexistent tracks, mismatches and faulty audio files 
+#     '''
+#     df = df_merge(extract_ids_from_summary(), find_tracks_with_7dids())
+#     df = df_purge_mismatches(df)
+#     df = df_purge_faulty_mp3(df, threshold=threshold)      #this is wrong, please change it.
     
-    if discard_no_tag == True:
-        df = df_purge_no_tag(df)
+#     if discard_no_tag == True:
+#         df = df_purge_no_tag(df)
 
-    dups = read_duplicates()
-    idxs = df.set_index('track_id').index
-    dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
-    return dups_purged
-
-# script
+#     dups = read_duplicates()
+#     idxs = df.set_index('track_id').index
+#     dups_purged = [[tid for tid in sublist if tid in idxs] for sublist in dups]
+#     return dups_purged
 
 def die_with_usage():
     print()

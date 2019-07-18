@@ -26,37 +26,21 @@ Functions
 
 
 '''
-import h5py
+
 import mutagen.mp3
 import os
 import pandas as pd
 import sys
 
-root_dir = '/srv/data/msd/7digital/'
+mp3_root_dir = '/srv/data/msd/7digital/'
 
-def set_mp3_root_dir(new_root_dir):   #better change it to another name, or will mess up with mp3_to_mpz when using from xx import *, please change
-    '''
-    Parameters
-    ----------
-    
-    new_path: str
-        The root directory of where mp3s were stored.
-        
-    '''
-    global root_dir
-    root_dir = new_root_dir
-
-def extract_ids_from_summary(path = '/srv/data/msd/msd_summary_file.h5'):
-    with h5py.File(path, 'r') as h5:
-        dataset_1 = h5['metadata']['songs']
-        dataset_2 = h5['analysis']['songs']
-        df_summary = pd.DataFrame(data={'track_7digitalid': dataset_1['track_7digitalid'], 'track_id': dataset_2['track_id']})
-        df_summary['track_id'] = df_summary['track_id'].apply(lambda x: x.decode('UTF-8'))
-        return df_summary
+def set_mp3_root_dir(new_root_dir): # same function name and var name across all modules
+    global mp3_root_dir
+    mp3_root_dir = new_root_dir
 
 def find_tracks():
     paths = []
-    for folder, subfolders, files in os.walk(root_dir):
+    for folder, subfolders, files in os.walk(mp3_root_dir):
         for file in files:
             path = os.path.join(os.path.abspath(folder), file)
             paths.append(path)
@@ -88,18 +72,17 @@ def check_size(df):
     
     '''
     s = []
-    paths = df['path'] #more efficient
-    for path in paths: 
-        #path = os.path.join(root_dir, path)
-        path = root_dir[:-1]+ path #was wrong, now fixed
+    for path in df['paths']: 
+        # path = mp3_root_dir[:-1] + path # what's wrong with os.path.join? string concatenation is more dangerous, what if path is an absolute path?
+        path = os.path.join(mp3_root_dir, path)
         s.append(os.path.getsize(path))
     #df['size'] = pd.Series(s, index=df.index) # sizes is better since df.size is ambiguous...
-    df['sizes'] = pd.Series(s, index=df.index)
+    #df['sizes'] = pd.Series(s, index=df.index) # it is a column name, I'm not happy with plural. 'file_size'? 
+    df['file_size'] = pd.Series(s, index=df.index)
     return df
 
-def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True,
-                       save_csv=True, output_path='/srv/data/urop/ultimate_csv_size.csv'): 
-    # You will want to see the progress, and after this long conversion, you may want to save it.
+# def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size.csv'):
+def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
     '''
     Parameters
     ----------
@@ -145,40 +128,35 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True,
     '''
     
     tot = len(df)
-    #mod = len(df) // 100    #len(df) is not divisiable by 100..
     l = []
     c = []
     for idx, path in enumerate(df['path']):
-        #path = os.path.join(root_dir, path)
-        path = root_dir[:-1]+ path #was wrong, now fixed
+        path = os.path.join(mp3_root_dir, path)
+        # path = mp3_root_dir[:-1]+ path # same as above...
         try:
             audio = mutagen.mp3.MP3(path)
-            l.append(audio.info.length)  #
-            c.append(audio.info.channels) #
+            l.append(audio.info.length)
+            c.append(audio.info.channels)
         except:
             l.append('')
             c.append('')
             continue
-        #l.append(audio.info.length)
-        #c.append(audio.info.channels) This is wrong I think
         
         if verbose == True:
-            if idx % 1000 == 0: # change based on comment above
+            if idx % 1000 == 0:
                 print('PROGRESS: {:6d}/{:6d}'.format(idx, tot))
 
     if add_length == True: 
         #df['length'] = pd.Series(l, index=df.index)
-        df['lengths'] = pd.Series(l, index=df.index) # sizes is better since df.length is ambiguous...
+        #df['lengths'] = pd.Series(l, index=df.index) # sizes is better since df.length is ambiguous...
+        df['track_length'] = pd.Series(l, index=df.index) # it is a column name, I'm not happy with plural. 'track_length'? 
     if add_channels == True:
-        df['channels'] = pd.Series(c, index=df.index)
-        
-        if save_csv:   #added
-            df.to_csv(output_path, index=False)
+        df['channels'] = pd.Series(c, index=df.index) # 'channels' though must necessarily be plural, since 'channel' makes no sense
     return df
 
 def die_with_usage():
     print()
-    print("track_fetch.py - Script to search for MP3 files within root_dir and output a CSV file with (optionally) the")
+    print("track_fetch.py - Script to search for MP3 files within mp3_root_dir and output a CSV file with (optionally) the")
     print("                 following columns: track 7digitalID, path, file size, track length, number of channels.")
     print()
     print("Usage:     python track_fetch.py <output filename> [options]")
@@ -187,7 +165,7 @@ def die_with_usage():
     print("  --no-size              Do not add column containing file sizes to output file.")
     print("  --no-length            Do not add column containing track lengths to output file.")
     print("  --no-channels          Do not add column containing track number of channels to output file.")
-    print("  --root-dir             Set different root_dir.")
+    print("  --root-dir             Set different mp3_root_dir.")
     print("  --help                 Show this help message and exit.")
     print("  --verbose              Show progress.")
     print()
@@ -242,8 +220,8 @@ if __name__ == "__main__":
             sys.exit(0)
 
         df = find_tracks_with_7dids()
-        if add_size == True:
-            df = check_size(df)
         if add_length == True or add_channels == True:
             df = check_mutagen_info(df, add_length, add_channels, verbose)
+        if add_size == True:
+            df = check_size(df)
         df.to_csv(output, index=False)
