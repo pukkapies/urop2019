@@ -102,10 +102,8 @@ def df_purge_faulty_mp3_1(track_df: pd.DataFrame, threshold: int = 0):
     df = track_df[track_df['file_size'] > threshold]
     return df
 
-def df_purge_faulty_mp3_2(track_df: pd.DataFrame, threshold: int = 0):
+def df_purge_faulty_mp3_2(track_df: pd.DataFrame):
     df = track_df[-track_df.isna(track_df['track_length'])]
-    if threshold:
-        df = df[df['track_length'] > threshold]
     return df
 
 def df_purge_no_tag(track_df: pd.DataFrame, lastfm_db: str = None):
@@ -179,7 +177,7 @@ def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool
     df = df_purge_faulty_mp3_1(df, threshold=min_size)
     print("done")
     print("    Checking files that can't be opened...", end=" ")
-    df = df_purge_faulty_mp3_2(df, threshold=min_length)
+    df = df_purge_faulty_mp3_2(df)
     print("done")
     
     if discard_no_tag == True:
@@ -206,7 +204,6 @@ def die_with_usage():
     print("  --discard-no-tag       Choose to discard tracks with no tags.")
     print("  --discard-dupl         Choose to discard duplicate tracks.")
     print("  --help                 Show this help message and exit.")
-    print("  --min-length           Set the minimum length (in seconds) to allow (default 0).")
     print("  --min-size             Set the minimum size (in bytes) to allow (default 0).")
     print()
     print("Example:   python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag")
@@ -230,12 +227,14 @@ if __name__ == "__main__":
     else:
         output = sys.argv[2] + '.csv'
         
+    min-size = 0
+    discard_no_tag = False
+    discard_dupl = False
+
+
     while True:
         if len(sys.argv) == 3:
             break
-        elif sys.argv[3] == '--min-length':
-            min-length = int(sys.argv[3])
-            del sys.argv[3:5]
         elif sys.argv[3] == '--min-size':
             min-length = int(sys.argv[3])
             del sys.argv[3:5]
@@ -250,5 +249,5 @@ if __name__ == "__main__":
             sys.exit(0)
 
     df = pd.read_csv(sys.argv[1])
-    df = ultimate_output(min_size, min_length, discard_no_tag, discard_dupl)
+    df = ultimate_output(min_size, discard_no_tag, discard_dupl)
     df.to_csv(output, index=False)
