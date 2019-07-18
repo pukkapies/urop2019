@@ -34,7 +34,7 @@ import sys
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 
-def set_mp3_root_dir(new_root_dir): # same function name and var name across all modules
+def set_mp3_root_dir(new_root_dir): # DAVIDE: now same function name and var name across all modules, to avoid errors
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
@@ -73,16 +73,16 @@ def check_size(df):
     '''
     s = []
     for path in df['paths']: 
-        # path = mp3_root_dir[:-1] + path # what's wrong with os.path.join? string concatenation is more dangerous, what if path is an absolute path?
+        # path = mp3_root_dir[:-1] + path # DAVIDE: what's wrong with os.path.join? string concatenation is more dangerous, what if path is an absolute path?
         path = os.path.join(mp3_root_dir, path)
         s.append(os.path.getsize(path))
-    #df['size'] = pd.Series(s, index=df.index) # sizes is better since df.size is ambiguous...
-    #df['sizes'] = pd.Series(s, index=df.index) # it is a column name, I'm not happy with plural. 'file_size'? 
+    #df['size'] = pd.Series(s, index=df.index) # ADEN: 'sizes' is better since df.size is ambiguous...
+    #df['sizes'] = pd.Series(s, index=df.index) # DAVIDE: it is a column name, I'm not happy with plural. 'file_size'? 
     df['file_size'] = pd.Series(s, index=df.index)
     return df
 
-# def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size.csv'):
-def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
+# ADEN: def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size.csv'):
+def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # DAVIDE: check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
     '''
     Parameters
     ----------
@@ -132,7 +132,7 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
     c = []
     for idx, path in enumerate(df['path']):
         path = os.path.join(mp3_root_dir, path)
-        # path = mp3_root_dir[:-1]+ path # same as above...
+        # path = mp3_root_dir[:-1]+ path # DAVIDE: same comment as above...
         try:
             audio = mutagen.mp3.MP3(path)
             l.append(audio.info.length)
@@ -148,10 +148,10 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
 
     if add_length == True: 
         #df['length'] = pd.Series(l, index=df.index)
-        #df['lengths'] = pd.Series(l, index=df.index) # sizes is better since df.length is ambiguous...
-        df['track_length'] = pd.Series(l, index=df.index) # it is a column name, I'm not happy with plural. 'track_length'? 
+        #df['lengths'] = pd.Series(l, index=df.index) # ADEN: 'length' is better since df.length is ambiguous...
+        df['track_length'] = pd.Series(l, index=df.index) # DAVIDE: it is a column name, I'm not happy with plural. 'track_length'? 
     if add_channels == True:
-        df['channels'] = pd.Series(c, index=df.index) # 'channels' though must necessarily be plural, since 'channel' makes no sense
+        df['channels'] = pd.Series(c, index=df.index) # DAVIDE: 'channels' though must necessarily be plural, since 'channel' makes no sense
     return df
 
 def die_with_usage():
@@ -175,11 +175,9 @@ def die_with_usage():
 
 if __name__ == "__main__":
 
-    # show help
     if len(sys.argv) < 2:
         die_with_usage()
     
-    # show help, if user did not input something weird
     if '--help' in sys.argv:
         if len(sys.argv) == 2:
             die_with_usage()

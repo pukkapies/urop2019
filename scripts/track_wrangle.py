@@ -215,11 +215,9 @@ def die_with_usage():
 
 if __name__ == "__main__":
 
-    # show help
     if len(sys.argv) < 3:
         die_with_usage()
     
-    # show help, if user did not input something weird
     if '--help' in sys.argv:
         if len(sys.argv) == 2:
             die_with_usage()
@@ -231,37 +229,26 @@ if __name__ == "__main__":
         output = sys.argv[2]
     else:
         output = sys.argv[2] + '.csv'
+        
+    while True:
+        if len(sys.argv) == 3:
+            break
+        elif sys.argv[3] == '--min-length':
+            min-length = int(sys.argv[3])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--min-size':
+            min-length = int(sys.argv[3])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--discard-no-tag':
+            discard_no_tag = True
+            del sys.argv[3]
+        elif sys.argv[3] == '--discard-dupl':
+            discard_dupl = True
+            del sys.argv[3]     
+        else:
+            print("???")
+            sys.exit(0)
 
-    # check arguments
-    if len(sys.argv) == 3:
-        df = ultimate_output()
-        df.to_csv(output, index=False)
-    else:
-        # initialize variables
-        min-length = 0
-        min-size = 0 
-        discard_no_tag = False
-        discard_dupl = False
-
-        while True:
-            if len(sys.argv) == 3:
-                break
-            elif sys.argv[3] == '--min-length':
-                min-length = int(sys.argv[3])
-                del sys.argv[3:5]
-            elif sys.argv[3] == '--min-size':
-                min-length = int(sys.argv[3])
-                del sys.argv[3:5]
-            elif sys.argv[3] == '--discard-no-tag':
-                discard_no_tag = True
-                del sys.argv[3]
-            elif sys.argv[3] == '--discard-dupl':
-                discard_dupl = True
-                del sys.argv[3]     
-            else:
-                print("???")
-                sys.exit(0)
-
-        df = pd.read_csv(sys.argv[1])
-        df = ultimate_output(min_size, min_length, discard_no_tag, discard_dupl)
-        df.to_csv(output, index=False)
+    df = pd.read_csv(sys.argv[1])
+    df = ultimate_output(min_size, min_length, discard_no_tag, discard_dupl)
+    df.to_csv(output, index=False)

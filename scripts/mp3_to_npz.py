@@ -93,7 +93,7 @@ def create_folder_structure():
         else:
             print("Directory " + structure + " already exits. Are you sure it is empty?")
 
-def savez(track_7digitalid):
+def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
     '''
     Parameters
     ----------
@@ -119,17 +119,21 @@ def savez(track_7digitalid):
             array respectively.
     
     '''
-    #the original code will make it more useful -- I actually used this for checking and fixing some individual errors a
     path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
     path_npz = npz_root_dir[:-1] +path[:-9] #
     path = mp3_root_dir[:-1] +path #
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
     array_split = librosa.effects.split(librosa.core.to_mono(array))
     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
-    
+
+# DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
+# def savez(path, path_npz):
+#     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
+#     array_split = librosa.effects.split(librosa.core.to_mono(array))
+#     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 
-def no_sound(df, start=0, end=501070, verbose=True): #trust me you will want to see the progress.. and you need start, end for tmux
+def no_sound(df, start=0, end=501070, verbose=True):
     '''
     Parameters
     ----------
@@ -166,27 +170,22 @@ def no_sound(df, start=0, end=501070, verbose=True): #trust me you will want to 
             represent one section -- starting position and ending position of 
             array respectively.
     '''
-    #
-    #start = time.time()
-    
-    
-    
-    paths = df['path'].tolist()[start:end]  #tmux,and this is probably more efficient
-    for idx, path in enumerate(paths): #
-        
-        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #I think this is wrong
-        start_time = time.time()
+    # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
+    # for idx, path in enumerate(paths)
+    for idx, path in enumerate(df['path'][start:end]): # DAVIDE: the efficience gain is in milliseconds
+        time = time.time()
+        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #ADEN: I think this is wrong # DAVIDE: it works
         if os.path.isfile(path_npz):
-            print("File " + path_npz + " already exists. Ignoring.")
-        
+            print("File " + path_npz + " already exists. Ignoring.") 
         else:
             path = os.path.join(mp3_root_dir, path)
-            track_7digitalid = int(os.path.basename(path)[:-9])  #since I changed savez
+            track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez
             savez(track_7digitalid)
+            # savez(path, path_npz) # DAVIDE: if we use my savez...
         
         if verbose == True:
             if idx % 100 == 0:
-                print("{:5d} - TIME TAKEN BY {}: {}".format(idx, path, time.time()-start_time)) #this is what you want to see
+                print("{:6d} - time taken by {:6d}: {}".format(idx, path, time.time()-time))
                 
 
 def no_sound_count(df, final_check=False):
@@ -215,9 +214,9 @@ def no_sound_count(df, final_check=False):
     count = 0
     l = []
      
-    paths = df['path'].tolist()  #This is probability more efficient
-    
-    for idx, path in enumerate(paths): #
+    # paths = df['path'].tolist()  # ADEN: This is probability more efficient. # DAVIDE the efficience gain is in milliseconds, and it is one line more of code
+    # for idx, path in enumerate(paths):
+    for idx, path in enumerate(df['path'])
         path_npz = npz_root_dir[:-1] + path[:-9]
         if os.path.isfile(path_npz + '.npz'):
             count += 1
@@ -225,10 +224,10 @@ def no_sound_count(df, final_check=False):
             l.append(path)
     
     if final_check == True:
-        print("{} OUT OF {} CONVERTED.".format(count, len(df)))
+        print("    {} out of {} converted...".format(count, len(df)))
         return l
     else:
-        print("{} OUT OF {} CONVERTED.".format(count, len(df)))
+        print("    {} out of {} converted...".format(count, len(df)))
         
         
 
@@ -242,27 +241,22 @@ def die_with_usage():
     print("  --root-dir-npz         Set different directory to save npz files.")
     print("  --root-dir-mp3         Set different directory to find mp3 files.")
     print("  --help                 Show this help message and exit.")
-    print("  --verbose              Show progress.")
     print()
     print("Example:   python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
     print()
     sys.exit(0)
 
 if __name__ == "__main__":
-
-    # show help
+    
     if len(sys.argv) < 2:
         die_with_usage()
     
-    # show help, if user did not input something weird
     if '--help' in sys.argv:
         if len(sys.argv) == 2:
             die_with_usage()
         else:
             print("???")
             sys.exit(0)
-
-    #verbose = False      #You will want to see the progress, and no need for this since it's already pre-defined in function
 
     while True:
         if len(sys.argv) == 2:
@@ -272,10 +266,7 @@ if __name__ == "__main__":
             del sys.argv[2:4]
         elif sys.argv[2] == '--root-dir-npz':
             set_npz_root_dir(sys.argv[3])
-            del sys.argv[2:4]
-        elif sys.argv[2] == '--verbose':
-            verbose = True
-            del sys.argv[2]     
+            del sys.argv[2:4]  
         else:
             print("???")
             sys.exit(0)

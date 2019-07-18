@@ -32,16 +32,16 @@ Functions
                               
 - filter_trim_length          
     Return the track_id of tracks that satisfy the condition: 
-    duration after trimming >= min_duration.
+    duration after trimming >= threshold.
                               
 - filter_tot_silence_duration 
     Return the track_id of tracks that satisfy the condition: 
-    total length of mid-silent duration <= max_duration.
+    total length of mid-silent duration <= threshold.
                               
 - filter_max_silence_duration 
     Return the track_id of tracks that satisfy the condition: 
     the maximum length amongst the individual mid-silent 
-    sections <= max_duration.
+    sections <= threshold.
 
 
 
@@ -85,35 +85,17 @@ from mp3_to_npz import savez
 mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
 
-def set_mp3_root_dir(new_root_dir): #better change it to another name, or will mess up with mp3_to_mpz when using from xx import *, please change
-    '''
-    Parameters
-    ----------
-    
-    new_path: str
-        The root directory of where mp3s were stored.
-        
-    '''
-
+def set_mp3_root_dir(new_root_dir):
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
-def set_npz_root_dir(new_root_dir): #better change it to another name, or will mess up with mp3_to_mpz when using from xx import *, please change
-    '''
-    Parameters
-    ----------
-    
-    new_path: str
-        The root directory of where numpy arrays will be stored.
-        
-    '''
-    
-    
+def set_npz_root_dir(new_root_dir):
     global npz_root_dir
     npz_root_dir = new_root_dir
 
-def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size2.csv'): 
-    #You will want to save a csv in here after the heavy computation and take a break...
+# def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size2.csv'): # ADEN: You will want to save a csv in here after the heavy computation and take a break...
+def check_silence(df): # DAVIDE: same as in track_fetch.py...
+                       #         check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
     
     '''
     Parameters
@@ -162,7 +144,7 @@ def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_si
         'silence_duration': list
                 length of each mid-silent section.
                 
-        'max_duration': float
+        'threshold': float
                 maximum length of individual mid-silent sections from the 
                 'silence_duration' column.
                 
@@ -179,32 +161,29 @@ def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_si
     paths = df['path'] #
     
     for idx, path in enumerate(paths):
-        #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # was wrong, fixed it.
-        path_npz = npz_root_dir[:-1]+ path[:-9] + '.npz'
+        #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # ADEN: was wrong, fixed it.
+        #path_npz = npz_root_dir[:-1]+ path[:-9] + '.npz'
+        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # DAVIDE: it works! and os.path.join is ALWAYS safer than string concatenation
         try:
             npz = np.load(path_npz)
         except:
             print(idx)
-            track_7digitalid = int(os.path.basename(path)[:-9])  #since I changed savez
-            #savez(path, path_npz)
+            track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez..
+            #savez(path, path_npz) # DAVIDE: I still believe this sintax is more clear...
             savez(track_7digitalid)
             npz = np.load(path_npz)
             
         sr = npz['sr']
         split = npz['split']
-        
-        #convert to seconds
         split = split/sr
         
         audio_start.append(split[0,0])
         audio_end.append(split[-1,-1])
 
-        #calculate the total length of silence after starting and before ending
         bits = []
         bits_sum = 0
 
         for i in range(len(split) - 1):
-            # silence section
             bit = (split[i,1], split[i+1,0])
             bits.append(bit)
             bits_sum += bit[1] - bit[0]
@@ -217,51 +196,42 @@ def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_si
         
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
+    df['effective_track_length'] = df['audio_end'] - df['audio_start']
     df['mid_silence_length'] = pd.Series(mid_silence_length, index=df.index)
-    df['effective_length'] = df['audio_end'] - df['audio_start']
-    df['non_silence_length'] = df['effective_length'] - df['mid_silence_length']
-    df['silence_percentage'] = df['non_silence_length'] / df['effective_length'] * 100
+    df['non_silence_length'] = df['effective_track_length'] - df['mid_silence_length']
+    df['silence_percentage'] = df['non_silence_length'] / df['effective_track_length'] * 100
     df['silence_detail'] = pd.Series(silence, index=df.index)
-
-    
+    df['silence_detail_length'] = df['silence_detail'].apply(lambda l: [i[1] - i[0] for i in l]) #
+    df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: np.max(l)) # DAVIDE: check them out, both one-liner's ;)
           
-    def get_duration(x): #These are needed for other functions
-        LIST = []
-        for i in x:
-            if i != None:
-                _ = i[1] - i[0]
-                LIST.append(_)
-        return LIST
+    # def get_duration(x): # DAVIDE: both added above...
+    #     for i in x:
+    #         if i != None:
+    #             _ = i[1] - i[0]
+    #             LIST.append(_)
+    #     return LIST
 
-     # get lengths of silent sections:
-    df['silence_duration'] = df.silence.apply(get_duration)
+    # df['silence_duration'] = df.silence.apply(get_duration)
     
-    def get_max(x):
-        if x:
-            return np.max(x)
-        else:
-            return None
-    
-     #get maximum lengths of individual silent sections:
-    df['max_duration'] = df.silence_duration.apply(get_max)
-    
-    if save_csv:   #added
-            df.to_csv(output_path, index=False)
+    # def get_max(x):
+    #     if x:
+    #         return np.max(x)
+    #     else:
+    #         return None
+
+    # df['threshold'] = df.silence_duration.apply(get_max)
             
     return df
-    
-    
 
-
-def filter_trim_length(df, min_duration):
+def filter_trim_length(df, threshold):
     '''
     Parameters
     ---------
     df: pd.DataFrame
         The dataframe from the function check_silence.
     
-    min_duration: float
-        If the length of tracks AFTER TRIMMING >= min_duration, keep the track 
+    threshold: float
+        If the length of tracks AFTER TRIMMING >= threshold, keep the track 
         and its track_id is returned.
     
     
@@ -269,24 +239,23 @@ def filter_trim_length(df, min_duration):
     ------
     list
         The track_id of tracks that satisfy the condition: 
-            duration after trimming >= min_duration.
+            duration after trimming >= threshold.
     
     '''
     
-    ID = df[df['lengths(after_trim)'] >= min_duration]
-    return ID.track_id.tolist()
+    # ID = df[df['effective_track_length'] >= threshold]
+    # return ID.track_id.tolist()
+    return df[df['effective_track_length'] >= threshold] # DAVIDE: why not returning directly the dataframe?
 
-
-
-def filter_tot_silence_duration(df, max_duration):
+def filter_tot_silence_duration(df, threshold):
     '''
     Parameters
     ---------
     df: pd.DataFrame
         The dataframe from the function check_silence.
     
-    max_duration: float
-        If the sum of the length of mid-silent sections <= min_duration, 
+    threshold: float
+        If the sum of the length of mid-silent sections <= threshold, 
         keep the track and its track_id is returned.
     
     
@@ -294,26 +263,27 @@ def filter_tot_silence_duration(df, max_duration):
     ------
     list
         The track_id of tracks that satisfy the condition: 
-            total length of mid-silent duration <= max_duration.
+            total length of mid-silent duration <= threshold.
     
     '''
     
-    ID = df[(df['mid_silence_length'] <= max_duration)]
-    return ID.track_id.tolist()
+    #ID = df[(df['mid_silence_length'] <= threshold)]
+    #return ID.track_id.tolist()
+    return df[df'mid_silence_length' <= threshold] # DAVIDE: same as above
 
 
-#This functions takes the dataframe and max_duration of an individual mid-silent section (e.g. 1s)
-#return the track_id that SATISFIES the condition -- the maximum length of an indiviual mid-silent section <= max_duration
-def filter_max_silence_duration(df, max_duration):
+#This functions takes the dataframe and threshold of an individual mid-silent section (e.g. 1s)
+#return the track_id that SATISFIES the condition -- the maximum length of an indiviual mid-silent section <= threshold
+def filter_max_silence_duration(df, threshold):
     '''
     Parameters
     ---------
     df: pd.DataFrame
         The dataframe from the function check_silence.
     
-    max_duration: float
+    threshold: float
         If the maximum length amongst the individual mid-silent sections 
-        <= max_duration, keep the track and its track_id is returned.
+        <= threshold, keep the track and its track_id is returned.
     
     
     Returns
@@ -321,37 +291,38 @@ def filter_max_silence_duration(df, max_duration):
     list
         The track_id of tracks that satisfy the condition: 
             the maximum length amongst the individual mid-silent sections 
-            <= max_duration.
+            <= threshold.
     
     '''
     
-    ID = df[(df['max_duration'] <= max_duration) 
-            | (np.isnan(df['max_duration']))]
-    return ID.track_id.tolist()
+    # ID = df[(df['max_silence_length'] <= threshold) 
+    #         | (np.isnan(df['threshold']))]
+    # return ID.track_id.tolist()
+    return df[df['max_silence_length'] <= threshold) # DAVIDE: same as above
 
 def die_with_usage():
     print()
     print("NOOOOO: mp3_to_npz.py - Script to convert MP3 files into waveform NumPy arrays.")
     print()
-    print("Usage:     python track_fetch.py <input filename> [options]")
+    print("Usage:     python track_wrangle_silence.py <input csv filename or path> <output csv filename or path> [options]")
     print()
     print("General Options:")
-    print("  --root-dir-npz         Set different directory to save npz files.")
-    print("  --root-dir-mp3         Set different directory to find mp3 files.")
-    print("  --help                 Show this help message and exit.")
-    print("  --verbose              Show progress.")
+    print("  --root-dir-npz                       Set different directory to save npz files.")
+    print("  --root-dir-mp3                       Set different directory to find mp3 files.")
+    print("  --filter-trim-length <int>           Keep only tracks whose effective length (in seconds) is longer than the theshold.")
+    print("  --filter-tot-silence-duration <int>  Keep only tracks whose total silent length is shorter than the theshold.")
+    print("  --filter-max-silence-duration <int>  Keep only tracks whose maximal silent length is shorter than the theshold.")
+    print("  --help                               Show this help message and exit.")
     print()
-    print("Example:   python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
+    print("Example:   python track_wrangle_silence.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
     print()
     sys.exit(0)
 
 if __name__ == "__main__":
 
-    # show help
     if len(sys.argv) < 3:
         die_with_usage()
     
-    # show help, if user did not input something weird
     if '--help' in sys.argv:
         if len(sys.argv) == 2:
             die_with_usage()
@@ -364,7 +335,9 @@ if __name__ == "__main__":
     else:
         output = sys.argv[2] + '.csv'
     
-    verbose = False
+    filt_trim_length = False
+    filt_tot_silence = False
+    filt_max_silence = False 
 
     while True:
         if len(sys.argv) == 3:
@@ -375,13 +348,25 @@ if __name__ == "__main__":
         elif sys.argv[3] == '--root-dir-npz':
             set_npz_root_dir(sys.argv[4])
             del sys.argv[3:5]
-        elif sys.argv[3] == '--verbose':
-            verbose = True
-            del sys.argv[3]     
+        elif sys.argv[3] == '--filter-trim-length':
+            filt_trim_length = int(sys.argv[4])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--filter-tot-silence-duration':
+            filt_tot_silence = int(sys.argv[4])
+            del sys.argv[3:5]
+        elif sys.argv[3] == '--filter-max-silence-duration':
+            filt_max_silence = int(sys.argv[4])
+            del sys.argv[3:5]  
         else:
             print("???")
             sys.exit(0)
 
     df = pd.read_csv(sys.argv[1])
     df = check_silence(df)
+    if filt_trim_length:
+        df = filter_trim_length(df, filt_trim_length)
+    if filt_tot_silence:
+        df = filter_tot_silence_duration(df, filt_tot_silence)
+    if filt_max_silence:
+        df = filter_max_silence_duration(df, filt_max_silence)
     df.to_csv(output, index=False)
