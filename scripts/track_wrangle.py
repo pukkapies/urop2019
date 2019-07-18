@@ -145,7 +145,7 @@ def df_purge_duplicates(track_df: pd.DataFrame):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False, add_length: bool = False, add_size: bool = False):
+def ultimate_output(min_size: int = 0, min_length: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid' and 'path'.
     
     Parameters
@@ -176,10 +176,10 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
 
     print("Purging faulty MP3 files...")
     print("    Checking files with size less than threshold...", end=" ")
-    df = df_purge_faulty_mp3_1(df, threshold=threshold, add_col=add_size)
+    df = df_purge_faulty_mp3_1(df, threshold=min_size)
     print("done")
     print("    Checking files that can't be opened...", end=" ")
-    df = df_purge_faulty_mp3_2(df, add_col=add_length)
+    df = df_purge_faulty_mp3_2(df, threshold=min_length)
     print("done")
     
     if discard_no_tag == True:
@@ -196,26 +196,27 @@ def ultimate_output(threshold: int = 0, discard_no_tag: bool = False, discard_du
 
 def die_with_usage():
     print()
-    print("Mp3Wrangler - Script to fetch Mp3 songs from the server and output an ultimate CSV file")
+    print("track_wrangle.py - Script to merge the list of MP3 files obtained with track_fetch.py with the MSD summary file, remove")
+    print("                   unwanted entries such as mismatches, faulty files or duplicates, and output a CSV file with the")
+    print("                   following columns: 'track_id', 'track_7digitalid', 'path', track_length', 'file_size', 'channels'")
     print()
-    print("Usage:     python data_wrangle.py <csv filename or path> [options]")
+    print("Usage:     python track_wrangle.py <input csv filename or path> <output csv filename or path> [options]")
     print()
     print("General Options:")
-    print("  --add-length           Add column to output file containing track lengths.")
-    print("  --add-size             Add column to output file containing file sizes.")
     print("  --discard-no-tag       Choose to discard tracks with no tags.")
-    print("  --discard-dupl <mode>  Choose to discard duplicate tracks.") # <mode> not currently supported
+    print("  --discard-dupl         Choose to discard duplicate tracks.")
     print("  --help                 Show this help message and exit.")
-    print("  --threshold            Set the minimum size (in bytes) to allow for the MP3 files (default 0).")
+    print("  --min-length           Set the minimum length (in seconds) to allow (default 0).")
+    print("  --min-size             Set the minimum size (in bytes) to allow (default 0).")
     print()
-    print("Example:   python data_wrangle.py ./wrangl.csv --threshold 50000 --discard-no-tag")
+    print("Example:   python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag")
     print()
     sys.exit(0)
 
 if __name__ == "__main__":
 
     # show help
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         die_with_usage()
     
     # show help, if user did not input something weird
@@ -226,44 +227,41 @@ if __name__ == "__main__":
             print("???")
             sys.exit(0)
     
-    if sys.argv[1][-4:] == '.csv':
-        output = sys.argv[1]
+    if sys.argv[2][-4:] == '.csv':
+        output = sys.argv[2]
     else:
-        output = sys.argv[1] + '.csv'
+        output = sys.argv[2] + '.csv'
 
     # check arguments
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
         df = ultimate_output()
         df.to_csv(output, index=False)
     else:
         # initialize variables
-        threshold = 0 
+        min-length = 0
+        min-size = 0 
         discard_no_tag = False
         discard_dupl = False
-        add_length = False
-        add_size = False
 
         while True:
-            if len(sys.argv) == 2:
+            if len(sys.argv) == 3:
                 break
-            elif sys.argv[2] == '--threshold':
-                threshold = int(sys.argv[3])
-                del sys.argv[2:4]
-            elif sys.argv[2] == '--discard-no-tag':
+            elif sys.argv[3] == '--min-length':
+                min-length = int(sys.argv[3])
+                del sys.argv[3:5]
+            elif sys.argv[3] == '--min-size':
+                min-length = int(sys.argv[3])
+                del sys.argv[3:5]
+            elif sys.argv[3] == '--discard-no-tag':
                 discard_no_tag = True
-                del sys.argv[2]
-            elif sys.argv[2] == '--discard-dupl':
+                del sys.argv[3]
+            elif sys.argv[3] == '--discard-dupl':
                 discard_dupl = True
-                del sys.argv[2]   
-            elif sys.argv[2] == '--add-length':
-                add_length = True
-                del sys.argv[2]
-            elif sys.argv[2] == '--add-size':
-                add_size = True
-                del sys.argv[2]     
+                del sys.argv[3]     
             else:
                 print("???")
                 sys.exit(0)
 
-        df = ultimate_output(threshold, discard_no_tag, discard_dupl)
+        df = pd.read_csv(sys.argv[1])
+        df = ultimate_output(min_size, min_length, discard_no_tag, discard_dupl)
         df.to_csv(output, index=False)

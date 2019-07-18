@@ -50,7 +50,7 @@ def find_tracks():
 def find_tracks_with_7dids():
     paths = find_tracks()
     paths_7dids = [int(os.path.basename(path)[:-9]) for path in paths]
-    df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'path': paths})
+    df = pd.DataFrame(data={'path': paths, 'track_7digitalid': paths_7dids})
     return df
 
 def check_size(df):
@@ -157,7 +157,7 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
 def die_with_usage():
     print()
     print("track_fetch.py - Script to search for MP3 files within mp3_root_dir and output a CSV file with (optionally) the")
-    print("                 following columns: track 7digitalID, path, file size, track length, number of channels.")
+    print("                 following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'")
     print()
     print("Usage:     python track_fetch.py <output filename> [options]")
     print()
@@ -169,7 +169,7 @@ def die_with_usage():
     print("  --help                 Show this help message and exit.")
     print("  --verbose              Show progress.")
     print()
-    print("Example:   python track_fetch.py ./tracks_on_boden.csv --root-dir /data/songs/ --no-channels --verbose")
+    print("Example:   python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --no-channels --verbose")
     print()
     sys.exit(0)
 
