@@ -35,17 +35,19 @@ def set_mp3_root_dir(new_root_dir): # DAVIDE: now same function name and var nam
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
-def find_tracks():
+def find_tracks(abs_path = False):
     paths = []
     for folder, subfolders, files in os.walk(mp3_root_dir):
         for file in files:
-            path = os.path.join(os.path.abspath(folder), file)
+            path = os.path.join(folder, file)
             paths.append(path)
     paths = [path for path in paths if path[-4:] == '.mp3']
+    if abs_path == False:
+        paths = [os.path.relpath(path, mp3_root_dir) for path in paths]
     return paths
 
-def find_tracks_with_7dids():
-    paths = find_tracks()
+def find_tracks_with_7dids(abs_path = False):
+    paths = find_tracks(abs_path)
     paths_7dids = [int(os.path.basename(path)[:-9]) for path in paths]
     df = pd.DataFrame(data={'path': paths, 'track_7digitalid': paths_7dids})
     return df
@@ -131,7 +133,11 @@ def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # 
         
         if verbose == True:
             if idx % 1000 == 0:
-                print('PROGRESS: {:6d}/{:6d}'.format(idx, tot))
+                print('Processed {:6d} out of {:6d}...'.format(idx, tot))
+    
+    if verbose == True:
+        print('Processed {:6d} out of {:6d}...'.format(tot, tot))
+
 
     if add_length == True: 
         #df['length'] = pd.Series(l, index=df.index)
@@ -149,6 +155,7 @@ def die_with_usage():
     print("Usage:     python track_fetch.py <output filename> [options]")
     print()
     print("General Options:")
+    print("  --abs-path             Use absolute paths in output file.")
     print("  --no-size              Do not add column containing file sizes to output file.")
     print("  --no-length            Do not add column containing track lengths to output file.")
     print("  --no-channels          Do not add column containing track number of channels to output file.")
@@ -177,9 +184,12 @@ if __name__ == "__main__":
     else:
         output = sys.argv[1] + '.csv'
 
+    abs_path = False
+
     add_size = True
     add_length = True
     add_channels = True
+    
     verbose = False
 
     while True:
@@ -188,6 +198,9 @@ if __name__ == "__main__":
         elif sys.argv[2] == '--root-dir':
             set_mp3_root_dir(sys.argv[3])
             del sys.argv[2:4]
+        elif sys.argv[2] == '--abs-path':
+            abs_path = True
+            del sys.argv[2]
         elif sys.argv[2] == '--no-size':
             add_size = False
             del sys.argv[2]
@@ -204,7 +217,7 @@ if __name__ == "__main__":
             print("???")
             sys.exit(0)
 
-        df = find_tracks_with_7dids()
+        df = find_tracks_with_7dids(abs_path)
         if add_length == True or add_channels == True:
             df = check_mutagen_info(df, add_length, add_channels, verbose)
         if add_size == True:
