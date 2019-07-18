@@ -80,6 +80,9 @@ def create_folder_structure():
         else:
             print("Directory " + structure + " already exits. Are you sure it is empty?")
 
+def mp3_path_to_npz_path(path):
+    return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
+
 def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
     '''
     Parameters
@@ -118,7 +121,6 @@ def savez(track_7digitalid): # ADEN: the original code will make it more useful 
 #     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
 #     array_split = librosa.effects.split(librosa.core.to_mono(array))
 #     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
-
 
 def no_sound(df, start=0, end=501070, verbose=True):
     '''
@@ -203,7 +205,7 @@ def no_sound_count(df, final_check=False):
      
     # paths = df['path'].tolist()  # ADEN: This is probability more efficient. # DAVIDE the efficience gain is in milliseconds, and it is one line more of code
     # for idx, path in enumerate(paths):
-    for idx, path in enumerate(df['path'])
+    for idx, path in enumerate(df['path']):
         path_npz = npz_root_dir[:-1] + path[:-9]
         if os.path.isfile(path_npz + '.npz'):
             count += 1
@@ -249,16 +251,19 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
             break
         elif sys.argv[2] == '--root-dir-mp3':
-            set_mp3_root_dir(sys.argv[3])
+            set_mp3_root_dir(os.path.expanduser(sys.argv[3]))
             del sys.argv[2:4]
         elif sys.argv[2] == '--root-dir-npz':
-            set_npz_root_dir(sys.argv[3])
+            set_npz_root_dir(os.path.expanduser(sys.argv[3]))
             del sys.argv[2:4]  
         else:
             print("???")
             sys.exit(0)
 
     df = pd.read_csv(sys.argv[1])
+    print(mp3_path_to_npz_path('1098708.clip.mp3'))
+    print(mp3_path_to_npz_path(df['path'][0]))
+    sys.exit(0)
     create_folder_structure()
     no_sound(df, verbose)
     no_sound_count(df, verbose)
