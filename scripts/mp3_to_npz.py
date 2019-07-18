@@ -81,40 +81,59 @@ def create_folder_structure():
             print("Directory " + structure + " already exits. Are you sure it is empty?")
 
 def mp3_path_to_npz_path(path):
+    ''' Given the path of an mp3 file, returns the path of the npz file associated with it.
+    
+    Parameters
+    ----------
+    path : str
+        The path of the mp3 file.
+
+    Returns
+    -------
+    str
+        The path of the npz file.
+    
+    Examples
+    --------
+    >>> set_mp3_root_dir('/User/Me/Desktop/7Digital')
+    >>> set_npz_root_dir('/User/Me/Desktop/7Digital_NumPy')
+    >>> path = '/User/Me/Desktop/7Digital/2/5/2573962.clip.mp3
+    >>> mp3_path_to_npz_path(path)
+    /User/Me/Desktop/7Digital_NumPy/2/5/2573962.npz
+    '''
     return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
 
 def savez(path):
+    '''
+    Parameters
+    ----------
+    track_7digitalid: int
+        The track_7digitalid of the track 
+        
+    Returns
+    -------
+    npz files:
+        The npz file is of the form ['array', 'sr', 'split']
+        'array': 
+            The loaded mp3 files in numpy-array form by library -- librosa.
+            The array represent the mp3s in its original sampling rate, and 
+            multi-channel is preserved. (each row represents one channel)
+            
+        'sr':
+            The sampling rate of the mp3 file.
+            
+        'split':
+            All the sections of the track which is non-silent (>=60dB). The
+            information is saved in the form: n*2 numpy.ndarray, and each row
+            represent one section -- starting position and ending position of 
+            array respectively.
+    '''
     path_npz = mp3_path_to_npz_path(path)
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
     array_split = librosa.effects.split(librosa.core.to_mono(array))
     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 # def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
-#     '''
-#     Parameters
-#     ----------
-#     track_7digitalid: int
-#         The track_7digitalid of the track 
-        
-#     Returns
-#     -------
-#     npz files:
-#         The npz file is of the form ['array', 'sr', 'split']
-#         'array': 
-#             The loaded mp3 files in numpy-array form by library -- librosa.
-#             The array represent the mp3s in its original sampling rate, and 
-#             multi-channel is preserved. (each row represents one channel)
-            
-#         'sr':
-#             The sampling rate of the mp3 file.
-            
-#         'split':
-#             All the sections of the track which is non-silent (>=60dB). The
-#             information is saved in the form: n*2 numpy.ndarray, and each row
-#             represent one section -- starting position and ending position of 
-#             array respectively.
-    
-#     '''
 #     path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
 #     path_npz = npz_root_dir[:-1] +path[:-9] #
 #     path = mp3_root_dir[:-1] +path #
