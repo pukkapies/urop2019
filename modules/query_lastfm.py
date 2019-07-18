@@ -1,3 +1,6 @@
+"""
+
+"""
 ''' Contains simple tools for querying the lastfm_tags.db file
 
 
@@ -21,27 +24,38 @@ to the database on Boden.
 
 Functions
 ---------
-- set_path              Sets path to the lastfm_tags.db
+- set_path
+    Set path to the lastfm_tags.db.
 
-- tid_to_tid_nums       Gets tid_num given tid
+- tid_to_tid_nums
+    Get tid_num given tid.
 
-- tid_num_to_tid        Gets tid given tid_num
+- tid_num_to_tid
+    Get tid given tid_num.
 
-- tid_num_to_tag_nums   Gets tag_num given tid_num
+- tid_num_to_tag_nums
+    Get tag_num given tid_num.
 
-- tag_num_to_tag        Gets tag given tag_num
+- tag_num_to_tag
+    Get tag given tag_num.
 
-- tag_to_tag_num        Gets tag_num given tag
+- tag_to_tag_num
+    Get tag_num given tag.
 
-- get_tags              Gets a list of tags associated to given tid
+- get_tags
+    Get a list of tags associated to given tid.
 
-- get_tags_dict         Gets a dict with tids as keys and a list of its tags as value
+- get_tags_dict
+    Get a dict with tids as keys and a list of its tags as value.
 
-- tid_tag_count         Gets a dict with tids as keys and its number of tags as value
+- tid_tag_count
+    Get a dict with tids as keys and its number of tags as value.
 
-- filter_tags           Filters list of tids based on minimum number of tags
+- filter_tags
+    Filter list of tids based on minimum number of tags.
 
-- tag_count             Gets a dict with the tags associated to tids as keys and their count number as values
+- tag_count
+    Get a dict with the tags associated to tids as keys and their count number as values.
 '''
 
 import sqlite3
