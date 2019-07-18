@@ -15,19 +15,8 @@ This script performs the following operations:
                                  as the converted arrays and sampling rate of the original mp3 to speed up 
                                  the loading process in the future;
 
-- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window;
+- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window.
 
-
-Examples
---------
-    create_folder_structure()
-    
-    df = track_wrangle.read_duplicates_and_purge()
-    
-    no_sound(df, start=0, end=40000)
-    
-    no_sound_count()
-    
 
 Functions
 ---------
@@ -35,16 +24,26 @@ Functions
                                 the same folder structure under a new directory, which will be used to save
                                 the converted numpy arrays
 
-- savez                         Converts a mp3 files into three numpy arrays as a single npz file:
-                                    1. loaded mp3 arrays
-                                    2. sampling rate 
-                                    3. start and end position of arrays in 1. when volume of track is above 60dB (see librosa documentation on librosa.effect.split)
+- create_folder_structure  
+    Copy the folder structure of how the mp3 files are saved and produce 
+    the same folder structure under a new directory, which will be used to save
+    the converted numpy arrays.
 
-- no_sound                      Applies savez() to the provided provided by a dataframe
+- mp3_path_to_npz_path
+    Convert the path of a mp3 file into the path of the corresponding npz file.
 
-- no_sound_count                Returns the number of mp3 files that have been saved as npz files
-                                Returns the path of tracks that have not been converted yet if final_check mode is True
-                           
+- savez
+    Convert a mp3 files into three numpy arrays as an npz file:
+    1. loaded mp3 arrays;
+    2. sample rate;
+    3. start and end positoin of arrays when volume of track is above 60dB (non-silent).
+                                 
+- no_sound                 
+    Apply savez() to the tracks provided provided by the input dataframe.
+                                         
+- no_sound_count                    
+    Return the number of mp3 files that have been correctly saved as npz files. 
+    Return the paths of the tracks that have not been saved yet if final_check is True.
 '''
 
 import os
@@ -60,17 +59,40 @@ mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
 
 def create_folder_structure():
-    '''
-    Generate folder structure to store npz files.
-    '''
+    ''' Generate folder structure to store npz files. '''
+
     for dirpath, dirnames, filenames in os.walk(mp3_root_dir):
         structure = os.path.join(npz_root_dir, dirpath[len(mp3_root_dir):])
         if not os.path.isdir(structure):
             os.mkdir(structure)
         else:
-            print("Directory " + structure + " already exits. Are you sure it is empty?")
+            print("WARNING directory " + structure + " already exits; are you sure it is empty?")
 
-def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
+def mp3_path_to_npz_path(path):
+    ''' Given the path of an mp3 file, returns the path of the npz file associated with it.
+    
+    Parameters
+    ----------
+    path : str
+        The path of the mp3 file.
+
+    Returns
+    -------
+    str
+        The path of the npz file.
+    
+    Examples
+    --------
+    >>> set_mp3_root_dir('/User/Me/Desktop/7Digital')
+    >>> set_npz_root_dir('/User/Me/Desktop/7Digital_NumPy')
+    >>> path = '/User/Me/Desktop/7Digital/2/5/2573962.clip.mp3
+    >>> mp3_path_to_npz_path(path)
+    /User/Me/Desktop/7Digital_NumPy/2/5/2573962.npz
+    '''
+
+    return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
+
+def savez(path):
     '''
     Parameters
     ----------
@@ -94,23 +116,24 @@ def savez(track_7digitalid): # ADEN: the original code will make it more useful 
             information is saved in the form: n*2 numpy.ndarray, and each row
             represent one section -- starting position and ending position of 
             array respectively.
-    
     '''
-    path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
-    path_npz = npz_root_dir[:-1] +path[:-9] #
-    path = mp3_root_dir[:-1] +path #
+
+    path_npz = mp3_path_to_npz_path(path)
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
     array_split = librosa.effects.split(librosa.core.to_mono(array))
     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
-# DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
-# def savez(path, path_npz):
+# def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
+#     path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
+#     path_npz = npz_root_dir[:-1] +path[:-9] #
+#     path = mp3_root_dir[:-1] +path #
 #     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
 #     array_split = librosa.effects.split(librosa.core.to_mono(array))
 #     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
+# DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
 
-def no_sound(df, start=0, end=501070, verbose=True):
+def no_sound(df, start=0, end=None, verbose=True):
     '''
     Parameters
     ----------
@@ -147,23 +170,27 @@ def no_sound(df, start=0, end=501070, verbose=True):
             represent one section -- starting position and ending position of 
             array respectively.
     '''
+
+    if end == None:
+        end = len(df)
     # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
     # for idx, path in enumerate(paths)
+    tot = len(df)
     for idx, path in enumerate(df['path'][start:end]): # DAVIDE: the efficience gain is in milliseconds
-        time = time.time()
+        start = time.time()
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #ADEN: I think this is wrong # DAVIDE: it works
         if os.path.isfile(path_npz):
-            print("File " + path_npz + " already exists. Ignoring.") 
+            print("WARNING file " + path_npz + " already exists!") 
         else:
             path = os.path.join(mp3_root_dir, path)
-            track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez
-            savez(track_7digitalid)
-            # savez(path, path_npz) # DAVIDE: if we use my savez...
+            # track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez
+            # savez(track_7digitalid)
+            savez(path) # DAVIDE: if we use my savez...
         
         if verbose == True:
             if idx % 100 == 0:
-                print("{:6d} - time taken by {:6d}: {}".format(idx, path, time.time()-time))
-                
+                print("Processed {:6d} out of {:6d}...".format(idx, tot))
+                print("Time consumed by {}: {:6.5f}".format(path, time.time() - start))
 
 def no_sound_count(df, final_check=False):
     '''
@@ -201,10 +228,10 @@ def no_sound_count(df, final_check=False):
             l.append(path)
     
     if final_check == True:
-        print("    {} out of {} converted...".format(count, len(df)))
+        print("Processed {:6d} out of {:6d}...".format(count, len(df)))
         return l
     else:
-        print("    {} out of {} converted...".format(count, len(df)))
+        print("Processed {:6d} out of {:6d}...".format(count, len(df)))
         
         
 
@@ -226,6 +253,7 @@ def die_with_usage():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.",
                                      epilog= "Example: python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
+    parser.add_argument("input", help="Input csv filename")
     parser.add_argument("--root-dir-npz", help="Set different directory to save npz files.")
     parser.add_argument("--root-dir-mp3", help="Set different directory to find mp3 files.")
 
@@ -235,7 +263,16 @@ if __name__ == "__main__":
     if args.root_dir_mp3:
         mp3_root_dir = args.root_dir_mp3
 
-    df = pd.read_csv(sys.argv[1])
+    df = pd.read_csv(args.input)
+
+    mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
+    
+    if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
+        print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
+        print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
+        set_mp3_root_dir(mp3_root_dir_infer)
+    
     create_folder_structure()
-    no_sound(df, verbose)
-    no_sound_count(df, verbose)
+
+    no_sound(df)
+    no_sound_count(df)

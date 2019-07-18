@@ -13,33 +13,32 @@ set the directory in which the 7Digital mp3 files are stored.
 
 Functions
 ---------
-- set_path_h5                Sets path to the msd_summary_file.h5
+- extract_ids_from_summary
+    Produce a dataframe with 7digitalid's and tid's of all tracks in the dataset.
 
-- set_path_txt_mismatches    Sets path to the msd_mismatches.txt file
+- df_merge
+    Produce a dataframe with 7digitalid's, tid's and paths of mp3 files on the server.
 
-- set_path_txt_duplicates    Sets path to the msd_duplicates.txt file
+- df_purge_mismatches
+    Remove mismatches from previously generated dataset.
 
-- extract_ids_from_summary   Produces a dataframe with 7digitalid's and tid's of all tracks in the dataset
+- df_purge_faulty_mp3_1
+    Remove tracks whose file size is less than the threshold (or have file size 0).
 
-- find_tracks                Gets a list of paths of mp3 files on our server
+- df_purge_faulty_mp3_2
+    Remove tracks which can't be opened and therefore have NaN length.
 
-- find_tracks_with_7dids     Produces a dataframe with 7digitalid's and paths of mp3 files on our server
+- df_purge_no_tag
+    Remove tracks which are not matched to any tag.
 
-- df_merge                   Produces a dataframe wiht 7digitalid's, tid's and paths of mp3 files on our server
+- read_duplicates
+    Read the msd_duplicates.txt file and produces a list (of lists) of duplicates.
 
-- df_purge_mismatches        Removes mismatches from previously generated dataset
+- df_purge_duplicates
+    Retain only one track for each set of duplicates.
 
-- df_purge_faulty_mp3_1      Removes tracks whose file size is less than the threshold (or have file size 0)
-
-- df_purge_faulty_mp3_2      Removes tracks which can't be opened and therefore have NaN length
-
-- df_purge_no_tag            Removes tracks which are not matched to any tag
-
-- read_duplicates            Reads the msd_duplicates.txt file and produces a list (of lists) of duplicates
-
-- df_purge_duplicates        Retains only one track for each set of duplicates
-
-- ultimate_output            Combine all the previous functions and produces a dataframe accoring to the given parameters
+- ultimate_output
+    Combine all the previous functions and produces a dataframe accoring to the given parameters.
 '''
 
 import os
