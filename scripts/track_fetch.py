@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--abs", action="store_true", dest="abs_path", help="use absolute paths in output file")
     parser.add_argument("--skip-os", action="store_false", dest="use_os", help="do not calculate tracks size")
     parser.add_argument("--skip-mutagen", action="store_false", dest="use_mutagen", help="do not use mutagen to check tracks length")
-    parser.add_argument("--debug", action="store_false", help="enable debug mode")
+    parser.add_argument("--debug", action="store_true", help="enable debug mode")
 
     args = parser.parse_args()
    
