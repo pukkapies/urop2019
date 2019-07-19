@@ -242,13 +242,13 @@ if __name__ == "__main__":
     description = "Script to analyze npz arrays to extract information about silence."
     epilog = "Example: python track_wrangle_silence.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="Input csv filename or path")
-    parser.add_argument("output", help="Output csv filename or path")
-    parser.add_argument("--root-dir-npz", help="Set different directory to save npz files.")
-    parser.add_argument("--root-dir-mp3", help="Set different directory to find mp3 files.")
-    parser.add_argument("--filter-trim-length", type=int, default=0, help="Keep only tracks whose effective length (in seconds) is longer than the theshold.")
-    parser.add_argument("--filter-tot-silence-duration", type=int, default=0, help="Keep only tracks whose total silent length is shorter than the theshold.")
-    parser.add_argument("--filter-max-silence-duration", type=int, default=0, help="Keep only tracks whose maximal silent length is shorter than the theshold.")
+    parser.add_argument("input", help="input csv filename or path")
+    parser.add_argument("output", help="output csv filename or path")
+    parser.add_argument("--root-dir-npz", help="set different directory to save npz files")
+    parser.add_argument("--root-dir-mp3", help="set different directory to find mp3 files")
+    parser.add_argument("--filter-trim-length", type=int, default=0, help="keep only tracks whose effective length (in seconds) is longer than the theshold")
+    parser.add_argument("--filter-tot-silence-duration", type=int, default=0, help="keep only tracks whose total silent length is shorter than the theshold")
+    parser.add_argument("--filter-max-silence-duration", type=int, default=0, help="keep only tracks whose maximal silent length is shorter than the theshold")
 
     args = parser.parse_args()
 

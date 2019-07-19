@@ -209,22 +209,17 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, min_length: int = 0, di
 
 if __name__ == "__main__":
     
-    description = '''Script to merge the list of mp3 files obtained with track_fetch.py with
-                     the MSD summary file, remove unwanted entries such as mismatches, faulty
-                     files or duplicates, and output a csv file with the following columns:
-                     'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size'.'''
-
+    description = "Script to merge the list of mp3 files obtained with track_fetch.py with the MSD summary file, remove unwanted entries such as mismatches, faulty files or duplicates, and output a csv file with the following columns: 'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size'."
     epilog = "Example: python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag"
-
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="Input csv filename or path")
-    parser.add_argument("output", help="Input csv filename or path")
-    parser.add_argument("--path-h5", help="Set path to msd_summary_file.h5.")
-    parser.add_argument("--path-txt-dupl", help="Set path to duplicates info file.")
-    parser.add_argument("--path-txt-mism", help="Set path to mismatches info file.")
-    parser.add_argument("--min-size", type=int, default=0, help="Set the minimum size (in bytes) to allow (default 0).")
-    parser.add_argument("--discard-no-tag", action="store_true", help="Choose to discard tracks with no tags.")
-    parser.add_argument("--discard-dupl", action="store_true", help="Choose to discard duplicate tracks.")
+    parser.add_argument("input", help="input csv filename or path")
+    parser.add_argument("output", help="output csv filename or path")
+    parser.add_argument("--path-h5", help="set path to msd_summary_file.h5")
+    parser.add_argument("--path-txt-dupl", help="set path to duplicates info file")
+    parser.add_argument("--path-txt-mism", help="set path to mismatches info file")
+    parser.add_argument("--min-size", type=int, default=0, help="set the minimum size (in bytes) to allow (default 0)")
+    parser.add_argument("--discard-no-tag", action="store_true", help="choose to discard tracks with no tags")
+    parser.add_argument("--discard-dupl", action="store_true", help="choose to discard duplicate tracks")
     
     args = parser.parse_args()
     

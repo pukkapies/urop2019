@@ -149,18 +149,16 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
 
 if __name__ == "__main__":
 
-    description = """Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the 
-                     following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'."""
+    description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'."
     epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
-
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("output", help="Output filename")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Show progress.")
-    parser.add_argument("--root-dir", help="Set different mp3_root_dir.")
-    parser.add_argument("--abs", action="store_true", dest="abs_path", help="Use absolute paths, instead of relative, in output file.")
-    parser.add_argument("--skip-os", action="store_false", dest="use_os", help="Do not calculate tracks size.")
-    parser.add_argument("--skip-mutagen", action="store_false", dest="use_mutagen", help="Do not use mutagen to check tracks length.")
-    parser.add_argument("--debug", help="Enable debug mode")
+    parser.add_argument("output", help="output filename or path")
+    parser.add_argument("-v", "--verbose", action="store_true", help="show progress")
+    parser.add_argument("--root-dir", help="set different mp3_root_dir")
+    parser.add_argument("--abs", action="store_true", dest="abs_path", help="use absolute paths in output file")
+    parser.add_argument("--skip-os", action="store_false", dest="use_os", help="do not calculate tracks size")
+    parser.add_argument("--skip-mutagen", action="store_false", dest="use_mutagen", help="do not use mutagen to check tracks length")
+    parser.add_argument("--debug", action="store_false", help="enable debug mode")
 
     args = parser.parse_args()
    
