@@ -262,12 +262,12 @@ if __name__ == "__main__":
 
     df = pd.read_csv(args.input)
 
-    mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
-    
-    if os.path.normpath(npz.mp3_root_dir) != mp3_root_dir_infer:
-        print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
-        print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
-        npz.set_mp3_root_dir(mp3_root_dir_infer)
+    if os.path.isabs(df['path'][0]):
+        mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
+        if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
+            print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
+            print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
+            mp3_root_dir = mp3_root_dir_infer
 
     df = check_silence(df)
     if args.filter_trim_length:
