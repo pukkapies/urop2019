@@ -78,7 +78,7 @@ def create_folder_structure():
         if not os.path.isdir(structure):
             os.mkdir(structure)
         else:
-            print("WARNING directory " + structure + " already exits; are you sure it is empty?")
+            print("WARNING directory " + structure + " already exits! Are you sure it is empty?")
 
 def mp3_path_to_npz_path(path):
     ''' Given the path of an mp3 file, returns the path of the npz file associated with it.
@@ -184,9 +184,10 @@ def no_sound(df, start=0, end=None, verbose=True):
         end = len(df)
     # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
     # for idx, path in enumerate(paths)
+    start = time.time()
     tot = len(df)
     for idx, path in enumerate(df['path'][start:end]): # DAVIDE: the efficience gain is in milliseconds
-        start = time.time()
+        partial = time.time()
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #ADEN: I think this is wrong # DAVIDE: it works
         if os.path.isfile(path_npz):
             print("WARNING file " + path_npz + " already exists!") 
@@ -198,8 +199,8 @@ def no_sound(df, start=0, end=None, verbose=True):
         
         if verbose == True:
             if idx % 100 == 0:
-                print("Processed {:6d} out of {:6d}...".format(idx, tot))
-                print("Time consumed by {}: {:6.5f}".format(path, time.time() - start))
+                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
+                print("Processed {} in {:6.5f} sec".format(path, time.time() - partial))
 
 def no_sound_count(df, final_check=False):
     '''

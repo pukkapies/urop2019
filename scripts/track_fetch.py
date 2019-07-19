@@ -32,10 +32,12 @@ Functions
     opened and the duration and number of channels of the tracks.
 '''
 
-import mutagen.mp3
 import os
 import pandas as pd
 import sys
+import time
+
+from mutagen.mp3 import MP3, HeaderNotFoundError
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 
@@ -88,70 +90,50 @@ def check_size(df):
     df['file_size'] = pd.Series(s, index=df.index)
     return df
 
-# ADEN: def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size.csv'):
-def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # DAVIDE: check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
+def check_mutagen_info(df, verbose = False, debug: int = None):
     '''
     Parameters
     ----------
     df: pd.DataFrame
         The input dataframe which you want extra information (length and number 
         of channel of tracks).
-    
-    add_length: bool
-        If True, the computed lengths column is appended to the df.
-    
-    add_channels: bool
-        If True, the computed number of channels column is appended to the df.
-        
-    verbose: bool
-        If True, the progress of running the program is printed.
-        
-        
+
     Returns
     -------
     df: pd.DataFrame
         A dataframe that has two extra columns if add_length and add_channels are True:
         
-        'track_length': float
-            The duration of the mp3 tracks.
-            
-        'channels': float
-            The number of channels of the mp3 tracks.
+        'length': float
+            The duration in seconds of the mp3 tracks.
             
         NOTE: an empty cell is returned to the corresponding rows for 'track_length' 
         and 'channels' if the script cannot read the size of the tracks or cannot 
         open the tracks (i.e. broken tracks).
     '''
-    
-    tot = len(df)
+    start = time.time()
     l = []
-    c = []
+    tot = len(df)
     for idx, path in enumerate(df['path']):
         path = os.path.join(mp3_root_dir, path)
-        # path = mp3_root_dir[:-1]+ path # DAVIDE: same comment as above...
         try:
-            audio = mutagen.mp3.MP3(path)
-            l.append(audio.info.length)
-            c.append(audio.info.channels)
-        except:
+            l.append(MP3(path).info.length)
+        except HeaderNotFoundError:
             l.append('')
-            c.append('')
-            print('ERROR opening ' + path)
-            continue
+        except:
+            print('WARNING unknown exception occurred at {:6d}, {}'.format(idx, path))
         
         if verbose == True:
-            if idx % 1000 == 0:
-                print('Processed {:6d} out of {:6d}...'.format(idx, tot))
+            if idx % 5000 == 0:
+                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
 
-    if add_length == True: 
-        #df['length'] = pd.Series(l, index=df.index)
-        #df['lengths'] = pd.Series(l, index=df.index) # ADEN: 'length' is better since df.length is ambiguous...
-        df['track_length'] = pd.Series(l, index=df.index) # DAVIDE: it is a column name, I'm not happy with plural. 'track_length'? 
-    if add_channels == True:
-        df['channels'] = pd.Series(c, index=df.index) # DAVIDE: 'channels' though must necessarily be plural, since 'channel' makes no sense
+        if debug:
+            if idx == debug:
+                return l
+
+    df['length'] = pd.Series(l, index=df.index)
 
     if verbose == True:
-        print('Processed {:6d} out of {:6d}...'.format(tot, tot))
+        print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
     
     return df
 
@@ -163,11 +145,10 @@ def die_with_usage():
     print("Usage:     python track_fetch.py <output filename> [options]")
     print()
     print("General Options:")
-    print("  --abs-path             Use absolute paths in output file.")
-    print("  --no-size              Do not add column containing file sizes to output file.")
-    print("  --no-length            Do not add column containing track lengths to output file.")
-    print("  --no-channels          Do not add column containing track number of channels to output file.")
     print("  --root-dir             Set different mp3_root_dir.")
+    print("  --abs                  Use absolute paths instead of relative in the output file.")
+    print("  --skip-os              Do not calculate tracks size.")
+    print("  --skip-mutagen         Do not use mutagen to check tracks length.")
     print("  --help                 Show this help message and exit.")
     print("  --verbose              Show progress.")
     print()
@@ -192,42 +173,49 @@ if __name__ == "__main__":
     else:
         output = sys.argv[1] + '.csv'
 
-    abs_path = False
+    debug = False
 
-    add_size = True
-    add_length = True
-    add_channels = True
-    
+    abs_path = False
+    use_os = True
+    use_mutagen = True
     verbose = False
 
     while True:
         if len(sys.argv) == 2:
             break
+        elif sys.argv[2] == '--debug':
+            debug = True
+            del sys.argv[2]  
         elif sys.argv[2] == '--root-dir':
             set_mp3_root_dir(os.path.expanduser(sys.argv[3]))
             del sys.argv[2:4]
-        elif sys.argv[2] == '--abs-path':
+        elif sys.argv[2] == '--abs':
             abs_path = True
             del sys.argv[2]
-        elif sys.argv[2] == '--no-size':
-            add_size = False
+        elif sys.argv[2] == '--skip-os':
+            use_os = False
             del sys.argv[2]
-        elif sys.argv[2] == '--no-length':
-            add_length = False
-            del sys.argv[2]   
-        elif sys.argv[2] == '--no-channels':
-            add_channels = False
+        elif sys.argv[2] == '--skip-mutagen':
+            use_mutagen = False
             del sys.argv[2]
         elif sys.argv[2] == '--verbose':
             verbose = True
-            del sys.argv[2]     
+            del sys.argv[2]      
         else:
             print("???")
             sys.exit(0)
 
-        df = find_tracks_with_7dids(abs_path)
-        if add_length == True or add_channels == True:
-            df = check_mutagen_info(df, add_length, add_channels, verbose)
-        if add_size == True:
-            df = check_size(df)
-        df.to_csv(output, index=False)
+    df = find_tracks_with_7dids(abs_path)
+
+    if debug == True:
+        import pdb
+        pdb.set_trace()
+        sys.exit(0)
+
+    if use_os == True:
+        df = check_size(df)
+
+    if use_mutagen == True:
+        df = check_mutagen_info(df, verbose)
+    
+    df.to_csv(output, index=False)
