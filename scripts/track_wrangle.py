@@ -63,10 +63,8 @@ import sys
 
 from itertools import islice
 
-if os.path.basename(os.getcwd()) == 'scripts':
-    sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
-else:
-    sys.path.insert(0, os.path.join(os.getcwd(), 'modules'))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
+
 
 import query_lastfm as db
 
