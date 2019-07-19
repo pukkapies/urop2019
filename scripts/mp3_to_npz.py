@@ -52,6 +52,7 @@ Functions
 
 import argparse
 import os
+import sys
 import time
 
 import librosa
@@ -251,7 +252,7 @@ if __name__ == "__main__":
     if args.root_dir_mp3:
         mp3_root_dir = os.path.expanduser(args.root_dir_mp3)
 
-    df = pd.read_csv(args.input)
+    df = pd.read_csv(args.input, comment='#')
 
     if os.path.isabs(df['path'][0]):
         mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))

@@ -180,4 +180,10 @@ if __name__ == "__main__":
     if args.use_mutagen == True:
         df = check_mutagen_info(df, args.verbose)
     
-    df.to_csv(args.output, index=False)
+    with open(args.output, 'a') as f:
+        comment = ('# python ' + os.path.basename(sys.argv.pop(0)))
+        for arg in sys.argv:
+            comment += ' ' + arg
+        f.write(comment + '\n')
+
+        df.to_csv(f, index=False)

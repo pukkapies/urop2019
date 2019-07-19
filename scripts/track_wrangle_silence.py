@@ -49,6 +49,7 @@ Glossary
 
 import argparse
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     if args.root_dir_mp3:
         npz.set_mp3_root_dir(os.path.expanduser(args.root_dir_mp3))
 
-    df = pd.read_csv(args.input)
+    df = pd.read_csv(args.input, comment='#')
 
     if os.path.isabs(df['path'][0]):
         mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
@@ -276,4 +277,11 @@ if __name__ == "__main__":
         df = filter_tot_silence_duration(df, args.filter_tot_silence)
     if args.filter_max_silence:
         df = filter_max_silence_duration(df, args.filter_max_silence)
-    df.to_csv(args.output, index=False)
+    
+    with open(args.output, 'a') as f:
+        comment = ('# python ' + os.path.basename(sys.argv.pop(0)))
+        for arg in sys.argv:
+            comment += ' ' + arg
+        f.write(comment + '\n')
+
+        df.to_csv(f, index=False)

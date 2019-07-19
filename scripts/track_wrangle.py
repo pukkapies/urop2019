@@ -234,6 +234,13 @@ if __name__ == "__main__":
         path_txt_duplicates = os.path.expanduser(args.path_txt_dupl)
     
     
-    df = pd.read_csv(args.input)
+    df = pd.read_csv(args.input, comment='#')
     df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
-    df.to_csv(args.output, index=False)
+    
+    with open(args.output, 'a') as f:
+        comment = ('# python ' + os.path.basename(sys.argv.pop(0)))
+        for arg in sys.argv:
+            comment += ' ' + arg
+        f.write(comment + '\n')
+
+        df.to_csv(f, index=False)
