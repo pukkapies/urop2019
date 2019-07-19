@@ -99,6 +99,12 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
     df: pd.DataFrame
         The input dataframe which you want extra information (length and number 
         of channel of tracks).
+        
+    verbose: bool
+        If True, print progress
+        
+    debug: int
+        Debug mode
 
     Returns
     -------
