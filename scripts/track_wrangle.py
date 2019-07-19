@@ -13,6 +13,15 @@ set the directory in which the 7Digital mp3 files are stored.
 
 Functions
 ---------
+- set_path_h5
+    Set path to the msd_summary_file.h5.
+
+- set_path_txt_mismatches
+    Set path to the msd_mismatches.txt file.
+
+- set_path_txt_duplicates
+    Set path to the msd_duplicates.txt file.
+
 - extract_ids_from_summary
     Produce a dataframe with 7digitalid's and tid's of all tracks in the dataset.
 
@@ -48,21 +57,33 @@ import argparse
 import h5py
 import numpy as np
 import pandas as pd
-# from mutagen import mp3 as mg
-# from track_fetch import * # I am not importing a module, but rather taking the output of the script
-
 from itertools import islice
 
-if os.path.basename(os.getcwd()) == 'scripts':
-    sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
-else:
-    sys.path.insert(0, os.path.join(os.getcwd(), 'modules'))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
 import query_lastfm as db
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
 path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
+
+def set_path_h5(new_path):
+    """ Set path to the msd_summary_file.h5. """
+
+    global path_h5
+    path_h5 = new_path
+
+def set_path_txt_mismatches(new_path):
+    """ Set path to the msd_mismatches.txt. """
+
+    global path_txt_mismatches
+    path_txt_mismatches = new_path
+
+def set_path_txt_duplicates(new_path):
+    """ Set path to the msd_duplicates.txt. """
+
+    global path_txt_duplicates
+    path_txt_duplicates = new_path
 
 def extract_ids_from_summary(): # my mistake, this function should have always been here
     with h5py.File(path_h5, 'r') as h5:
@@ -93,7 +114,7 @@ def df_purge_faulty_mp3_1(merged_df: pd.DataFrame, threshold: int = 0):
     return df
 
 def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
-    df = merged_df[-merged_df['track_length'].isna()]
+    df = merged_df[-merged_df['length'].isna()] # 'lengths'? 'track_length?'
     return df
 
 def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
@@ -135,7 +156,7 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     return df.reset_index()
 
 def ultimate_output(df: pd.DataFrame, min_size: int = 0, min_length: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
-    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'track_length', 'channels'.
+    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'length'.
     
     Parameters
     ----------

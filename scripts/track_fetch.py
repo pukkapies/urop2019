@@ -12,6 +12,9 @@ set the directory in which the 7Digital mp3 files are stored.
 
 Functions
 ---------
+- set_mp3_root_dir
+    Tell the script where mp3 files are stored.
+
 - find_tracks
     Performs an os.walk to find all the mp3 files within mp3_root_dir
 
@@ -29,11 +32,19 @@ Functions
 import os
 import sys
 import argparse
+import time
 
-import mutagen.mp3
 import pandas as pd
+from mutagen.mp3 import MP3
+from mutagen.mp3 import HeaderNotFoundError
 
 mp3_root_dir = '/srv/data/msd/7digital/'
+
+def set_mp3_root_dir(new_root_dir): # DAVIDE: now same function name and var name across all modules, to avoid errors
+    """ Function to set mp3_root_dir, useful when script is used as module """
+
+    global mp3_root_dir
+    mp3_root_dir = new_root_dir
 
 def find_tracks(abs_path = False):
     paths = []
@@ -80,70 +91,50 @@ def check_size(df):
     df['file_size'] = pd.Series(s, index=df.index)
     return df
 
-# ADEN: def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size.csv'):
-def check_mutagen_info(df, add_length=True, add_channels=True, verbose=True): # DAVIDE: check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
+def check_mutagen_info(df, verbose = False, debug: int = None):
     '''
     Parameters
     ----------
     df: pd.DataFrame
         The input dataframe which you want extra information (length and number 
         of channel of tracks).
-    
-    add_length: bool
-        If True, the computed lengths column is appended to the df.
-    
-    add_channels: bool
-        If True, the computed number of channels column is appended to the df.
-        
-    verbose: bool
-        If True, the progress of running the program is printed.
-        
-        
+
     Returns
     -------
     df: pd.DataFrame
         A dataframe that has two extra columns if add_length and add_channels are True:
         
-        'track_length': float
-            The duration of the mp3 tracks.
-            
-        'channels': float
-            The number of channels of the mp3 tracks.
+        'length': float
+            The duration in seconds of the mp3 tracks.
             
         NOTE: an empty cell is returned to the corresponding rows for 'track_length' 
         and 'channels' if the script cannot read the size of the tracks or cannot 
         open the tracks (i.e. broken tracks).
     '''
-    
-    tot = len(df)
+    start = time.time()
     l = []
-    c = []
+    tot = len(df)
     for idx, path in enumerate(df['path']):
         path = os.path.join(mp3_root_dir, path)
-        # path = mp3_root_dir[:-1]+ path # DAVIDE: same comment as above...
         try:
-            audio = mutagen.mp3.MP3(path)
-            l.append(audio.info.length)
-            c.append(audio.info.channels)
-        except:
+            l.append(MP3(path).info.length)
+        except HeaderNotFoundError:
             l.append('')
-            c.append('')
-            print('ERROR opening ' + path)
-            continue
+        except:
+            print('WARNING unknown exception occurred at {:6d}, {}'.format(idx, path))
         
         if verbose == True:
-            if idx % 1000 == 0:
-                print('Processed {:6d} out of {:6d}...'.format(idx, tot))
+            if idx % 5000 == 0:
+                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
 
-    if add_length == True: 
-        #df['length'] = pd.Series(l, index=df.index)
-        #df['lengths'] = pd.Series(l, index=df.index) # ADEN: 'length' is better since df.length is ambiguous...
-        df['track_length'] = pd.Series(l, index=df.index) # DAVIDE: it is a column name, I'm not happy with plural. 'track_length'? 
-    if add_channels == True:
-        df['channels'] = pd.Series(c, index=df.index) # DAVIDE: 'channels' though must necessarily be plural, since 'channel' makes no sense
+        if debug:
+            if idx == debug:
+                return l
+
+    df['length'] = pd.Series(l, index=df.index) # 'lengths'? 'track_length'?
 
     if verbose == True:
-        print('Processed {:6d} out of {:6d}...'.format(tot, tot))
+        print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
     
     return df
 
@@ -157,10 +148,10 @@ if __name__ == "__main__":
     parser.add_argument("output", help="Output filename")
     parser.add_argument("-v", "--verbose", action="store_true", help="Show progress.")
     parser.add_argument("--root-dir", help="Set different mp3_root_dir.")
-    parser.add_argument("--abs-path", action="store_true", help="Use absolute paths in output file.")
-    parser.add_argument("--no-size", action="store_false", dest="add_size", help="Do not add column containing file sizes to output file.")
-    parser.add_argument("--no-length", action="store_false", dest="add_length", help="Do not add column containing track lengths to output file.")
-    parser.add_argument("--no-channels", action="store_false", dest="add_channels", help="Do not add column containing track number of channels to output file.")
+    parser.add_argument("--abs", action="store_true", dest="abs_path", help="Use absolute paths, instead of relative, in output file.")
+    parser.add_argument("--skip-os", action="store_false", dest="use_os", help="Do not calculate tracks size.")
+    parser.add_argument("--skip-mutagen", action="store_false", dest="use_mutagen", help="Do not use mutagen to check tracks length.")
+    parser.add_argument("--debug", help="Enable debug mode")
 
     args = parser.parse_args()
    
@@ -170,8 +161,16 @@ if __name__ == "__main__":
         mp3_root_dir = args.root_dir    
     
     df = find_tracks_with_7dids(args.abs_path)
-    if args.add_length == True or args.add_channels == True:
-        df = check_mutagen_info(df, args.add_length, args.add_channels, args.verbose)
-    if args.add_size == True:
+
+    if args.debug == True:
+        import pdb
+        pdb.set_trace()
+        sys.exit(0)
+
+    if args.use_os == True:
         df = check_size(df)
+
+    if args.use_mutagen == True:
+        df = check_mutagen_info(df, args.verbose)
+    
     df.to_csv(args.output, index=False)
