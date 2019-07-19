@@ -29,9 +29,9 @@ Functions
     opened and the duration and number of channels of the tracks.
 '''
 
+import argparse
 import os
 import sys
-import argparse
 import time
 
 import pandas as pd
@@ -141,8 +141,8 @@ def check_mutagen_info(df, verbose = False, debug: int = None):
 if __name__ == "__main__":
 
     description = """Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the 
-                     following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'"""
-    epilog = "Example:   python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --no-channels --verbose"
+                     following columns: 'path', 'track_7digitalID', 'length, 'file_size'."""
+    epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
 
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("output", help="Output filename")

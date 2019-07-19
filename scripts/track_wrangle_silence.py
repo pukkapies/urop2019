@@ -45,9 +45,9 @@ Glossary
         nor the ending silent section.
 '''
 
+import argparse
 import os
 import sys
-import argparse
 
 import numpy as np
 import pandas as pd
@@ -285,7 +285,7 @@ def filter_max_silence_duration(df, threshold):
 if __name__ == "__main__":
 
     description = "Script to analyze npz arrays to extract information about silence."
-    epilog = "Example:   python track_wrangle_silence.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
+    epilog = "Example: python track_wrangle_silence.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="Input csv filename or path")
     parser.add_argument("output", help="Output csv filename or path")

@@ -48,10 +48,10 @@ Functions
     Return the paths of the tracks that have not been saved yet if final_check is True.
 '''
 
+import argparse
 import os
 import sys
 import time
-import argparse
 
 import librosa
 import numpy as np
@@ -247,8 +247,10 @@ def no_sound_count(df, final_check=False):
         print("Processed {:6d} out of {:6d}...".format(count, len(df)))
         
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.",
-                                     epilog= "Example: python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
+
+    description= "Script to convert mp3 files into waveform NumPy arrays."
+    epilog= "Example: python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="Input csv filename")
     parser.add_argument("--root-dir-npz", help="Set different directory to save npz files.")
     parser.add_argument("--root-dir-mp3", help="Set different directory to find mp3 files.")

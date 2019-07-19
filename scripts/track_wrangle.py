@@ -50,9 +50,9 @@ Functions
     Combine all the previous functions and produces a dataframe accoring to the given parameters.
 '''
 
+import argparse
 import os
 import sys
-import argparse
 
 import h5py
 import numpy as np
@@ -209,9 +209,9 @@ if __name__ == "__main__":
     description = """Script to merge the list of mp3 files obtained with track_fetch.py with
                      the MSD summary file, remove unwanted entries such as mismatches, faulty
                      files or duplicates, and output a csv file with the following columns:
-                     'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size', 'channels'"""
+                     'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size'."""
 
-    epilog = "Example:   python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag"
+    epilog = "Example: python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag"
 
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="Input csv filename or path")
