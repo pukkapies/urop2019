@@ -131,7 +131,7 @@ def check_mutagen_info(df, verbose = False, debug: int = None):
             if idx == debug:
                 return l
 
-    df['length'] = pd.Series(l, index=df.index)
+    df['length'] = pd.Series(l, index=df.index) # 'lengths'? 'track_length'?
 
     if verbose == True:
         print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
