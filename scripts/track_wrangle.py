@@ -65,7 +65,6 @@ from itertools import islice
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
-
 import query_lastfm as db
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
