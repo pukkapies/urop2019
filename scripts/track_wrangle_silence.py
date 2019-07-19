@@ -1,3 +1,5 @@
+"""
+"""
 ''' Contains tools for discarding mp3 files that are entirely or in major part silent
 
 
@@ -47,7 +49,6 @@ Glossary
 
 import argparse
 import os
-import sys
 
 import numpy as np
 import pandas as pd
@@ -55,32 +56,17 @@ import pandas as pd
 import mp3_to_npz as npz
 
 
-import numpy as np
-import pandas as pd
 
-import mp3_to_npz as npz
 
-# mp3_root_dir = '/srv/data/msd/7digital/'
-# npz_root_dir = '/srv/data/urop/7digital_numpy/'
-
-# def set_mp3_root_dir(new_root_dir):
-#     global mp3_root_dir
-#     mp3_root_dir = new_root_dir
-
-# def set_npz_root_dir(new_root_dir):
-#     global npz_root_dir
-#     npz_root_dir = new_root_dir
-
-# def check_silence(df, save_csv=True, output_path='/srv/data/urop/ultimate_csv_size2.csv'): # ADEN: You will want to save a csv in here after the heavy computation and take a break...
-def check_silence(df, verbose=True): # DAVIDE: same as in track_fetch.py...
-                       #         check out 'if __name__ = __main__'; this script outputs a csv, there's no need to mention csv's in function declarations
+def check_silence(df, verbose=True): 
     
     '''
     Parameters
     ----------
     path: str
         The path of the input dataframe.
-        Recommendation: df = track_wrangle.read_duplicates_and_purge() 
+        Recommendation: df = ultimate_output(df_fetch, discard_no_tag=True),
+        where df_fetch is the dataframe from track_fetch.
     
         
     Returns
@@ -95,13 +81,13 @@ def check_silence(df, verbose=True): # DAVIDE: same as in track_fetch.py...
         
         
         Extra columns:
-        'start': float
+        'audio_start': float
             The start time (s) of non-silent section of tracks.
             
-        'end': float
+        'audio_end': float
             The end time (s) of non-silent section of tracks.
             
-        'silent_details': list
+        'silence_detail': list
             A list of tuples, and each tuple contains 2
             elements of the form (a,b). Each tuple represents a silent section 
             (after trimming), where a, b are the start and end time of the 
@@ -110,24 +96,22 @@ def check_silence(df, verbose=True): # DAVIDE: same as in track_fetch.py...
         'mid_silence_length': float
             The sum of the length of all the mid-silent sections.
             
-        'lengths(after_trim)': float
+        'effective_track_length': float
             The length of track after trimming.
             
         'non_silence_length': float
             The total duration of the non-silent sections of the track.
             
-        'perc_after_trim': float
+        'silence_percentage': float
             The percentage of the track which is non-silent after trimming.
         
-        'silence_duration': list
-                length of each mid-silent section.
+        'silence_detail_length': list
+            length of each mid-silent section.
                 
-        'threshold': float
+        'max_silence_length': float
                 maximum length of individual mid-silent sections from the 
                 'silence_duration' column.
                 
-    csv: 
-        The df is saved as csv if save_csv is True.
     
                 
     '''
@@ -140,17 +124,11 @@ def check_silence(df, verbose=True): # DAVIDE: same as in track_fetch.py...
     silence = []
     
     for idx, path in enumerate(df['path']):
-        #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # ADEN: was wrong, fixed it.
-        #path_npz = npz_root_dir[:-1]+ path[:-9] + '.npz'
-        #path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz') # DAVIDE: it works! and os.path.join is ALWAYS safer than string concatenation
         path_npz = npz.mp3_path_to_npz_path(path)
         try:
             ar = np.load(path_npz)
         except:
             print("WARNING at {:6d} out of {:6d}: {} was not savez'd correctly!".format(idx, len(df), path))
-            #track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez..
-            #savez(path, path_npz) # DAVIDE: I still believe this sintax is more clear...
-            #savez(track_7digitalid)
             npz.savez(path)
             ar = np.load(path_npz)
             
@@ -184,27 +162,11 @@ def check_silence(df, verbose=True): # DAVIDE: same as in track_fetch.py...
     df['silence_percentage'] = df['mid_silence_length'] / df['effective_track_length'] * 100
     df['silence_detail'] = pd.Series(silence, index=df.index)
     df['silence_detail_length'] = df['silence_detail'].apply(lambda l: [i[1] - i[0] for i in l])
-    df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l)) # DAVIDE: check them out, both one-liner's ;)
+    df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l))
         
     if verbose == True:
         print('Processed {:6d} out of {:6d}...'.format(tot, tot))
 
-    # def get_duration(x): # DAVIDE: both added above...
-    #     for i in x:
-    #         if i != None:
-    #             _ = i[1] - i[0]
-    #             LIST.append(_)
-    #     return LIST
-
-    # df['silence_duration'] = df.silence.apply(get_duration)
-    
-    # def get_max(x):
-    #     if x:
-    #         return np.max(x)
-    #     else:
-    #         return None
-
-    # df['threshold'] = df.silence_duration.apply(get_max)
             
     return df
 
@@ -222,15 +184,13 @@ def filter_trim_length(df, threshold):
     
     Returns
     ------
-    list
-        The track_id of tracks that satisfy the condition: 
+    df: pd.DataFrame
+        The rows that satisfy the condition: 
             duration after trimming >= threshold.
     
     '''
     
-    # ID = df[df['effective_track_length'] >= threshold]
-    # return ID.track_id.tolist()
-    return df[df['effective_track_length'] >= threshold] # DAVIDE: why not returning directly the dataframe?
+    return df[df['effective_track_length'] >= threshold] 
 
 def filter_tot_silence_duration(df, threshold):
     '''
@@ -246,15 +206,13 @@ def filter_tot_silence_duration(df, threshold):
     
     Returns
     ------
-    list
-        The track_id of tracks that satisfy the condition: 
+    df: pd.DataFrame
+        The rows that satisfy the condition: 
             total length of mid-silent duration <= threshold.
     
     '''
     
-    #ID = df[(df['mid_silence_length'] <= threshold)]
-    #return ID.track_id.tolist()
-    return df[df['mid_silence_length'] <= threshold] # DAVIDE: same as above
+    return df[df['mid_silence_length'] <= threshold] 
 
 def filter_max_silence_duration(df, threshold):
     '''
@@ -270,17 +228,14 @@ def filter_max_silence_duration(df, threshold):
     
     Returns
     ------
-    list
-        The track_id of tracks that satisfy the condition: 
+    df: pd.DataFrame
+        The rows that satisfy the condition: 
             the maximum length amongst the individual mid-silent sections 
             <= threshold.
     
     '''
     
-    # ID = df[(df['max_silence_length'] <= threshold) 
-    #         | (np.isnan(df['threshold']))]
-    # return ID.track_id.tolist()
-    return df[df['max_silence_length'] <= threshold] # DAVIDE: same as above
+    return df[df['max_silence_length'] <= threshold]
 
 if __name__ == "__main__":
 

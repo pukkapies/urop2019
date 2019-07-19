@@ -1,3 +1,5 @@
+"""
+"""
 ''' Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
 
 
@@ -50,7 +52,6 @@ Functions
 
 import argparse
 import os
-import sys
 import time
 
 import librosa
@@ -108,8 +109,8 @@ def savez(path):
     '''
     Parameters
     ----------
-    track_7digitalid: int
-        The track_7digitalid of the track 
+    path:
+        The path of the mp3 file.
         
     Returns
     -------
@@ -135,15 +136,6 @@ def savez(path):
     array_split = librosa.effects.split(librosa.core.to_mono(array))
     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
-# def savez(track_7digitalid): # ADEN: the original code will make it more useful -- I actually used this for checking and fixing some individual errors
-#     path = '/'+str(track_7digitalid)[0]+'/'+str(track_7digitalid)[1]+'/'+str(track_7digitalid)+'.clip.mp3' #
-#     path_npz = npz_root_dir[:-1] +path[:-9] #
-#     path = mp3_root_dir[:-1] +path #
-#     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
-#     array_split = librosa.effects.split(librosa.core.to_mono(array))
-#     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
-
-# DAVIDE: I still think it is better to keep functions as generic as possible. This one is more clear in my opinion
 
 def no_sound(df, start=0, end=None, verbose=True):
     '''
@@ -151,7 +143,8 @@ def no_sound(df, start=0, end=None, verbose=True):
     ----------
         df: pd.DataFrame
             The input dataframe that stores the path of mp3s that will be converted to npz files.
-            Recommendation: df = track_wrangle.read_duplicates_and_purge()
+            Recommendation: df = ultimate_output(df_fetch, discard_no_tag=True),
+            where df_fetch is the dataframe from track_fetch.
     
         start: int
             The index of starting point in the pre_no_sound.csv.
@@ -159,8 +152,8 @@ def no_sound(df, start=0, end=None, verbose=True):
         end: int
             The index of ending point in the pre_no_sound.csv.
             
-        file: str
-            File name of input csv. Default-Ultimate_csv_size.csv
+        verbose: bool
+            If True, print progress
          
     
     Returns
@@ -185,24 +178,21 @@ def no_sound(df, start=0, end=None, verbose=True):
 
     if end == None:
         end = len(df)
-    # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
-    # for idx, path in enumerate(paths)
-    start = time.time()
+        
+    start_time = time.time()
     tot = len(df)
-    for idx, path in enumerate(df['path'][start:end]): # DAVIDE: the efficience gain is in milliseconds
+    for idx, path in enumerate(df['path'][start:end]): 
         partial = time.time()
-        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')   #ADEN: I think this is wrong # DAVIDE: it works
+        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
         if os.path.isfile(path_npz):
             print("WARNING file " + path_npz + " already exists!") 
         else:
             path = os.path.join(mp3_root_dir, path)
-            # track_7digitalid = int(os.path.basename(path)[:-9])  #ADEN: since I changed savez
-            # savez(track_7digitalid)
-            savez(path) # DAVIDE: if we use my savez...
+            savez(path) 
         
         if verbose == True:
             if idx % 100 == 0:
-                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
+                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start_time, int(idx / tot * 100)))
                 print("Processed {} in {:6.5f} sec".format(path, time.time() - partial))
 
 def no_sound_count(df, final_check=False):
@@ -231,11 +221,10 @@ def no_sound_count(df, final_check=False):
     count = 0
     l = []
      
-    # paths = df['path'].tolist()  # ADEN: This is probability more efficient. # DAVIDE the efficience gain is in milliseconds, and it is one line more of code
-    # for idx, path in enumerate(paths):
+
     for idx, path in enumerate(df['path']):
-        path_npz = npz_root_dir[:-1] + path[:-9]
-        if os.path.isfile(path_npz + '.npz'):
+        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
+        if os.path.isfile(path_npz):
             count += 1
         elif final_check == True:
             l.append(path)

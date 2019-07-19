@@ -1,4 +1,8 @@
-''' Contains tools to fetch mp3 files on our server and analyze their size, length and number of channels
+"""
+
+"""
+''' 
+Contains tools to fetch mp3 files on our server and analyze their size, length and number of channels
 
 
 Notes
@@ -40,7 +44,7 @@ from mutagen.mp3 import HeaderNotFoundError
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 
-def set_mp3_root_dir(new_root_dir): # DAVIDE: now same function name and var name across all modules, to avoid errors
+def set_mp3_root_dir(new_root_dir): 
     ''' Function to set mp3_root_dir, useful when script is used as module. '''
 
     global mp3_root_dir
@@ -83,15 +87,12 @@ def check_size(df):
     '''
     s = []
     for path in df['path']: 
-        # path = mp3_root_dir[:-1] + path # DAVIDE: what's wrong with os.path.join? string concatenation is more dangerous, what if path is an absolute path?
         path = os.path.join(mp3_root_dir, path)
         s.append(os.path.getsize(path))
-    #df['size'] = pd.Series(s, index=df.index) # ADEN: 'sizes' is better since df.size is ambiguous...
-    #df['sizes'] = pd.Series(s, index=df.index) # DAVIDE: it is a column name, I'm not happy with plural. 'file_size'? 
     df['file_size'] = pd.Series(s, index=df.index)
     return df
 
-def check_mutagen_info(df, verbose = False, debug: int = None):
+def check_mutagen_info(df, verbose = True, debug: int = None):
     '''
     Parameters
     ----------
@@ -113,25 +114,29 @@ def check_mutagen_info(df, verbose = False, debug: int = None):
     '''
     start = time.time()
     l = []
+    c = []
     tot = len(df)
     for idx, path in enumerate(df['path']):
         path = os.path.join(mp3_root_dir, path)
         try:
             l.append(MP3(path).info.length)
+            c.append(MP3(path).info.channels)
         except HeaderNotFoundError:
             l.append('')
+            c.append('')
         except:
             print('WARNING unknown exception occurred at {:6d}, {}'.format(idx, path))
         
         if verbose == True:
-            if idx % 5000 == 0:
+            if idx % 500 == 0:
                 print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
 
         if debug:
             if idx == debug:
                 return l
 
-    df['length'] = pd.Series(l, index=df.index) # 'lengths'? 'track_length'?
+    df['track_length'] = pd.Series(l, index=df.index) 
+    df['channels'] = pd.Series(c, index=df.index)
 
     if verbose == True:
         print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
@@ -141,7 +146,7 @@ def check_mutagen_info(df, verbose = False, debug: int = None):
 if __name__ == "__main__":
 
     description = """Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the 
-                     following columns: 'path', 'track_7digitalID', 'length, 'file_size'."""
+                     following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'."""
     epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
 
     parser = argparse.ArgumentParser(description=description, epilog=epilog)

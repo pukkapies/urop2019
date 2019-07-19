@@ -1,5 +1,7 @@
-''' Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
-
+"""
+"""
+''' 
+Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
 
 Notes
 -----
@@ -53,6 +55,7 @@ Functions
 import argparse
 import os
 import sys
+import re
 
 import h5py
 import numpy as np
@@ -85,7 +88,7 @@ def set_path_txt_duplicates(new_path):
     global path_txt_duplicates
     path_txt_duplicates = new_path
 
-def extract_ids_from_summary(): # my mistake, this function should have always been here
+def extract_ids_from_summary(): 
     with h5py.File(path_h5, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
         dataset_2 = h5['analysis']['songs']
@@ -102,9 +105,9 @@ def df_merge(track_summary_df: pd.DataFrame, merged_df: pd.DataFrame):
 def df_purge_mismatches(merged_df: pd.DataFrame):
     df = merged_df.set_index('track_id')
     to_drop = []
-    with open(path_txt_mismatches, 'r') as file: # I don't mind having regex here... I am happy with either
+    with open(path_txt_mismatches, encoding='utf-8') as file: 
         for line in file:
-            to_drop.append(line[27:45])
+            to_drop.append(re.findall(r'T[A-Z0-9]{17}', line)[0])
     to_drop = [tid for tid in to_drop if tid in df.index]
     df.drop(to_drop, inplace=True)
     return df.reset_index()
@@ -114,7 +117,7 @@ def df_purge_faulty_mp3_1(merged_df: pd.DataFrame, threshold: int = 0):
     return df
 
 def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
-    df = merged_df[-merged_df['length'].isna()] # 'lengths'? 'track_length?'
+    df = merged_df[-merged_df['track_length'].isna()]
     return df
 
 def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
@@ -128,14 +131,14 @@ def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
 
 def read_duplicates():      
     l = []
-    with open (path_txt_duplicates, 'r') as file:
+    with open (path_txt_duplicates, encoding='utf-8') as file:
         t = []
         for line in islice(file, 7, None):
             if line[0] == '%':
                 l.append(t)
                 t = []
             else:
-                t.append(line[:18])
+                t.append(re.findall(r'T[A-Z0-9]{17}', line)[0])
         l.append(t)
     return l
 
@@ -156,7 +159,7 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     return df.reset_index()
 
 def ultimate_output(df: pd.DataFrame, min_size: int = 0, min_length: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
-    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'length'.
+    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'track_length', 'channels'.
     
     Parameters
     ----------
