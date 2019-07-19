@@ -256,6 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("--root-dir-mp3", help="Set different directory to find mp3 files.")
 
     args = parser.parse_args()
+    
     if args.root_dir_npz:
         npz_root_dir = os.path.expanduser(args.root_dir_npz)
     if args.root_dir_mp3:

@@ -300,6 +300,11 @@ if __name__ == "__main__":
     if args.output[-4:] != '.csv':
         args.output = args.output + '.csv' 
 
+    if args.root_dir_npz:
+        npz.set_npz_root_dir(os.path.expanduser(args.root_dir_npz))
+    if args.root_dir_mp3:
+        npz.set_mp3_root_dir(os.path.expanduser(args.root_dir_mp3))
+
     df = pd.read_csv(args.input)
 
     mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
