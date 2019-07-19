@@ -1,6 +1,3 @@
-"""
-
-"""
 ''' Contains tools to fetch mp3 files on our server and analyze their size, length and number of channels
 
 
@@ -19,7 +16,7 @@ Functions
     Tell the script where mp3 files are stored.
 
 - find_tracks
-    Perform an os.walk to find all mp3 files within mp3_root_dir.
+    Performs an os.walk to find all the mp3 files within mp3_root_dir
 
 - find_tracks_with_7dids
     Extract 7digitalid's from mp3 filenames.
@@ -34,6 +31,7 @@ Functions
 
 import os
 import sys
+import argparse
 import time
 
 import pandas as pd
@@ -43,6 +41,8 @@ from mutagen.mp3 import HeaderNotFoundError
 mp3_root_dir = '/srv/data/msd/7digital/'
 
 def set_mp3_root_dir(new_root_dir): # DAVIDE: now same function name and var name across all modules, to avoid errors
+    """ Function to set mp3_root_dir, useful when script is used as module """
+
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
@@ -138,85 +138,39 @@ def check_mutagen_info(df, verbose = False, debug: int = None):
     
     return df
 
-def die_with_usage():
-    print()
-    print("track_fetch.py - Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the")
-    print("                 following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'")
-    print()
-    print("Usage:     python track_fetch.py <output filename> [options]")
-    print()
-    print("General Options:")
-    print("  --root-dir             Set different mp3_root_dir.")
-    print("  --abs                  Use absolute paths instead of relative in the output file.")
-    print("  --skip-os              Do not calculate tracks size.")
-    print("  --skip-mutagen         Do not use mutagen to check tracks length.")
-    print("  --help                 Show this help message and exit.")
-    print("  --verbose              Show progress.")
-    print()
-    print("Example:   python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --no-channels --verbose")
-    print()
-    sys.exit(0)
-
 if __name__ == "__main__":
 
-    if len(sys.argv) < 2:
-        die_with_usage()
+    description = """Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the 
+                     following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'"""
+    epilog = "Example:   python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --no-channels --verbose"
+
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
+    parser.add_argument("output", help="Output filename")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show progress.")
+    parser.add_argument("--root-dir", help="Set different mp3_root_dir.")
+    parser.add_argument("--abs", action="store_true", dest="abs_path", help="Use absolute paths, instead of relative, in output file.")
+    parser.add_argument("--skip-os", action="store_false", dest="use_os", help="Do not calculate tracks size.")
+    parser.add_argument("--skip-mutagen", action="store_false", dest="use_mutagen", help="Do not use mutagen to check tracks length.")
+    parser.add_argument("--debug", help="Enable debug mode")
+
+    args = parser.parse_args()
+   
+    if args.output[-4:] != '.csv':
+        args.output = args.output + '.csv' 
+    if args.root_dir:
+        mp3_root_dir = args.root_dir    
     
-    if '--help' in sys.argv:
-        if len(sys.argv) == 2:
-            die_with_usage()
-        else:
-            print("???")
-            sys.exit(0)
-    
-    if sys.argv[1][-4:] == '.csv':
-        output = sys.argv[1]
-    else:
-        output = sys.argv[1] + '.csv'
+    df = find_tracks_with_7dids(args.abs_path)
 
-    debug = False
-
-    abs_path = False
-    use_os = True
-    use_mutagen = True
-    verbose = False
-
-    while True:
-        if len(sys.argv) == 2:
-            break
-        elif sys.argv[2] == '--debug':
-            debug = True
-            del sys.argv[2]  
-        elif sys.argv[2] == '--root-dir':
-            set_mp3_root_dir(os.path.expanduser(sys.argv[3]))
-            del sys.argv[2:4]
-        elif sys.argv[2] == '--abs':
-            abs_path = True
-            del sys.argv[2]
-        elif sys.argv[2] == '--skip-os':
-            use_os = False
-            del sys.argv[2]
-        elif sys.argv[2] == '--skip-mutagen':
-            use_mutagen = False
-            del sys.argv[2]
-        elif sys.argv[2] == '--verbose':
-            verbose = True
-            del sys.argv[2]      
-        else:
-            print("???")
-            sys.exit(0)
-
-    df = find_tracks_with_7dids(abs_path)
-
-    if debug == True:
+    if args.debug == True:
         import pdb
         pdb.set_trace()
         sys.exit(0)
 
-    if use_os == True:
+    if args.use_os == True:
         df = check_size(df)
 
-    if use_mutagen == True:
-        df = check_mutagen_info(df, verbose)
+    if args.use_mutagen == True:
+        df = check_mutagen_info(df, args.verbose)
     
-    df.to_csv(output, index=False)
+    df.to_csv(args.output, index=False)

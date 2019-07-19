@@ -1,6 +1,3 @@
-"""
-
-"""
 ''' Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
 
 
@@ -54,6 +51,7 @@ Functions
 import os
 import sys
 import time
+import argparse
 
 import librosa
 import numpy as np
@@ -63,17 +61,18 @@ mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
 
 def set_mp3_root_dir(new_root_dir):
+    """ Function to set mp3_root_dir, useful when script is used as module """
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
 def set_npz_root_dir(new_root_dir):
+    """ Function to set npz_root_dir, useful when script is used as module """
     global npz_root_dir
     npz_root_dir = new_root_dir
 
 def create_folder_structure():
-    '''
-    Generate folder structure to store npz files.
-    '''
+    ''' Generate folder structure to store npz files. '''
+
     for dirpath, dirnames, filenames in os.walk(mp3_root_dir):
         structure = os.path.join(npz_root_dir, dirpath[len(mp3_root_dir):])
         if not os.path.isdir(structure):
@@ -102,6 +101,7 @@ def mp3_path_to_npz_path(path):
     >>> mp3_path_to_npz_path(path)
     /User/Me/Desktop/7Digital_NumPy/2/5/2573962.npz
     '''
+
     return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
 
 def savez(path):
@@ -129,6 +129,7 @@ def savez(path):
             represent one section -- starting position and ending position of 
             array respectively.
     '''
+
     path_npz = mp3_path_to_npz_path(path)
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
     array_split = librosa.effects.split(librosa.core.to_mono(array))
@@ -181,6 +182,7 @@ def no_sound(df, start=0, end=None, verbose=True):
             represent one section -- starting position and ending position of 
             array respectively.
     '''
+
     if end == None:
         end = len(df)
     # paths = df['path'].tolist()[start:end]  #ADEN: this is probably more efficient
@@ -244,57 +246,29 @@ def no_sound_count(df, final_check=False):
     else:
         print("Processed {:6d} out of {:6d}...".format(count, len(df)))
         
-        
-
-def die_with_usage():
-    print()
-    print("mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.")
-    print()
-    print("Usage:     python track_fetch.py <input filename> [options]")
-    print()
-    print("General Options:")
-    print("  --root-dir-npz         Set different directory to save npz files.")
-    print("  --root-dir-mp3         Set different directory to find mp3 files.")
-    print("  --help                 Show this help message and exit.")
-    print()
-    print("Example:   python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
-    print()
-    sys.exit(0)
-
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="mp3_to_npz.py - Script to convert mp3 files into waveform NumPy arrays.",
+                                     epilog= "Example: python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
+    parser.add_argument("input", help="Input csv filename")
+    parser.add_argument("--root-dir-npz", help="Set different directory to save npz files.")
+    parser.add_argument("--root-dir-mp3", help="Set different directory to find mp3 files.")
 
-    if len(sys.argv) < 2:
-        die_with_usage()
-    
-    if '--help' in sys.argv:
-        if len(sys.argv) == 2:
-            die_with_usage()
-        else:
-            print("???")
-            sys.exit(0)
+    args = parser.parse_args()
+    if args.root_dir_npz:
+        npz_root_dir = args.root_dir_npz
+    if args.root_dir_mp3:
+        mp3_root_dir = args.root_dir_mp3
 
-    while True:
-        if len(sys.argv) == 2:
-            break
-        elif sys.argv[2] == '--root-dir-mp3':
-            set_mp3_root_dir(os.path.expanduser(sys.argv[3]))
-            del sys.argv[2:4]
-        elif sys.argv[2] == '--root-dir-npz':
-            set_npz_root_dir(os.path.expanduser(sys.argv[3]))
-            del sys.argv[2:4]  
-        else:
-            print("???")
-            sys.exit(0)
-
-    df = pd.read_csv(sys.argv[1])
+    df = pd.read_csv(args.input)
 
     mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
     
     if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
         print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
         print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
-        set_mp3_root_dir(mp3_root_dir_infer)
+        mp3_root_dir = mp3_root_dir_infer
     
     create_folder_structure()
+
     no_sound(df)
     no_sound_count(df)

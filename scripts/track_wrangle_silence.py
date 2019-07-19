@@ -1,6 +1,3 @@
-"""
-
-"""
 ''' Contains tools for discarding mp3 files that are entirely or in major part silent
 
 
@@ -50,6 +47,13 @@ Glossary
 
 import os
 import sys
+import argparse
+
+import numpy as np
+import pandas as pd
+
+import mp3_to_npz as npz
+
 
 import numpy as np
 import pandas as pd
@@ -278,68 +282,25 @@ def filter_max_silence_duration(df, threshold):
     # return ID.track_id.tolist()
     return df[df['max_silence_length'] <= threshold] # DAVIDE: same as above
 
-def die_with_usage():
-    print()
-    print("track_wrangle_silence.py - Script to analyze npz arrays to extract information about silence.")
-    print()
-    print("Usage:     python track_wrangle_silence.py <input csv filename or path> <output csv filename or path> [options]")
-    print()
-    print("General Options:")
-    print("  --root-dir-npz                       Set different directory to save npz files.")
-    print("  --root-dir-mp3                       Set different directory to find mp3 files.")
-    print("  --filter-trim-length <int>           Keep only tracks whose effective length (in seconds) is longer than the theshold.")
-    print("  --filter-tot-silence-duration <int>  Keep only tracks whose total silent length is shorter than the theshold.")
-    print("  --filter-max-silence-duration <int>  Keep only tracks whose maximal silent length is shorter than the theshold.")
-    print("  --help                               Show this help message and exit.")
-    print()
-    print("Example:   python track_wrangle_silence.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/")
-    print()
-    sys.exit(0)
-
 if __name__ == "__main__":
 
-    if len(sys.argv) < 3:
-        die_with_usage()
-    
-    if '--help' in sys.argv:
-        if len(sys.argv) == 2:
-            die_with_usage()
-        else:
-            print("???")
-            sys.exit(0)
+    description = "Script to analyze npz arrays to extract information about silence."
+    epilog = "Example:   python track_wrangle_silence.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
+    parser.add_argument("input", help="Input csv filename or path")
+    parser.add_argument("output", help="Output csv filename or path")
+    parser.add_argument("--root-dir-npz", help="Set different directory to save npz files.")
+    parser.add_argument("--root-dir-mp3", help="Set different directory to find mp3 files.")
+    parser.add_argument("--filter-trim-length", type=int, default=0, help="Keep only tracks whose effective length (in seconds) is longer than the theshold.")
+    parser.add_argument("--filter-tot-silence-duration", type=int, default=0, help="Keep only tracks whose total silent length is shorter than the theshold.")
+    parser.add_argument("--filter-max-silence-duration", type=int, default=0, help="Keep only tracks whose maximal silent length is shorter than the theshold.")
 
-    if sys.argv[2][-4:] == '.csv':
-        output = sys.argv[2]
-    else:
-        output = sys.argv[2] + '.csv'
-    
-    filt_trim_length = False
-    filt_tot_silence = False
-    filt_max_silence = False 
+    args = parser.parse_args()
 
-    while True:
-        if len(sys.argv) == 3:
-            break
-        elif sys.argv[3] == '--root-dir-mp3':
-            npz.set_mp3_root_dir(os.path.expanduser(sys.argv[4]))
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--root-dir-npz':
-            npz.set_npz_root_dir(os.path.expanduser(sys.argv[4]))
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--filter-trim-length':
-            filt_trim_length = int(sys.argv[4])
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--filter-tot-silence-duration':
-            filt_tot_silence = int(sys.argv[4])
-            del sys.argv[3:5]
-        elif sys.argv[3] == '--filter-max-silence-duration':
-            filt_max_silence = int(sys.argv[4])
-            del sys.argv[3:5]  
-        else:
-            print("???")
-            sys.exit(0)
+    if args.output[-4:] != '.csv':
+        args.output = args.output + '.csv' 
 
-    df = pd.read_csv(sys.argv[1])
+    df = pd.read_csv(args.input)
 
     mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
     
@@ -349,10 +310,10 @@ if __name__ == "__main__":
         npz.set_mp3_root_dir(mp3_root_dir_infer)
 
     df = check_silence(df)
-    if filt_trim_length:
-        df = filter_trim_length(df, filt_trim_length)
-    if filt_tot_silence:
-        df = filter_tot_silence_duration(df, filt_tot_silence)
-    if filt_max_silence:
-        df = filter_max_silence_duration(df, filt_max_silence)
-    df.to_csv(output, index=False)
+    if args.filter_trim_length:
+        df = filter_trim_length(df, args.filter_trim_length)
+    if args.filter_tot_silence:
+        df = filter_tot_silence_duration(df, args.filter_tot_silence)
+    if args.filter_max_silence:
+        df = filter_max_silence_duration(df, args.filter_max_silence)
+    df.to_csv(args.output, index=False)
