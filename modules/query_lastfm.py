@@ -1,5 +1,4 @@
 """
-
 """
 ''' Contains simple tools for querying the lastfm_tags.db file
 
