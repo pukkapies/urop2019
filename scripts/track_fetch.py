@@ -158,7 +158,7 @@ if __name__ == "__main__":
     if args.output[-4:] != '.csv':
         args.output = args.output + '.csv' 
     if args.root_dir:
-        mp3_root_dir = args.root_dir    
+        mp3_root_dir = os.path.expanduser(args.root_dir)
     
     df = find_tracks_with_7dids(args.abs_path)
 

@@ -257,9 +257,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.root_dir_npz:
-        npz_root_dir = args.root_dir_npz
+        npz_root_dir = os.path.expanduser(args.root_dir_npz)
     if args.root_dir_mp3:
-        mp3_root_dir = args.root_dir_mp3
+        mp3_root_dir = os.path.expanduser(args.root_dir_mp3)
 
     df = pd.read_csv(args.input)
 

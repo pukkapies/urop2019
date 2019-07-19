@@ -225,17 +225,15 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    if args.input[-4:] != '.csv':
-        args.input = args.input + '.csv'
     if args.output[-4:] != '.csv':
         args.output = args.output + '.csv'
-    # Setting paths
+
     if args.path_h5:
-        path_h5 = args.path_h5
+        path_h5 = os.path.expanduser(args.path_h5)
     if args.path_txt_mism:
-        path_txt_mismatches = args.path_txt_mism
+        path_txt_mismatches = os.path.expanduser(args.path_txt_mism)
     if args.path_txt_dupl:
-        path_txt_duplicates = args.path_txt_dupl
+        path_txt_duplicates = os.path.expanduser(args.path_txt_dupl)
     
     
     df = pd.read_csv(args.input)
