@@ -61,12 +61,12 @@ mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
 
 def set_mp3_root_dir(new_root_dir):
-    """ Function to set mp3_root_dir, useful when script is used as module """
+    ''' Function to set mp3_root_dir, useful when script is used as module. '''
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
 def set_npz_root_dir(new_root_dir):
-    """ Function to set npz_root_dir, useful when script is used as module """
+    ''' Function to set npz_root_dir, useful when script is used as module. '''
     global npz_root_dir
     npz_root_dir = new_root_dir
 

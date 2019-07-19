@@ -41,7 +41,7 @@ from mutagen.mp3 import HeaderNotFoundError
 mp3_root_dir = '/srv/data/msd/7digital/'
 
 def set_mp3_root_dir(new_root_dir): # DAVIDE: now same function name and var name across all modules, to avoid errors
-    """ Function to set mp3_root_dir, useful when script is used as module """
+    ''' Function to set mp3_root_dir, useful when script is used as module. '''
 
     global mp3_root_dir
     mp3_root_dir = new_root_dir

@@ -68,19 +68,19 @@ path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
 path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
 
 def set_path_h5(new_path):
-    """ Set path to the msd_summary_file.h5. """
+    ''' Set path to the msd_summary_file.h5. '''
 
     global path_h5
     path_h5 = new_path
 
 def set_path_txt_mismatches(new_path):
-    """ Set path to the msd_mismatches.txt. """
+    ''' Set path to the msd_mismatches.txt. '''
 
     global path_txt_mismatches
     path_txt_mismatches = new_path
 
 def set_path_txt_duplicates(new_path):
-    """ Set path to the msd_duplicates.txt. """
+    ''' Set path to the msd_duplicates.txt. '''
 
     global path_txt_duplicates
     path_txt_duplicates = new_path
@@ -206,10 +206,10 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, min_length: int = 0, di
 
 if __name__ == "__main__":
     
-    description = """Script to merge the list of mp3 files obtained with track_fetch.py with
+    description = '''Script to merge the list of mp3 files obtained with track_fetch.py with
                      the MSD summary file, remove unwanted entries such as mismatches, faulty
                      files or duplicates, and output a csv file with the following columns:
-                     'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size'."""
+                     'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size'.'''
 
     epilog = "Example: python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag"
 
