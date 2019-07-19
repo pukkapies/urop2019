@@ -48,11 +48,13 @@ Glossary
         nor the ending silent section.
 '''
 
-import mp3_to_npz as npz
-import numpy as np
 import os
-import pandas as pd
 import sys
+
+import numpy as np
+import pandas as pd
+
+import mp3_to_npz as npz
 
 # mp3_root_dir = '/srv/data/msd/7digital/'
 # npz_root_dir = '/srv/data/urop/7digital_numpy/'

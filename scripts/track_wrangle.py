@@ -53,14 +53,12 @@ Functions
     Combine all the previous functions and produces a dataframe accoring to the given parameters.
 '''
 
+import os
+import sys
+
 import h5py
 import numpy as np
-import os
 import pandas as pd
-import sys
-# from mutagen import mp3 as mg
-# from track_fetch import * # I am not importing a module, but rather taking the output of the script
-
 from itertools import islice
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))

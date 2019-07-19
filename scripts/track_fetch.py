@@ -33,11 +33,12 @@ Functions
 '''
 
 import os
-import pandas as pd
 import sys
 import time
 
-from mutagen.mp3 import MP3, HeaderNotFoundError
+import pandas as pd
+from mutagen.mp3 import MP3
+from mutagen.mp3 import HeaderNotFoundError
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 

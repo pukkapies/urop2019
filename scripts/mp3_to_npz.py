@@ -51,12 +51,13 @@ Functions
     Return the paths of the tracks that have not been saved yet if final_check is True.
 '''
 
-import librosa
-import numpy as np
 import os
-import pandas as pd
 import sys
 import time
+
+import librosa
+import numpy as np
+import pandas as pd
 
 mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'

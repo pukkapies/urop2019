@@ -46,7 +46,9 @@ Functions
     Return a (list of) attribute(s) such as title or artist_id given a (list of ) track_id('s), song_id('s) or 7digitalid('s)
 '''
 
-import tables, sqlite3
+import sqlite3
+
+import tables
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5' # default path to msd summary file
 
