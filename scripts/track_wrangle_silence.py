@@ -50,6 +50,7 @@ Glossary
 import argparse
 import os
 import sys
+import time
 
 import numpy as np
 import pandas as pd
@@ -117,6 +118,7 @@ def check_silence(df, verbose=True):
                 
     '''
     
+    start = time.time()
     tot = len(df)
 
     audio_start = []
@@ -153,7 +155,7 @@ def check_silence(df, verbose=True):
         
         if verbose == True:
             if idx % 100 == 0:
-                print('Processed {:6d} out of {:6d}...'.format(idx, tot))
+                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
         
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
@@ -166,9 +168,8 @@ def check_silence(df, verbose=True):
     df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l))
         
     if verbose == True:
-        print('Processed {:6d} out of {:6d}...'.format(tot, tot))
+        print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
 
-            
     return df
 
 def filter_trim_length(df, threshold):
