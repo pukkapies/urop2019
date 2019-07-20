@@ -67,7 +67,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath
 import query_lastfm as db
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
-path_txt_mismatches = '/srv/data/urop/msd_mismatches.txt'
+path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'
 path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
 
 def set_path_h5(new_path):
