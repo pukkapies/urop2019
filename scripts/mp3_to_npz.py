@@ -242,8 +242,8 @@ if __name__ == "__main__":
     epilog= "Example: python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input csv filename or path")
-    parser.add_argument("--root-dir-npz", help="set different directory to save npz files")
-    parser.add_argument("--root-dir-mp3", help="set different directory to find mp3 files")
+    parser.add_argument("--root-dir-npz", help="set directory to save npz files")
+    parser.add_argument("--root-dir-mp3", help="set directory to find mp3 files")
 
     args = parser.parse_args()
     

@@ -156,7 +156,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("output", help="output filename or path")
     parser.add_argument("-v", "--verbose", action="store_true", help="show progress")
-    parser.add_argument("--root-dir", help="set different mp3_root_dir")
+    parser.add_argument("--root-dir", help="set directory to find mp3 files")
     parser.add_argument("--abs", action="store_true", dest="abs_path", help="use absolute paths in output file")
     parser.add_argument("--skip-os", action="store_false", dest="use_os", help="do not calculate tracks size")
     parser.add_argument("--skip-mutagen", action="store_false", dest="use_mutagen", help="do not use mutagen to check tracks length")
