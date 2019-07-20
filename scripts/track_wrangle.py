@@ -160,7 +160,7 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def ultimate_output(df: pd.DataFrame, min_size: int = 0, min_length: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
+def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'track_length', 'channels'.
     
     Parameters
