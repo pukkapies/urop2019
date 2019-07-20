@@ -139,10 +139,10 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
             if idx == debug:
                 return l
 
-    df['clip_length'] = pd.Series(l, index=df.index) 
     df['channels'] = pd.Series(c, index=df.index)
     df['channels'] = df['channels'].fillna(0)
     df['channels'] = df['channels'].apply(lambda x: int(x))
+    df['clip_length'] = pd.Series(l, index=df.index) 
 
     if verbose == True:
         print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
