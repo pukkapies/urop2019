@@ -152,8 +152,8 @@ def check_silence(df, verbose=True):
     df['silence_percentage'] = df['mid_silence_length'] / df['effective_clip_length'] * 100
     df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l))
 
-    cols = df.columns.tolist().pop()
-    cols = cols[:-8] + ['effective_clip_length', 'audio_start', 'audio_end'] + cols[-5:-3] + ['max_silence_length'] + cols[-3:]
+    cols = df.columns.tolist()
+    cols = cols[:-9] + ['effective_clip_length', 'audio_start', 'audio_end'] + cols[-6:-4] + ['max_silence_length'] + cols[-4:-1]
     df = df[cols]
         
     if verbose == True:
