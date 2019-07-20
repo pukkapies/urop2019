@@ -18,7 +18,7 @@ Functions
     Tell the script where mp3 files are stored.
 
 - find_tracks
-    Performs an os.walk to find all the mp3 files within mp3_root_dir
+    Performs an os.walk to find all the mp3 files within mp3_root_dir.
 
 - find_tracks_with_7dids
     Extract 7digitalid's from mp3 filenames.
@@ -99,10 +99,10 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
         of channel of tracks).
         
     verbose: bool
-        If True, print progress
+        If True, print progress.
         
     debug: int
-        Debug mode
+        If not None, return partial list when idx == debug.
 
     Returns
     -------
@@ -133,7 +133,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
         
         if verbose == True:
             if idx % 500 == 0:
-                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
+                print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
 
         if debug:
             if idx == debug:
@@ -145,7 +145,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
     df['clip_length'] = pd.Series(l, index=df.index) 
 
     if verbose == True:
-        print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
+        print('Processed {:6d} in {:8.4f} s.'.format(tot, time.time() - start))
     
     return df
 

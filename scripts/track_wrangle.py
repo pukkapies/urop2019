@@ -166,13 +166,13 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = 
     Parameters
     ----------
     min_size : int
-        the tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value)
+        The tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value).
     
     discard_no_tag : bool
-        if True, discards tracks which are not matched to any tag
+        If True, discards tracks which are not matched to any tag.
 
     discard_dupl : bool
-        if True, discards tracks which are duplicates and keeps one for each set
+        If True, discards tracks which are duplicates and keeps one for each set.
 
     Returns
     -------

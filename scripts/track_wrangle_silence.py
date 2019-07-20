@@ -36,8 +36,7 @@ Functions
 
 
 Glossary
-----------
-
+--------
     trim:
         The total duration of tracks excluding the starting and ending section 
         if they are silent.
@@ -61,16 +60,7 @@ import mp3_to_npz as npz
 
 
 def check_silence(df, verbose=True): 
-    
     '''
-    Parameters
-    ----------
-    path: str
-        The path of the input dataframe.
-        Recommendation: df = ultimate_output(df_fetch, discard_no_tag=True),
-        where df_fetch is the dataframe from track_fetch.
-    
-        
     Returns
     -------
     
@@ -83,39 +73,34 @@ def check_silence(df, verbose=True):
         
         
         Extra columns:
+        'effective_clip_length': float
+            The length of the track after trimming.
+        
         'audio_start': float
-            The start time (s) of non-silent section of tracks.
+            The start time (in s) of non-silent section in the tracks.
             
         'audio_end': float
-            The end time (s) of non-silent section of tracks.
-            
-        'silence_detail': list
-            A list of tuples, and each tuple contains 2
-            elements of the form (a,b). Each tuple represents a silent section 
-            (after trimming), where a, b are the start and end time of the 
-            section respectively.
+            The end time (in s) of non-silent section in the tracks.
             
         'mid_silence_length': float
             The sum of the length of all the mid-silent sections.
             
-        'effective_clip_length': float
-            The length of track after trimming.
-            
         'non_silence_length': float
             The total duration of the non-silent sections of the track.
-            
-        'silence_percentage': float
-            The percentage of the track which is non-silent after trimming.
+
+        'max_silence_length': float
+            The maximal length of individual mid-silent sections from the 'silence_duration' column.
         
         'silence_detail_length': list
-            length of each mid-silent section.
-                
-        'max_silence_length': float
-                maximum length of individual mid-silent sections from the 
-                'silence_duration' column.
-                
-    
-                
+            The length of each mid-silent section.
+
+        'silence_detail': list
+            A list of tuples, each tuple containing 2 elements of the form (a,b), each tuple
+            representing a silent section (after trimming). 
+            Here a and b are the start and end time of the section (respectively).
+
+        'silence_percentage': float
+            The percentage of the track which is non-silent after trimming.
     '''
     
     start = time.time()
@@ -155,7 +140,7 @@ def check_silence(df, verbose=True):
         
         if verbose == True:
             if idx % 100 == 0:
-                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
+                print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
     
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
@@ -172,7 +157,7 @@ def check_silence(df, verbose=True):
     df = df[cols]
         
     if verbose == True:
-        print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
+        print('Processed {:6d} in {:8.4f} s.'.format(tot, time.time() - start))
 
     return df
 
@@ -184,8 +169,7 @@ def filter_trim_length(df, threshold):
         The dataframe from the function check_silence.
     
     threshold: float
-        If the length of tracks AFTER TRIMMING >= threshold, keep the track 
-        and its track_id is returned.
+        If the length of tracks AFTER TRIMMING >= threshold, keep the track.
     
     
     Returns
@@ -206,15 +190,13 @@ def filter_tot_silence_duration(df, threshold):
         The dataframe from the function check_silence.
     
     threshold: float
-        If the sum of the length of mid-silent sections <= threshold, 
-        keep the track and its track_id is returned.
-    
+        If the sum of the length of mid-silent sections <= threshold, keep the track and its track_id is returned.
     
     Returns
     ------
     df: pd.DataFrame
         The rows that satisfy the condition: 
-            total length of mid-silent duration <= threshold.
+            tot length of mid-silent duration <= threshold.
     
     '''
     
@@ -228,16 +210,13 @@ def filter_max_silence_duration(df, threshold):
         The dataframe from the function check_silence.
     
     threshold: float
-        If the maximum length amongst the individual mid-silent sections 
-        <= threshold, keep the track and its track_id is returned.
-    
+        If the maximum length amongst the individual mid-silent sections <= threshold, keep the track.
     
     Returns
     ------
     df: pd.DataFrame
         The rows that satisfy the condition: 
-            the maximum length amongst the individual mid-silent sections 
-            <= threshold.
+            max length amongst the individual mid-silent sections <= threshold.
     
     '''
     

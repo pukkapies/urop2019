@@ -148,33 +148,32 @@ def no_sound(df, start=0, end=None, verbose=True):
             where df_fetch is the dataframe from track_fetch.
     
         start: int
-            The index of starting point in the pre_no_sound.csv.
+            The index of the starting point in the dataframe.
             
         end: int
-            The index of ending point in the pre_no_sound.csv.
+            The index of the end point in the dataframe.
             
         verbose: bool
-            If True, print progress
+            If True, print progress.
          
-    
     Returns
     -------
     
     npz files:
         The npz file is of the form ['array', 'sr', 'split']
         'array': 
-            The loaded mp3 files in numpy-array form by library -- librosa.
-            The array represent the mp3s in its original sampling rate, and 
-            multi-channel is preserved. (each row represents one channel)
+            The loaded mp3 files in numpy-array form by librosa.
+            The array represent the mp3 files in their original sample rate, and 
+            multi-channel is preserved (each row represents a channel).
             
         'sr':
             The sampling rate of the mp3 file.
             
         'split':
-            All the sections of the track which is non-silent (>=60dB). The
-            information is saved in the form: n*2 numpy.ndarray, and each row
-            represent one section -- starting position and ending position of 
-            array respectively.
+            The sections of the track which is non-silent (>=60dB). 
+            The information is saved in the form n*2 numpy.ndarray (each row
+            represent a section - starting position and end position of 
+            array).
     '''
 
     if end == None:
@@ -193,30 +192,23 @@ def no_sound(df, start=0, end=None, verbose=True):
         
         if verbose == True:
             if idx % 100 == 0:
-                print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start_time, int(idx / tot * 100)))
-                print("Processed {} in {:6.5f} sec".format(path, time.time() - partial))
+                print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start_time, int(idx / tot * 100)))
+                print("Processed {} in {:6.5f} s".format(path, time.time() - partial))
 
 def no_sound_count(df, final_check=False):
     '''
     Parameters
     ----------
     df: pd.DataFrame
-        The input dataframe that stores the path of mp3s that will be converted to npz files.
-        Recommendation: df = track_wrangle.read_duplicates_and_purge() 
+        The input dataframe that stores the path of mp3 files that will be converted to npz files.
     
     final_check: bool
-        final check mode.
-        
-
+        If True, perform a final check.
         
     Returns
     -------
     l: list
-        If it is in final check mode, it returns the list of path of the tracks
-        whose mp3 has not been loaded and saved to numpy array.
-        
-    count: int
-        Print progress.    
+        The list of path of the tracks whose mp3 has not been loaded and saved correctly.  
     '''
     
     count = 0
