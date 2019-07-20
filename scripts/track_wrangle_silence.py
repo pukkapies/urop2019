@@ -121,8 +121,8 @@ def check_silence(df, verbose=True):
     start = time.time()
     tot = len(df)
 
-    audio_start = []
-    audio_end = []
+    audio_start = np.array([])
+    audio_end = np.array([])
     mid_silence_length = []
     silence = []
     
@@ -139,8 +139,8 @@ def check_silence(df, verbose=True):
         split = ar['split']
         split = split/sr
         
-        audio_start.append(split[0,0])
-        audio_end.append(split[-1,-1])
+        np.append(audio_start, split[0,0])
+        np.append(audio_end, split[-1,-1])
 
         bits = []
         bits_sum = 0
@@ -156,16 +156,20 @@ def check_silence(df, verbose=True):
         if verbose == True:
             if idx % 100 == 0:
                 print('Processed {:6d} in {:8.4f} sec. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
-        
+    
+    df['effective_clip_length'] = pd.Series(audio_end - audio_start, index=df.index)
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
-    df['effective_clip_length'] = df['audio_end'] - df['audio_start']
     df['mid_silence_length'] = pd.Series(mid_silence_length, index=df.index)
     df['non_silence_length'] = df['effective_clip_length'] - df['mid_silence_length']
-    df['silence_percentage'] = df['mid_silence_length'] / df['effective_clip_length'] * 100
     df['silence_detail'] = pd.Series(silence, index=df.index)
     df['silence_detail_length'] = df['silence_detail'].apply(lambda l: [i[1] - i[0] for i in l])
+    df['silence_percentage'] = df['mid_silence_length'] / df['effective_clip_length'] * 100
     df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l))
+
+    cols = df.columns.tolist().pop()
+    cols = cols[:-3] + ['max_silence_length'] + cols[-3:]
+    df = df[cols]
         
     if verbose == True:
         print('Processed {:6d} in {:8.4f} sec.'.format(tot, time.time() - start))
