@@ -182,7 +182,7 @@ def no_sound(df, start=0, end=None, verbose=True):
         
     start_time = time.time()
     tot = len(df)
-    for idx, path in enumerate(df['path'][start:end]): 
+    for idx, path in enumerate(df['file_path'][start:end]): 
         partial = time.time()
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
         if os.path.isfile(path_npz):
@@ -223,7 +223,7 @@ def no_sound_count(df, final_check=False):
     l = []
      
 
-    for idx, path in enumerate(df['path']):
+    for idx, path in enumerate(df['file_path']):
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
         if os.path.isfile(path_npz):
             count += 1
@@ -254,8 +254,8 @@ if __name__ == "__main__":
 
     df = pd.read_csv(args.input, comment='#')
 
-    if os.path.isabs(df['path'][0]):
-        mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
+    if os.path.isabs(df['file_path'][0]):
+        mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['file_path'].to_list()))
         if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
             print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
             print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)

@@ -126,7 +126,7 @@ def check_silence(df, verbose=True):
     mid_silence_length = []
     silence = []
     
-    for idx, path in enumerate(df['path']):
+    for idx, path in enumerate(df['file_path']):
         path_npz = npz.mp3_path_to_npz_path(path)
         try:
             ar = np.load(path_npz)
@@ -264,8 +264,8 @@ if __name__ == "__main__":
 
     df = pd.read_csv(args.input, comment='#')
 
-    if os.path.isabs(df['path'][0]):
-        mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['path'].to_list()))
+    if os.path.isabs(df['file_path'][0]):
+        mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['file_path'].to_list()))
         if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
             print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
             print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)

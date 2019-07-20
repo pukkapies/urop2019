@@ -62,7 +62,7 @@ def find_tracks(abs_path = False):
 def find_tracks_with_7dids(abs_path = False):
     paths = find_tracks(abs_path)
     paths_7dids = [int(os.path.basename(path)[:-9]) for path in paths]
-    df = pd.DataFrame(data={'path': paths, 'track_7digitalid': paths_7dids})
+    df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'file_path': paths})
     return df
 
 def check_size(df):
@@ -84,7 +84,7 @@ def check_size(df):
     
     '''
     s = []
-    for path in df['path']: 
+    for path in df['file_path']: 
         path = os.path.join(mp3_root_dir, path)
         s.append(os.path.getsize(path))
     df['file_size'] = pd.Series(s, index=df.index)
@@ -120,7 +120,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
     l = []
     c = []
     tot = len(df)
-    for idx, path in enumerate(df['path']):
+    for idx, path in enumerate(df['file_path']):
         path = os.path.join(mp3_root_dir, path)
         try:
             l.append(MP3(path).info.length)
@@ -151,7 +151,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
 
 if __name__ == "__main__":
 
-    description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'path', 'track_7digitalID', 'clip_length, 'file_size', 'channels'."
+    description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'track_7digitalID', 'file_path', 'file_size', 'channels', 'clip_length'."
     epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("output", help="output filename or path")
