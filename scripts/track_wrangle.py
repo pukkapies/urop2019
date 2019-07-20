@@ -204,7 +204,7 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = 
     
     if discard_dupl == True:
         print("Purging duplicate tracks...", end=" ")
-        df = df_purge_duplicates(merged_df)
+        merged_df = df_purge_duplicates(merged_df)
         print("done")
     
     return merged_df
