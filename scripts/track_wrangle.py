@@ -92,8 +92,10 @@ def extract_ids_from_summary():
     with h5py.File(path_h5, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
         dataset_2 = h5['analysis']['songs']
-        df_summary = pd.DataFrame(data={'track_7digitalid': dataset_1['track_7digitalid'], 'track_id': dataset_2['track_id']})
+        dataset_3 = h5['musicbrainz']['songs']
+        df_summary = pd.DataFrame(data={'track_7digitalid': dataset_1['track_7digitalid'], 'track_id': dataset_2['track_id'], 'year': dataset_3['year']})
         df_summary['track_id'] = df_summary['track_id'].apply(lambda x: x.decode('UTF-8'))
+        df_summary['year'] = df_summary['year'].fillna(0)
         return df_summary
 
 def df_merge(track_summary_df: pd.DataFrame, merged_df: pd.DataFrame):
