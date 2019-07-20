@@ -235,16 +235,16 @@ if __name__ == "__main__":
     if args.path_txt_dupl:
         path_txt_duplicates = os.path.expanduser(args.path_txt_dupl)
     
-    
     df = pd.read_csv(args.input, comment='#')
     df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
     
     with open(args.output, 'a') as f:
         comment = '# python'
-        for _ in range(3):
-            comment += ' ' + os.path.basename(sys.argv.pop(0))
-        for _ in range(len(sys.argv)):
-            comment += sys.argv
+        comment += ' ' + os.path.basename(sys.argv.pop(0))
+        for _ in range(len(sys.argv) - 2):
+            comment += ' ' + sys.argv.pop(0)
+        for _ in range(2):
+            comment += ' ' + sys.argv.pop(0)
         
         f.write(comment + '\n')
 
