@@ -112,7 +112,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
         'length': float
             The duration in seconds of the mp3 tracks.
             
-        NOTE: an empty cell is returned to the corresponding rows for 'track_length' 
+        NOTE: an empty cell is returned to the corresponding rows for 'clip_length' 
         and 'channels' if the script cannot read the size of the tracks or cannot 
         open the tracks (i.e. broken tracks).
     '''
@@ -139,7 +139,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
             if idx == debug:
                 return l
 
-    df['track_length'] = pd.Series(l, index=df.index) 
+    df['clip_length'] = pd.Series(l, index=df.index) 
     df['channels'] = pd.Series(c, index=df.index)
 
     if verbose == True:
@@ -149,7 +149,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
 
 if __name__ == "__main__":
 
-    description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'path', 'track_7digitalID', 'track_length, 'file_size', 'channels'."
+    description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'path', 'track_7digitalID', 'clip_length, 'file_size', 'channels'."
     epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("output", help="output filename or path")

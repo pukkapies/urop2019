@@ -119,7 +119,7 @@ def df_purge_faulty_mp3_1(merged_df: pd.DataFrame, threshold: int = 0):
     return df
 
 def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
-    df = merged_df[-merged_df['track_length'].isna()]
+    df = merged_df[-merged_df['clip_length'].isna()]
     return df
 
 def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
@@ -161,7 +161,7 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     return df.reset_index()
 
 def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
-    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'track_length', 'channels'.
+    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'path', 'file_size', 'clip_length', 'channels'.
     
     Parameters
     ----------
@@ -211,7 +211,7 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = 
 
 if __name__ == "__main__":
     
-    description = "Script to merge the list of mp3 files obtained with track_fetch.py with the MSD summary file, remove unwanted entries such as mismatches, faulty files or duplicates, and output a csv file with the following columns: 'track_id', 'track_7digitalid', 'path', 'track_length', 'file_size'."
+    description = "Script to merge the list of mp3 files obtained with track_fetch.py with the MSD summary file, remove unwanted entries such as mismatches, faulty files or duplicates, and output a csv file with the following columns: 'track_id', 'track_7digitalid', 'path', 'clip_length', 'file_size'."
     epilog = "Example: python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input csv filename or path")
