@@ -249,8 +249,8 @@ if __name__ == "__main__":
     parser.add_argument("--root-dir-npz", help="set different directory to save npz files")
     parser.add_argument("--root-dir-mp3", help="set different directory to find mp3 files")
     parser.add_argument("--filter-trim-length", type=float, default=0, help="keep only tracks whose effective length (in seconds) is longer than the theshold")
-    parser.add_argument("--filter-tot-silence-duration", type=float, default=0, help="keep only tracks whose total silent length is shorter than the theshold")
-    parser.add_argument("--filter-max-silence-duration", type=float, default=0, help="keep only tracks whose maximal silent length is shorter than the theshold")
+    parser.add_argument("--filter-tot-silence", type=float, default=0, help="keep only tracks whose tot silent length is shorter than the theshold")
+    parser.add_argument("--filter-max-silence", type=float, default=0, help="keep only tracks whose max silent length is shorter than the theshold")
 
     args = parser.parse_args()
 
