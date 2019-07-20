@@ -181,7 +181,7 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = 
         The entries are the ones specified by the given parameters.
     '''
 
-    print("Fetching mp3 files from root directory...", end=" ")
+    print("Fetching mp3 files from input dataframe...", end=" ")
     merged_df = df_merge(extract_ids_from_summary(), df)
     print("done")
 
@@ -190,10 +190,10 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = 
     print("done")
 
     print("Purging faulty mp3 files...")
-    print("    Checking files with size less than threshold...", end=" ")
+    print("    Checking mp3 files size...", end=" ")
     merged_df = df_purge_faulty_mp3_1(merged_df, threshold=min_size)
     print("done")
-    print("    Checking files that can't be opened...", end=" ")
+    print("    Checking mp3 files that can't be opened...", end=" ")
     merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
