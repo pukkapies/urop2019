@@ -280,9 +280,12 @@ if __name__ == "__main__":
         df = filter_max_silence_duration(df, args.filter_max_silence)
     
     with open(args.output, 'a') as f:
-        comment = ('# python ' + os.path.basename(sys.argv.pop(0)))
-        for arg in sys.argv:
-            comment += ' ' + arg
+        comment = '# python'
+        for _ in range(3):
+            comment += ' ' + os.path.basename(sys.argv.pop(0))
+        for _ in range(len(sys.argv)):
+            comment += sys.argv
+        
         f.write(comment + '\n')
 
         df.to_csv(f, index=False)

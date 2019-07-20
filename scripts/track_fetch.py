@@ -183,9 +183,12 @@ if __name__ == "__main__":
         df = check_mutagen_info(df, args.verbose)
     
     with open(args.output, 'a') as f:
-        comment = ('# python ' + os.path.basename(sys.argv.pop(0)))
-        for arg in sys.argv:
-            comment += ' ' + arg
+        comment = '# python'
+        for _ in range(2):
+            comment += ' ' + os.path.basename(sys.argv.pop(0))
+        for _ in range(len(sys.argv)):
+            comment += sys.argv
+        
         f.write(comment + '\n')
 
         df.to_csv(f, index=False)

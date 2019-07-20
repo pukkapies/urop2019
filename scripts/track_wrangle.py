@@ -240,9 +240,12 @@ if __name__ == "__main__":
     df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
     
     with open(args.output, 'a') as f:
-        comment = ('# python ' + os.path.basename(sys.argv.pop(0)))
-        for arg in sys.argv:
-            comment += ' ' + arg
+        comment = '# python'
+        for _ in range(3):
+            comment += ' ' + os.path.basename(sys.argv.pop(0))
+        for _ in range(len(sys.argv)):
+            comment += sys.argv
+        
         f.write(comment + '\n')
 
         df.to_csv(f, index=False)
