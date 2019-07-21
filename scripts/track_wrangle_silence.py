@@ -56,9 +56,6 @@ import pandas as pd
 
 import mp3_to_npz as npz
 
-
-
-
 def check_silence(df, verbose=True): 
     '''
     Returns

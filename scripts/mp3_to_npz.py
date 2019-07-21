@@ -137,7 +137,6 @@ def savez(path):
     array_split = librosa.effects.split(librosa.core.to_mono(array))
     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
-
 def no_sound(df, start=0, end=None, verbose=True):
     '''
     Parameters
