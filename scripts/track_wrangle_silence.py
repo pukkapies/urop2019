@@ -54,6 +54,8 @@ import time
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
+
 import mp3_to_npz as npz
 
 def check_silence(df, verbose=True): 
