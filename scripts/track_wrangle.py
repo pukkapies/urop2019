@@ -226,7 +226,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     if args.output[-4:] != '.csv':
-        args.output = args.output + '.csv'
+        output = args.output + '.csv'
+    else:
+        output = args.output
 
     if os.path.isfile(args.output):
        print("WARNING file " + args.output + " already exists!")
@@ -245,13 +247,13 @@ if __name__ == "__main__":
 
     df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
     
-    with open(args.output, 'a') as f:
+    with open(output, 'a') as f:
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
-        for _ in range(len(sys.argv) - 2):
-            comment += ' ' + sys.argv.pop(0)
-        for _ in range(2):
-            comment += ' ' + os.path.basename(sys.argv.pop(0))
+        options = [arg for arg in sys.argv if arg not in (args.input, args.output)]
+        for option in options:
+            comment += ' ' + option
+        comment += ' ' + os.path.basename(args.input) + ' ' + os.path.basename(output)
         
         f.write(comment + '\n')
 
