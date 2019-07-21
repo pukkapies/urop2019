@@ -272,7 +272,7 @@ if __name__ == "__main__":
         for _ in range(len(sys.argv) - 2):
             comment += ' ' + sys.argv.pop(0)
         for _ in range(2):
-            comment += ' ' + sys.argv.pop(0)
+            comment += ' ' + os.path.basename(sys.argv.pop(0))
         
         f.write(comment + '\n')
 
