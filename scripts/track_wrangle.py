@@ -228,6 +228,10 @@ if __name__ == "__main__":
     if args.output[-4:] != '.csv':
         args.output = args.output + '.csv'
 
+    if os.path.isfile(args.output):
+       print("WARNING file " + args.output + " already exists!")
+       sys.exit(0)
+
     if args.path_h5:
         path_h5 = os.path.expanduser(args.path_h5)
     if args.path_txt_mism:

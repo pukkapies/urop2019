@@ -166,6 +166,11 @@ if __name__ == "__main__":
    
     if args.output[-4:] != '.csv':
         args.output = args.output + '.csv' 
+    
+    if os.path.isfile(args.output):
+       print("WARNING file " + args.output + " already exists!")
+       sys.exit(0)
+    
     if args.root_dir:
         mp3_root_dir = os.path.expanduser(args.root_dir)
     

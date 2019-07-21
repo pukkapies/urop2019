@@ -185,7 +185,7 @@ def no_sound(df, start=0, end=None, verbose=True):
         partial = time.time()
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
         if os.path.isfile(path_npz):
-            print("WARNING file " + path_npz + " already exists!") 
+            print("WARNING file " + path_npz + " already exists!")
         else:
             path = os.path.join(mp3_root_dir, path)
             savez(path) 
