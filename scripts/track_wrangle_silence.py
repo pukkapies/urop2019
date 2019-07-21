@@ -248,14 +248,22 @@ if __name__ == "__main__":
 
     df = pd.read_csv(args.input, comment='#')
 
-    if os.path.isabs(df['file_path'][0]):
-        mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['file_path'].to_list()))
-        if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
-            print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
-            print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
-            mp3_root_dir = mp3_root_dir_infer
+    cols = ['effective_clip_length', 'audio_start', 'audio_end', 'mid_silence_length', 'non_silence_length', 'max_silence_length', 'silence_detail_length', 'silence_detail', 'silence_percentage']
+    
+    if [col in cols if col in df.columns] != cols:
+        if os.path.isabs(df['file_path'][0]):
+            mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['file_path'].to_list()))
+            if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
+                print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
+                print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
+                mp3_root_dir = mp3_root_dir_infer
+                
+        df = check_silence(df)
 
-    df = check_silence(df)
+    elif not any([args.filter_trim_length, args.filter_tot_silence, args.filter_max_silence]):
+        print("Nothing to be done!!")
+        sys.exit(0)
+        
     if args.filter_trim_length:
         df = filter_trim_length(df, args.filter_trim_length)
     if args.filter_tot_silence:
