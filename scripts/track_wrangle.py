@@ -34,7 +34,7 @@ Functions
     Remove mismatches from previously generated dataset.
 
 - df_purge_faulty_mp3_1
-    Remove tracks whose file size is less than the threshold (or have file size 0).
+    Remove tracks which have file size 0.
 
 - df_purge_faulty_mp3_2
     Remove tracks which can't be opened and therefore have NaN length.
@@ -114,8 +114,8 @@ def df_purge_mismatches(merged_df: pd.DataFrame):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def df_purge_faulty_mp3_1(merged_df: pd.DataFrame, threshold: int = 0):
-    df = merged_df[merged_df['file_size'] > threshold]
+def df_purge_faulty_mp3_1(merged_df: pd.DataFrame):
+    df = merged_df[merged_df['file_size'] > 0]
     return df
 
 def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
@@ -160,13 +160,13 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = False, discard_dupl: bool = False):
+def ultimate_output(df: pd.DataFrame, discard_no_tag: bool = False, discard_dupl: bool = False):
     ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'.
     
     Parameters
     ----------
-    min_size : int
-        The tracks with file size (in bytes) below the threshold are discarded (50000 is a safe value).
+    df : pd.DataFrame
+        The dataframe to purge.
     
     discard_no_tag : bool
         If True, discards tracks which are not matched to any tag.
@@ -190,10 +190,10 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = 
     print("done")
 
     print("Purging faulty mp3 files...")
-    print("    Checking mp3 files size...", end=" ")
-    merged_df = df_purge_faulty_mp3_1(merged_df, threshold=min_size)
+    print("    Checking mp3 files which have size 0...", end=" ")
+    merged_df = df_purge_faulty_mp3_1(merged_df)
     print("done")
-    print("    Checking mp3 files that can't be opened...", end=" ")
+    print("    Checking mp3 files which can't be opened and have length 0...", end=" ")
     merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
@@ -212,14 +212,13 @@ def ultimate_output(df: pd.DataFrame, min_size: int = 0, discard_no_tag: bool = 
 if __name__ == "__main__":
     
     description = "Script to merge the list of mp3 files obtained with track_fetch.py with the MSD summary file, remove unwanted entries such as mismatches, faulty files or duplicates, and output a csv file with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'."
-    epilog = "Example: python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --min-size 50000 --discard-no-tag"
+    epilog = "Example: python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --discard-no-tag"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input csv filename or path")
     parser.add_argument("output", help="output csv filename or path")
     parser.add_argument("--path-h5", help="set path to msd_summary_file.h5")
     parser.add_argument("--path-txt-dupl", help="set path to duplicates info file")
     parser.add_argument("--path-txt-mism", help="set path to mismatches info file")
-    parser.add_argument("--min-size", type=int, default=0, help="set the minimum size (in bytes) to allow (default 0)")
     parser.add_argument("--discard-no-tag", action="store_true", help="choose to discard tracks with no tags")
     parser.add_argument("--discard-dupl", action="store_true", help="choose to discard duplicate tracks")
     
@@ -245,7 +244,7 @@ if __name__ == "__main__":
 
     assert 'file_size' in df and 'clip_length' in df
 
-    df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
+    df = ultimate_output(df, args.discard_no_tag, args.discard_dupl)
     
     with open(output, 'a') as f:
         comment = '# python'

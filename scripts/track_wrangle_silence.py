@@ -230,6 +230,7 @@ if __name__ == "__main__":
     parser.add_argument("output", help="output csv filename or path")
     parser.add_argument("--root-dir-npz", help="set directory to save npz files")
     parser.add_argument("--root-dir-mp3", help="set directory to find mp3 files")
+    parser.add_argument("--min-size", type=int, default=0, help="set the minimum size (in bytes) to allow")
     parser.add_argument("--filter-trim-length", type=float, default=0, help="keep only tracks whose effective length (in seconds) is longer than the theshold")
     parser.add_argument("--filter-tot-silence", type=float, default=0, help="keep only tracks whose tot silent length is shorter than the theshold")
     parser.add_argument("--filter-max-silence", type=float, default=0, help="keep only tracks whose max silent length is shorter than the theshold")
@@ -252,6 +253,8 @@ if __name__ == "__main__":
 
     df = pd.read_csv(args.input, comment='#')
 
+    assert 'file_size' in df
+
     cols = ['effective_clip_length', 'audio_start', 'audio_end', 'mid_silence_length', 'non_silence_length', 'max_silence_length', 'silence_detail_length', 'silence_detail', 'silence_percentage']
     
     if [col for col in cols if col in df.columns] != cols:
@@ -264,7 +267,7 @@ if __name__ == "__main__":
                 
         df = check_silence(df)
 
-    elif not any([args.filter_trim_length, args.filter_tot_silence, args.filter_max_silence]):
+    elif not any([args.filter_trim_length, args.filter_tot_silence, args.filter_max_silence, args.min_size]):
         print("Nothing to be done!!")
         sys.exit(0)
         
@@ -274,6 +277,8 @@ if __name__ == "__main__":
         df = filter_tot_silence_duration(df, args.filter_tot_silence)
     if args.filter_max_silence:
         df = filter_max_silence_duration(df, args.filter_max_silence)
+
+    df = df[df['file_size'] > args.min_size]
     
     with open(output, 'a') as f:
         comment = '# python'
