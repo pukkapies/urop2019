@@ -250,7 +250,7 @@ if __name__ == "__main__":
 
     cols = ['effective_clip_length', 'audio_start', 'audio_end', 'mid_silence_length', 'non_silence_length', 'max_silence_length', 'silence_detail_length', 'silence_detail', 'silence_percentage']
     
-    if [col in cols if col in df.columns] != cols:
+    if [col for col in cols if col in df.columns] != cols:
         if os.path.isabs(df['file_path'][0]):
             mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['file_path'].to_list()))
             if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
