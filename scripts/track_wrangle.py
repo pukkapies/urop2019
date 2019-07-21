@@ -240,6 +240,9 @@ if __name__ == "__main__":
         path_txt_duplicates = os.path.expanduser(args.path_txt_dupl)
     
     df = pd.read_csv(args.input, comment='#')
+
+    assert 'file_size' in df and 'clip_length' in df
+
     df = ultimate_output(df, args.min_size, args.discard_no_tag, args.discard_dupl)
     
     with open(args.output, 'a') as f:
