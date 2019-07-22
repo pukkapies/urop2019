@@ -49,6 +49,20 @@ def set_mp3_root_dir(new_root_dir):
     mp3_root_dir = new_root_dir
 
 def find_tracks(abs_path = False):
+    ''' Finds all the mp3 files within mp3_root_dir. 
+    
+    Parameters
+    ----------
+    abs_path : bool
+        If true, use absolute paths.
+
+    Returns
+    -------
+    paths : list
+        list containing paths (str) to all mp3 files in mp3_root_dir.
+    
+    '''
+
     paths = []
     for folder, subfolders, files in os.walk(mp3_root_dir):
         for file in files:
@@ -60,6 +74,19 @@ def find_tracks(abs_path = False):
     return paths
 
 def find_tracks_with_7dids(abs_path = False):
+    ''' Finds all the mp3 files within mp3_root_dir and extracts 7digitalid from their names
+    
+    Parameters
+    ----------
+    abs_path : bool
+        If true, use absolute paths.
+
+    Returns
+    -------
+    df : DataFrame
+        contains 1 column for the paths and 1 for the corresponding 7digitalids.
+    '''
+
     paths = find_tracks(abs_path)
     paths_7dids = [int(os.path.basename(path)[:-9]) for path in paths]
     df = pd.DataFrame(data={'track_7digitalid': paths_7dids, 'file_path': paths})
@@ -83,6 +110,7 @@ def check_size(df):
         
     
     '''
+
     s = []
     for path in df['file_path']: 
         path = os.path.join(mp3_root_dir, path)
@@ -116,6 +144,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
         and 'channels' if the script cannot read the size of the tracks or cannot 
         open the tracks (i.e. broken tracks).
     '''
+
     start = time.time()
     l = []
     c = []
@@ -150,7 +179,8 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
     return df
 
 if __name__ == "__main__":
-
+    
+    # Using Argparse to handle arguments
     description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'track_7digitalID', 'file_path', 'file_size', 'channels', 'clip_length'."
     epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
@@ -189,14 +219,16 @@ if __name__ == "__main__":
     if args.use_mutagen == True:
         df = check_mutagen_info(df, args.verbose)
     
+    # Creates output csv file
     with open(output, 'a') as f:
+        # Creates a comment displaying arguments used to obtain csv file.
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
         options = [arg for arg in sys.argv if arg != args.output]
         for option in options:
             comment += ' ' + option
         comment += ' ' + os.path.basename(output)
-        
+        # Writes comment to the top of the file 
         f.write(comment + '\n')
-
+        # Adds the DataFrame to the file.
         df.to_csv(f, index=False)
