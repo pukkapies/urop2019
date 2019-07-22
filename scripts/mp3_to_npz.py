@@ -204,7 +204,7 @@ def no_sound_count(df, final_check=False):
         The input dataframe that stores the path of mp3 files that will be converted to npz files.
     
     final_check: bool
-        If True, perform a final check.
+        If True, return a list of path of the tracks that has not been converted to npz files.
         
     Returns
     -------
