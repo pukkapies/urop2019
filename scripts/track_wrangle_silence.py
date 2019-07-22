@@ -10,12 +10,16 @@ the right npz files ready.
 
 This script performs the following operations:
     
-- analysing results: check_silence analyse silent sections within the tracks and 
-return a detail analysis dataframe.
-- filtering results: return a DataFrame by filtering out tracks that are below a minimum 
-trimmed length threshold, tracks that have total mid-silent section above a maximum 
-threshold, and tracks that have length of maximum mid-silent section above a maximum 
-threshold. See Glossary for what these terms mean.
+- analysing results: 
+    check_silence analyse silent sections within the tracks and return a detail 
+    analysis dataframe.
+
+- filtering results: 
+    return a DataFrame by filtering out tracks that are 
+    below a minimum trimmed length threshold, tracks that have total mid-silent 
+    section above a maximum threshold, and tracks that have length of maximum 
+    mid-silent section above a maximum threshold. See Glossary for what these 
+    terms mean.
     
 
 Functions

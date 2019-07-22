@@ -1,4 +1,4 @@
-''' 
+''' Contain tools to convert mp3 files to npz files and store silence information of tracks.
 
 
 Notes
@@ -9,13 +9,16 @@ You will first need to run track_fetch.py and provide the output of that script 
 
 This script performs the following operations:
     
-- preparing the directory: see create_folder_structure;
+- preparing the directory: 
+    see create_folder_structure.
 
-- saving information on silence: no_sound() saves the information about silence in npz files, as well
-                                 as the converted arrays and sampling rate of the original mp3 to speed up 
-                                 the loading process in the future;
+- saving information on silence: 
+    no_sound() saves the information about silence in npz files, 
+    as well as the converted arrays and sampling rate of the original mp3 to 
+    speed up the loading process in the future.
 
-- progress check: no_sound_count() can be used to check progress of no_sound() on seperate window.
+- progress check: 
+    no_sound_count() can be used to check progress of no_sound() on seperate window.
 
 
 Functions
