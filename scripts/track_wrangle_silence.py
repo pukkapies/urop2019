@@ -101,9 +101,11 @@ def check_silence(df, verbose=True):
         'silence_percentage': float
             The percentage of the track which is non-silent after trimming.
     '''
-    
+   
+    #Initialise
     start = time.time()
     tot = len(df)
+
 
     audio_start = []
     audio_end = []
@@ -112,35 +114,52 @@ def check_silence(df, verbose=True):
     
     for idx, path in enumerate(df['file_path']):
         path_npz = npz.mp3_path_to_npz_path(path)
+        #try to load the stored npz file
         try:
             ar = np.load(path_npz)
+        #if file cannot be loaded, re-save the mp3 as npz and load the npz again
         except:
             print("WARNING at {:6d} out of {:6d}: {} was not savez'd correctly!".format(idx, len(df), path))
             npz.savez(path)
             ar = np.load(path_npz)
-            
+        
+        #load info stored in the npz file
         sr = ar['sr']
         split = ar['split']
+        
+        #convert sampling rate into second
         split = split/sr
         
+        #retrieve the starting time of the non-silent section of track
         audio_start.append(split[0,0])
+        
+        #retrieve the ending time of the non-silent section of track
         audio_end.append(split[-1,-1])
 
+        #store info about time interval of the mid-silent sections
         bits = []
         bits_sum = 0
 
         for i in range(len(split) - 1):
+            #a tuple of the form (start of silent section, end of silent section)
             bit = (split[i,1], split[i+1,0])
             bits.append(bit)
+            
+            #record the sum of length of mid-silent sections
             bits_sum += bit[1] - bit[0]
         
+        #store info about silence interval 
         silence.append(bits)
+        
+        #store sum of length of mid-silent section
         mid_silence_length.append(bits_sum)
         
+        #print progress
         if verbose == True:
             if idx % 100 == 0:
                 print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
     
+    #append new columns 
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
     df['effective_clip_length'] = df['audio_end'] - df['audio_start']
@@ -152,9 +171,12 @@ def check_silence(df, verbose=True):
     df['max_silence_length'] = df['silence_detail_length'].apply(lambda l: [0] if l == [] else l).apply(lambda l: np.max(l))
 
     cols = df.columns.tolist()
+    
+    #rearrange order of columns
     cols = cols[:-9] + ['effective_clip_length', 'audio_start', 'audio_end'] + cols[-6:-4] + ['max_silence_length'] + cols[-4:-1]
     df = df[cols]
-        
+    
+    #print total time taken and total processed
     if verbose == True:
         print('Processed {:6d} in {:8.4f} s.'.format(tot, time.time() - start))
 
