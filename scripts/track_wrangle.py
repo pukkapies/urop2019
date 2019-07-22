@@ -89,6 +89,8 @@ def set_path_txt_duplicates(new_path):
     path_txt_duplicates = new_path
 
 def extract_ids_from_summary(): 
+    ''' Produce a dataframe with 7digitalid's and tid's of all tracks in the dataset. '''
+
     with h5py.File(path_h5, 'r') as h5:
         dataset_1 = h5['metadata']['songs']
         dataset_2 = h5['analysis']['songs']
@@ -99,12 +101,17 @@ def extract_ids_from_summary():
         return df_summary
 
 def df_merge(track_summary_df: pd.DataFrame, merged_df: pd.DataFrame):
+    ''' Produce a dataframe with 7digitalid's, tid's and paths of mp3 files on the server. '''
+
+
     df = pd.merge(track_summary_df, merged_df, on='track_7digitalid', how='inner')
     df = df[-df.duplicated('track_7digitalid', keep=False)]
     df = df[-df.duplicated('track_id', keep=False)]
     return df
 
 def df_purge_mismatches(merged_df: pd.DataFrame):
+    ''' Remove mismatches from previously generated dataset. '''
+
     df = merged_df.set_index('track_id')
     to_drop = []
     with open(path_txt_mismatches, encoding='utf-8') as file: 
@@ -115,14 +122,20 @@ def df_purge_mismatches(merged_df: pd.DataFrame):
     return df.reset_index()
 
 def df_purge_faulty_mp3_1(merged_df: pd.DataFrame):
+    ''' Remove tracks which have file size 0. '''
+
     df = merged_df[merged_df['file_size'] > 0]
     return df
 
 def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
+    ''' Remove tracks which can't be opened and therefore have NaN length. '''
+
     df = merged_df[-merged_df['clip_length'].isna()]
     return df
 
 def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
+    ''' Remove tracks which are not matched to any tag. '''
+
     if lastfm_db:
         db.set_path(lastfm_db)
 
@@ -132,6 +145,8 @@ def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
     return pd.merge(merged_df, tids_with_tag_df, on='track_id', how='inner')
 
 def read_duplicates():      
+    ''' Read the msd_duplicates.txt file and produces a list (of lists) of duplicates. '''
+
     l = []
     with open (path_txt_duplicates, encoding='utf-8') as file:
         t = []
@@ -145,6 +160,8 @@ def read_duplicates():
     return l
 
 def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
+    ''' Retain only one track for each set of duplicates. '''
+
     df = merged_df.set_index('track_id')
     dups = read_duplicates()
     idxs = df.index
@@ -152,10 +169,10 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     if not randomness:
         np.random.seed(42)
     for sublist in to_drop:
-            if len(sublist) > 1:
-                sublist.pop(np.random.randint(len(sublist)))
-            else:
-                continue
+        if len(sublist) > 1:
+            sublist.pop(np.random.randint(len(sublist)))
+        else:
+            continue
     to_drop = [tid for sublist in to_drop for tid in sublist]
     df.drop(to_drop, inplace=True)
     return df.reset_index()
@@ -246,14 +263,16 @@ if __name__ == "__main__":
 
     df = ultimate_output(df, args.discard_no_tag, args.discard_dupl)
     
+    # Creates output csv file
     with open(output, 'a') as f:
+        # Creates a comment displaying arguments used.
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
         options = [arg for arg in sys.argv if arg not in (args.input, args.output)]
         for option in options:
             comment += ' ' + option
         comment += ' ' + os.path.basename(args.input) + ' ' + os.path.basename(output)
-        
+        # Writes comment to the top line
         f.write(comment + '\n')
-
+        # Writes DataFrame to the file.
         df.to_csv(f, index=False)

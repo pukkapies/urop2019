@@ -1,11 +1,13 @@
-''' Contains tools for fetching mp3 files on the server, matching 7digitalid's with tid's, and purging unwanted entries such as mismatches, faulty mp3 files, tracks without tags or duplicates
+"""
+"""
+''' 
 
 
 Notes
 -----
-This file can be run as a script. To do so, just type 'python mp3_to_npz.py' in the terminal. The help 
-page should contain all the options you might possibly need. You will first need to run track_fetch.py and
-provide the output of that script as an input argument for this one.
+This file can be run as a script. To do so, just type 'python mp3_to_npz.py <input>' in the terminal. The help 
+page, accessed by typing: "python mp3_to_npz.py --help", should contain all the options you might possibly need. 
+You will first need to run track_fetch.py and provide the output of that script as an input argument for this one.
 
 This script performs the following operations:
     
@@ -27,9 +29,7 @@ Functions
     Tell the script the root directory of where numpy arrays will be stored.
 
 - create_folder_structure  
-    Copy the folder structure of how the mp3 files are saved and produce 
-    the same folder structure under a new directory, which will be used to save
-    the converted numpy arrays.
+    Copies the folder structure under mp3_root_dir to npz_root_dir.
 
 - mp3_path_to_npz_path
     Convert the path of a mp3 file into the path of the corresponding npz file.
@@ -44,8 +44,7 @@ Functions
     Apply savez() to the tracks provided provided by the input dataframe.
                                          
 - no_sound_count                    
-    Return the number of mp3 files that have been correctly saved as npz files. 
-    Return the paths of the tracks that have not been saved yet if final_check is True.
+    Counts the number of mp3 files that have been correctly saved as npz files.
 '''
 
 import argparse
@@ -61,19 +60,22 @@ mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = '/srv/data/urop/7digital_numpy/'
 
 def set_mp3_root_dir(new_root_dir):
-    ''' Function to set mp3_root_dir, useful when script is used as module. '''
+    ''' Function to set mp3_root_dir, useful if script is used as a module. '''
+
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
 def set_npz_root_dir(new_root_dir):
-    ''' Function to set npz_root_dir, useful when script is used as module. '''
+    ''' Function to set npz_root_dir, useful if script is used as a module. '''
+
     global npz_root_dir
     npz_root_dir = new_root_dir
 
 def create_folder_structure():
-    ''' Generate folder structure to store npz files. '''
+    ''' Copies the folder structure under mp3_root_dir to npz_root_dir. '''
 
     for dirpath, dirnames, filenames in os.walk(mp3_root_dir):
+        # Joins path to directory, relative to mp3_root_dir to npz_root_dir to mimic structure.
         structure = os.path.join(npz_root_dir, dirpath[len(mp3_root_dir):])
         if not os.path.isdir(structure):
             os.mkdir(structure)
@@ -105,16 +107,16 @@ def mp3_path_to_npz_path(path):
     return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
 
 def savez(path):
-    '''
+    ''' Obtains properties from a given .mp3 file and saves these to a corresponding .npz file 
+
     Parameters
     ----------
     path:
         The path of the mp3 file.
         
-    Returns
+    Notes 
     -------
-    npz files:
-        The npz file is of the form ['array', 'sr', 'split']
+    The created .npz file is of the form ['array', 'sr', 'split']
         'array': 
             The loaded mp3 files in numpy-array form by library -- librosa.
             The array represent the mp3s in its original sampling rate, and 
@@ -136,7 +138,8 @@ def savez(path):
     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
 
 def no_sound(df, start=0, end=None, verbose=True):
-    '''
+    ''' Applies savez() to the tracks provided provided by the input dataframe.
+
     Parameters
     ----------
         df: pd.DataFrame
@@ -153,8 +156,8 @@ def no_sound(df, start=0, end=None, verbose=True):
         verbose: bool
             If True, print progress.
          
-    Returns
-    -------
+    Notes 
+    -----
     
     npz files:
         The npz file is of the form ['array', 'sr', 'split']
@@ -193,7 +196,8 @@ def no_sound(df, start=0, end=None, verbose=True):
                 print("Processed {} in {:6.5f} s".format(path, time.time() - partial))
 
 def no_sound_count(df, final_check=False):
-    '''
+    ''' Counts the number of tracks that has been correctly saved.
+
     Parameters
     ----------
     df: pd.DataFrame
@@ -240,13 +244,13 @@ if __name__ == "__main__":
         npz_root_dir = os.path.expanduser(args.root_dir_npz)
     if args.root_dir_mp3:
         mp3_root_dir = os.path.expanduser(args.root_dir_mp3)
-
+    
     df = pd.read_csv(args.input, comment='#')
 
     if os.path.isabs(df['file_path'][0]):
         mp3_root_dir_infer = os.path.dirname(os.path.commonprefix(df['file_path'].to_list()))
         if os.path.normpath(mp3_root_dir) != mp3_root_dir_infer:
-            print('WARNING mp3_root_dir is different from what seems to be the right one given the input...')
+            print('WARNING mp3_root_dir is different from the inferred one given the input...')
             print('WARNING mp3_root_dir is now set as ' + mp3_root_dir_infer)
             mp3_root_dir = mp3_root_dir_infer
     
