@@ -21,7 +21,7 @@ Functions
     Performs an os.walk to find all the mp3 files within mp3_root_dir.
 
 - find_tracks_with_7dids
-    Extract 7digitalid's from mp3 filenames.
+    Finds all mp3 files within mp3_root dir and extracts the 7digitalid's from mp3 filenames.
 
 - check_size
     Extend the columns of the given dataframe to identify the size of the tracks.
