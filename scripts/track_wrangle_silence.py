@@ -122,7 +122,7 @@ def check_silence(df, verbose=True):
         # if file cannot be loaded, re-save the mp3 as npz and load the npz again
         except:
             print("WARNING at {:6d} out of {:6d}: {} was not savez'd correctly!".format(idx, len(df), path))
-            npz.savez(path)
+            npz.savez(path, path_npz)
             ar = np.load(path_npz)
         
         # load info stored in the npz file

@@ -107,7 +107,7 @@ def mp3_path_to_npz_path(path):
 
     return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
 
-def savez(path):
+def savez(path, path_npz):
     ''' Obtains properties from a given .mp3 file and saves these to a corresponding .npz file 
 
     Parameters
@@ -133,7 +133,6 @@ def savez(path):
             array respectively.
     '''
 
-    path_npz = mp3_path_to_npz_path(path)
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
     array_split = librosa.effects.split(librosa.core.to_mono(array))
     np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
@@ -186,12 +185,12 @@ def no_sound(df, start=0, end=None, verbose=True):
     
     for idx, path in enumerate(df['file_path'][start:end]): 
         partial = time.time()
-        path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
+        path = os.path.join(mp3_root_dir, path)
+        path_npz = mp3_path_to_npz_path(path)
         if os.path.isfile(path_npz):
             print("WARNING file " + path_npz + " already exists!")
         else:
-            path = os.path.join(mp3_root_dir, path)
-            savez(path) 
+            savez(path, path_npz) 
         
         if verbose:
             if idx % 100 == 0:
