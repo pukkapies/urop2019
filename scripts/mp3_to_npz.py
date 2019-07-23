@@ -76,7 +76,7 @@ def create_folder_structure():
     ''' Copies the folder structure under mp3_root_dir to npz_root_dir. '''
 
     for dirpath, dirnames, filenames in os.walk(mp3_root_dir):
-        # Joins path to directory, relative to mp3_root_dir to npz_root_dir to mimic structure.
+        # joins path to directory, relative to mp3_root_dir to npz_root_dir to mimic structure
         structure = os.path.join(npz_root_dir, dirpath[len(mp3_root_dir):])
         if not os.path.isdir(structure):
             os.mkdir(structure)
