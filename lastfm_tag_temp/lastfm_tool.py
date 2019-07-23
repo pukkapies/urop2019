@@ -170,6 +170,9 @@ def generate_csv():
 
     df = pd.concat([df, unused_df])
     
+    #merge with lastfm ID
+    df = df.merge(tag_df, on='tag')
+    
     return df
 
 
