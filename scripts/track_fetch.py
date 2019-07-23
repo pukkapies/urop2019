@@ -143,10 +143,14 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
         open the tracks (i.e. broken tracks).
     '''
 
-    start = time.time()
+    if verbose:
+        start = time.time()
+        tot = len(df)
+    
+    # initialize
     l = []
     c = []
-    tot = len(df)
+    
     for idx, path in enumerate(df['file_path']):
         path = os.path.join(mp3_root_dir, path)
         try:
@@ -156,7 +160,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
             l.append('')
             c.append('')
         
-        if verbose == True:
+        if verbose:
             if idx % 500 == 0:
                 print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
 
@@ -170,7 +174,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
     df['channels'] = df['channels'].apply(lambda x: int(x))
     df['clip_length'] = pd.Series(l, index=df.index) 
 
-    if verbose == True:
+    if verbose:
         print('Processed {:6d} in {:8.4f} s.'.format(tot, time.time() - start))
     
     return df

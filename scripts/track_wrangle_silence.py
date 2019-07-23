@@ -104,10 +104,11 @@ def check_silence(df, verbose=True):
             The percentage of the track which is non-silent after trimming.
     '''
    
-    # initialise
-    start = time.time()
-    tot = len(df)
+    if verbose:
+        start = time.time()
+        tot = len(df)
 
+    # initialize
     audio_start = []
     audio_end = []
     mid_silence_length = []
@@ -155,7 +156,7 @@ def check_silence(df, verbose=True):
         mid_silence_length.append(bits_sum)
         
         # print progress
-        if verbose == True:
+        if verbose:
             if idx % 100 == 0:
                 print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
     
@@ -177,7 +178,7 @@ def check_silence(df, verbose=True):
     df = df[cols]
     
     # print total time taken and total processed
-    if verbose == True:
+    if verbose:
         print('Processed {:6d} in {:8.4f} s.'.format(tot, time.time() - start))
 
     return df

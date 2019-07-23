@@ -180,8 +180,10 @@ def no_sound(df, start=0, end=None, verbose=True):
     if end == None:
         end = len(df)
         
-    start_time = time.time()
-    tot = len(df)
+    if verbose: 
+        start = time.time()
+        tot = len(df)
+    
     for idx, path in enumerate(df['file_path'][start:end]): 
         partial = time.time()
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
@@ -191,9 +193,9 @@ def no_sound(df, start=0, end=None, verbose=True):
             path = os.path.join(mp3_root_dir, path)
             savez(path) 
         
-        if verbose == True:
+        if verbose:
             if idx % 100 == 0:
-                print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start_time, int(idx / tot * 100)))
+                print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
                 print("Processed {} in {:6.5f} s".format(path, time.time() - partial))
 
 def no_sound_count(df, final_check=False):
