@@ -45,8 +45,8 @@ def db_to_csv():
         
 def insert_index(df):
     
-    df['ID']=np.arange(1, len(df)+1)
-    df.set_index('ID')
+    df['lastfm_ID']=np.arange(1, len(df)+1)
+    df.set_index('lastfm_ID')
     return df
 
 
@@ -61,7 +61,7 @@ def popularity():
     tt = pd.read_csv(file_paths[1])
 
     tag = insert_index(tag)
-    tag.set_index('ID', inplace=True)
+    tag.set_index('lastfm_ID', inplace=True)
     
     right = tt.tag.value_counts().to_frame()
     left = tag.tag.to_frame()
@@ -73,7 +73,7 @@ def popularity():
     popularity['ranking'] = np.arange(1, len(popularity)+1)
     popularity.reset_index(inplace=True)
     popularity.set_index('ranking', inplace=True)
-    popularity.rename(columns={'index':'ID'}, inplace=True)
+    popularity.rename(columns={'index':'lastfm_ID'}, inplace=True)
     
     return popularity
 
@@ -123,7 +123,7 @@ def generate_tags_index(category, category_list):
     
     ID_root = category_index[category]
     category_ID = ID_root*100+np.arange(1, len(category_list)+1)
-    df = pd.Series(data = category_ID, index=category_list)
+    df = pd.Series(data = category_ID, index=category_list, name='ID')
     return df
 
 
@@ -139,9 +139,11 @@ def generate_csv():
     clean_tags_df = pd.concat([Ins_df, Voc_df, Gen_df, Roc_df, Hip_df, Jaz_df]).to_frame()
     clean_tags_df.rename(columns={clean_tags_df.columns[0]:'tag'}, inplace=True)
     
+    dirty_tags_list = []
     dirty_df = pd.Series()
     for txt_path in txt_paths_list:
         dirty_tags, tag_name = load_txt(txt_path)
+        dirty_tags_list.append(dirty_tags)
         
         #convert list to df of dirty tag names and clean tag names
         _ = pd.Series(data = [tag_name]*len(dirty_tags), index=dirty_tags)
@@ -150,7 +152,23 @@ def generate_csv():
     dirty_df = dirty_df.to_frame()
     dirty_df.rename(columns={dirty_df.columns[0]:'tag'}, inplace=True)
     
+    #dataframe with dirty tags used only
     df = dirty_df.merge(clean_tags_df, on='tag')
+    
+    
+    #get all tags
+    tag_path = os.path.join(output_path,  filename + '_' + 'tags' + '.csv')
+    tag_df = pd.read_csv(tag_path)
+    tag_df = insert_index(tag_df)
+    na_index = tag_df[tag_df.tag.isna()].index
+    tag_df = tag_df.dropna()
+    all_tags = tag_df.tag.to_list()
+    unused_tags = [t for t in all_tags if t not in dirty_tags]
+    
+    _ = len(unused_tags)
+    unused_df = pd.DataFrame({'tag':[None]*_, 'ID': np.zeros(_)})
+
+    df = pd.concat([df, unused_df])
     
     return df
 
