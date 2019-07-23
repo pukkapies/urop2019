@@ -177,7 +177,6 @@ def check_silence(df, verbose=True):
     cols = cols[:-9] + ['effective_clip_length', 'audio_start', 'audio_end'] + cols[-6:-4] + ['max_silence_length'] + cols[-4:-1]
     df = df[cols]
     
-    # print total time taken and total processed
     if verbose:
         print('Processed {:6d} in {:8.4f} s.'.format(tot, time.time() - start))
 
