@@ -307,7 +307,8 @@ if __name__ == "__main__":
         # insert comment line displaying options used
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
-        options = [arg for arg in sys.argv if arg not in (args.input, args.output)]
+        options = [arg for arg in sys.argv if arg not in (args.input, args.output, '--root-dir-npz', npz.npz_root_dir, '--root-dir-mp3', npz.mp3_root_dir)]
+        comment += ' --root-dir-npz ' + npz.npz_root_dir + ' --root-dir-mp3 ' + npz.mp3_root_dir
         for option in options:
             comment += ' ' + option
         comment += ' ' + os.path.basename(args.input) + ' ' + os.path.basename(output)
