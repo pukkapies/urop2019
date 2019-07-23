@@ -220,13 +220,16 @@ if __name__ == "__main__":
         if args.mutg_channels == False:
             df.drop('channels', axis=1, inplace=True)
     
+    # create output csv file
     with open(output, 'a') as f:
-        # insert comment line displaying optiones used
+        # insert comment line displaying options used
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
         options = [arg for arg in sys.argv if arg != args.output]
         for option in options:
             comment += ' ' + option
         comment += ' ' + os.path.basename(output)
+        # write comment to the top line
         f.write(comment + '\n')
+        # write dataframe
         df.to_csv(f, index=False)

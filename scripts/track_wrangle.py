@@ -163,15 +163,15 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     df = merged_df.set_index('track_id')
     dups = read_duplicates()
     idxs = df.index
-    to_drop = [[tid for tid in sublist if tid in idxs] for sublist in dups]
+    to_drop = [[tid for tid in sublist if tid in idxs] for sublist in dups] # contains lists of duplicates which are also in the purged dataframe
     if not randomness:
         np.random.seed(42)
     for sublist in to_drop:
-        if len(sublist) > 1:
+        if len(sublist) > 1: # for each list of duplicates, only "save" one track (that is, pop it from to_drop)
             sublist.pop(np.random.randint(len(sublist)))
         else:
             continue
-    to_drop = [tid for sublist in to_drop for tid in sublist]
+    to_drop = [tid for sublist in to_drop for tid in sublist] # flatten
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
@@ -261,16 +261,16 @@ if __name__ == "__main__":
 
     df = ultimate_output(df, args.discard_no_tag, args.discard_dupl)
     
-    # Creates output csv file
+    # create output csv file
     with open(output, 'a') as f:
-        # Creates a comment displaying arguments used.
+        # insert comment line displaying options used
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
         options = [arg for arg in sys.argv if arg not in (args.input, args.output)]
         for option in options:
             comment += ' ' + option
         comment += ' ' + os.path.basename(args.input) + ' ' + os.path.basename(output)
-        # Writes comment to the top line
+        # write comment to the top line
         f.write(comment + '\n')
-        # Writes DataFrame to the file.
+        # write dataframe
         df.to_csv(f, index=False)
