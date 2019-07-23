@@ -184,8 +184,9 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="store_true", help="show progress")
     parser.add_argument("--root-dir", help="set directory to find mp3 files")
     parser.add_argument("--abs", action="store_true", dest="abs_path", help="use absolute paths in output file")
-    parser.add_argument("--skip-os", action="store_false", dest="use_os", help="do not calculate tracks size")
-    parser.add_argument("--skip-mutagen", action="store_false", dest="use_mutagen", help="do not use mutagen to check tracks length")
+    parser.add_argument("--no-size", action="store_false", dest="use_os", help="do not calculate tracks size")
+    parser.add_argument("--no-mut-length", action="store_false", dest="mutg_length", help="do not use mutagen to check tracks number of channels")
+    parser.add_argument("--no-mut-channels", action="store_false", dest="mutg_channels", help="do not use mutagen to check tracks length")
     parser.add_argument("--debug", action="store_true", help="enable debug mode")
 
     args = parser.parse_args()
@@ -212,8 +213,12 @@ if __name__ == "__main__":
     if args.use_os == True:
         df = check_size(df)
 
-    if args.use_mutagen == True:
+    if args.mutg_length == True and mutg_channels == True:
         df = check_mutagen_info(df, args.verbose)
+        if args.mutg_length == False:
+            df.drop('clip_length', axis=1, inplace=True)
+        if args.mutg_channels == False:
+            df.drop('channels', axis=1, inplace=True)
     
     with open(output, 'a') as f:
         # insert comment line displaying optiones used
