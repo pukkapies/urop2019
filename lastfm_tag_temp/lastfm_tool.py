@@ -173,6 +173,12 @@ def generate_csv():
     #merge with lastfm ID
     df = df.merge(tag_df, on='tag')
     
+    for idx, na in enumerate(na_index):
+        na_row = {'tag':None, 'ID':0, 'lastfm_ID':na}
+        na_df = pd.DataFrame(data=na_row, index='Na'+str(idx))
+        ###
+        df = pd.concat([df, na_df])
+    
     return df
 
 
