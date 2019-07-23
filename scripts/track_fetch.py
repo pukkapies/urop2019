@@ -155,8 +155,6 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
         except HeaderNotFoundError:
             l.append('')
             c.append('')
-        except:
-            print('WARNING unknown exception occurred at {:6d}, {}'.format(idx, path))
         
         if verbose == True:
             if idx % 500 == 0:
