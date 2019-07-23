@@ -160,12 +160,13 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
             if idx % 500 == 0:
                 print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
 
+        # debug option allows to stop execution after 'debug' steps
         if debug:
             if idx == debug:
-                return l
+                return l # returning l or returning c is analogous for debugging purposes
 
     df['channels'] = pd.Series(c, index=df.index)
-    df['channels'] = df['channels'].fillna(0)
+    df['channels'] = df['channels'].fillna(0) # by default missing values are NaN (which pandas considers as float)
     df['channels'] = df['channels'].apply(lambda x: int(x))
     df['clip_length'] = pd.Series(l, index=df.index) 
 
@@ -176,7 +177,6 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
 
 if __name__ == "__main__":
     
-    # Using Argparse to handle arguments
     description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'track_7digitalID', 'file_path', 'file_size', 'channels', 'clip_length'."
     epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
@@ -215,16 +215,13 @@ if __name__ == "__main__":
     if args.use_mutagen == True:
         df = check_mutagen_info(df, args.verbose)
     
-    # Creates output csv file
     with open(output, 'a') as f:
-        # Creates a comment displaying arguments used to obtain csv file.
+        # insert comment line displaying optiones used
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
         options = [arg for arg in sys.argv if arg != args.output]
         for option in options:
             comment += ' ' + option
         comment += ' ' + os.path.basename(output)
-        # Writes comment to the top of the file 
         f.write(comment + '\n')
-        # Adds the DataFrame to the file.
         df.to_csv(f, index=False)
