@@ -115,7 +115,7 @@ def savez(path, path_npz):
     path:
         The path of the mp3 file.
     path_npz:
-        The path to the future .npz file.
+        The path to the future npz file.
         
     Notes 
     -------
