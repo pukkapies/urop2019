@@ -29,7 +29,7 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     # for each tag idx, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
     new_tags = new_tags.apply(lambda i: flat['new_tag'].loc[i])
 
-    output = pd.DataFrame(data={'old_lastfm_tag': new_tags}, index=old_tags.rename('new_tag'))
+    output = pd.DataFrame(data={'new_tag': new_tags}, index=old_tags.rename('old_lastfm_tag'))
     return output
 
 def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
