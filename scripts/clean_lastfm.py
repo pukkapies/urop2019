@@ -2,6 +2,18 @@ import pandas as pd
 
 # from aden import his module
 
+def flatten(df: pd.DataFrame):
+    tags =[]
+    tags_nums = []
+
+    for num, tag in enumerate(df['tags']):
+        tags.append(tag)
+        tags_nums.append(num)
+
+        for tag in df['merged_tags'].iloc[num]:
+            tags.append(tag)
+            tags_num.append(num)
+
 def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     flat = flatten_num(df)
     
