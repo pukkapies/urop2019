@@ -13,6 +13,9 @@ def flatten(df: pd.DataFrame):
         for tag in df['merged_tags'].iloc[num]:
             tags.append(tag)
             tags_num.append(num)
+    
+    output = pd.DataFrame(data={'old_lastfm_tag': tags, 'new_tag': tags_nums})
+    return output
 
 def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     flat = flatten_num(df)
@@ -27,6 +30,7 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     new_tags = new_tags.apply(lambda i: flat['new_tag'].loc[i])
 
     output = pd.DataFrame(data={'old_lastfm_tag': new_tags}, index=old_tags.rename('new_tag'))
+    return output
 
 def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
