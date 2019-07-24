@@ -229,12 +229,17 @@ if __name__ == "__main__":
         # insert comment line displaying options used
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
-        options = [arg for arg in sys.argv if arg not in (args.output, '--root-dir', mp3_root_dir)]
+        
         comment += ' --root-dir ' + mp3_root_dir
+
+        options = [arg for arg in sys.argv if arg not in (args.output, '--root-dir', mp3_root_dir)]
         for option in options:
             comment += ' ' + option
+        
         comment += ' ' + os.path.basename(output)
+        
         # write comment to the top line
         f.write(comment + '\n')
+        
         # write dataframe
         df.to_csv(f, index=False)
