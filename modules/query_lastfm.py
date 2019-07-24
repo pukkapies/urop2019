@@ -1,3 +1,5 @@
+"""
+"""
 ''' Contains simple tools for querying the lastfm_tags.db file
 
 
@@ -6,7 +8,7 @@ Notes
 The lastfm_tags database contains 3 tables: tids, tags, tid_tag.
 - tids, 1-column table containing the track ids.
 - tid_tags, contains 3 columns:
-    - tid: rowid of the track id in the tids table
+    - tid: rowid of the track id in the tids table.
     - tag: rowid of the tag that belongs to the tid in the same row.
     - val: number between 0 and 100 (guessing this is how accurate the tag is?)
 - tags, 1-column table containing the tags.
@@ -14,24 +16,45 @@ The lastfm_tags database contains 3 tables: tids, tags, tid_tag.
 The row number of the tid in the tids table will be refered to as as tid_num.
 Similarly tag_num will refer to the row number of the tag in the tags table.
 
-IMPORTANT: If using this script elsewhere than on boden then run set_path(db_path) to
+IMPORTANT: If using this script elsewhere than on Boden then run set_path(db_path) to
 set the path of the database. Otherwise it will use the default path, which is the path
-to the database on boden.
+to the database on Boden.
 
 
 Functions
 ---------
-- set_path              Sets path to the lastfm_tags.db
-- tid_to_tid_nums       Gets tid_num given tid
-- tid_num_to_tid        Gets tid given tid_num 
-- tid_num_to_tag_nums   Gets tag_num given tid_num 
-- tag_num_to_tag        Gets tag given tag_num 
-- tag_to_tag_num        Gets tag_num given tag 
-- get_tags              Gets a list of tags associated to given tid 
-- get_tags_dict         Gets a dict with tids as keys and a list of its tags as value
-- tid_tag_count         Gets a dict with tids as keys and its number of tags as value 
-- filter_tags           Filters list of tids based on minimum number of tags
-- tag_count             Gets a dict with the tags associated to tids as keys and their count number as values
+- set_path
+    Set path to the lastfm_tags.db.
+
+- tid_to_tid_nums
+    Get tid_num given tid.
+
+- tid_num_to_tid
+    Get tid given tid_num.
+
+- tid_num_to_tag_nums
+    Get tag_num given tid_num.
+
+- tag_num_to_tag
+    Get tag given tag_num.
+
+- tag_to_tag_num
+    Get tag_num given tag.
+
+- get_tags
+    Get a list of tags associated to given tid.
+
+- get_tags_dict
+    Get a dict with tids as keys and a list of its tags as value.
+
+- tid_tag_count
+    Get a dict with tids as keys and its number of tags as value.
+
+- filter_tags
+    Filter list of tids based on minimum number of tags.
+
+- tag_count
+    Get a dict with the tags associated to tids as keys and their count number as values.
 '''
 
 import sqlite3
