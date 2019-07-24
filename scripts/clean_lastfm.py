@@ -17,8 +17,13 @@ def flatten(df: pd.DataFrame):
     output = pd.DataFrame(data={'old_lastfm_tag': tags, 'new_tag': tags_nums})
     return output
 
+def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
+    output = flatten(df)
+    output['old_lastfm_tag'] = output['old_lastfm_tag'].apply(lambda t: db.tag_to_tag_num(t))
+    return output
+
 def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
-    flat = flatten_num(df)
+    flat = flatten_to_tag_num(db, df)
     
     # fetch the tag num's from the original database
     old_tags = db.tag.index.to_series()
