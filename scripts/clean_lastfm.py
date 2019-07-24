@@ -35,7 +35,7 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
 def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
     col_1 = db.tid_tag['tid']
-    col_2 = db.tid_tag['tag'].apply(lambda t: df_tag_tag['clean_tag'].loc[t])
+    col_2 = db.tid_tag['tag'].apply(lambda t: df_tag_tag['new_tag'].loc[t])
 
     # concatenate columns in a dataframe
     output = pd.concat([col_1, col_2], axis=1)
