@@ -103,7 +103,7 @@ if __name__ = '__main__':
     df.reset_index(inplace=True)
     df.index = df.index + 1 # love pandas
 
-    tags = df['tags']
+    tags = df['tags'] # read the 'clean' tags table straight from Aden's dataframe
     tag_tag = create_tag_tag_table(lastfm, df)
     tid_tag = create_tid_tag_table(lastfm, tag_tag)
 
