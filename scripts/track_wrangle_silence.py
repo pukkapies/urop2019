@@ -276,22 +276,25 @@ if __name__ == "__main__":
     df = pd.read_csv(args.input, comment='#')
 
     assert 'file_size' in df
+    
+    need_check_silence = False
 
     cols = ['effective_clip_length', 'audio_start', 'audio_end', 'mid_silence_length', 'non_silence_length', 'max_silence_length', 'silence_detail_length', 'silence_detail', 'silence_percentage']
-    
+
     # if any column already exists in the df, dont run check_silence (i.e. adding the columns) 
     if [col for col in cols if col in df.columns] != cols:
         if args.root_dir_npz:
             npz.set_npz_root_dir(os.path.expanduser(args.root_dir_npz))
         if args.root_dir_mp3:
             npz.set_mp3_root_dir(os.path.expanduser(args.root_dir_mp3))
-
-        df = check_silence(df)
+        need_check_silence = True
     
     elif not any([args.filter_trim_length, args.filter_tot_silence, args.filter_max_silence, args.min_size]):
         print("Nothing to be done!!")
         sys.exit(0)
-        
+
+    if need_check_silence:
+        df = check_silence(df)        
     if args.filter_trim_length:
         df = filter_trim_length(df, args.filter_trim_length)
     if args.filter_tot_silence:
@@ -307,7 +310,8 @@ if __name__ == "__main__":
         comment = '# python'
         comment += ' ' + os.path.basename(sys.argv.pop(0))
         options = [arg for arg in sys.argv if arg not in (args.input, args.output, '--root-dir-npz', npz.npz_root_dir, '--root-dir-mp3', npz.mp3_root_dir)]
-        comment += ' --root-dir-npz ' + npz.npz_root_dir + ' --root-dir-mp3 ' + npz.mp3_root_dir
+        if need_check_silence:
+            comment += ' --root-dir-npz ' + npz.npz_root_dir + ' --root-dir-mp3 ' + npz.mp3_root_dir
         for option in options:
             comment += ' ' + option
         comment += ' ' + os.path.basename(args.input) + ' ' + os.path.basename(output)
