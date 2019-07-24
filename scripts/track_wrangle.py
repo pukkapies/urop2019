@@ -212,12 +212,12 @@ def ultimate_output(df: pd.DataFrame, discard_no_tag: bool = False, discard_dupl
     merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
-    if discard_no_tag == True:
+    if discard_no_tag:
         print("Purging tracks with no tags...", end=" ")
         merged_df = df_purge_no_tag(merged_df)
         print("done")
     
-    if discard_dupl == True:
+    if discard_dupl:
         print("Purging duplicate tracks...", end=" ")
         merged_df = df_purge_duplicates(merged_df)
         print("done")
@@ -244,8 +244,8 @@ if __name__ == "__main__":
     else:
         output = args.output
 
-    if os.path.isfile(args.output):
-       print("WARNING file " + args.output + " already exists!")
+    if os.path.isfile(output):
+       print("WARNING file " + output + " already exists!")
        sys.exit(0)
 
     if args.path_h5:
