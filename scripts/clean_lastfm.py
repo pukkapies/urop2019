@@ -52,7 +52,22 @@ def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
     return output
 
 if __name__ = '__main__':
+
+    # do an argvparse to get lastfm_db location and output location for the clean_lastfm_db
+
+    # open sql connection as conn
+
+    # create an instance of LastFm class (will be in the new query_lastfm_pd.py module)
+    # lastfm = db.LastFm(path-to-db)
     
     # df = aden module .generate_df()
     df.reset_index(inplace=True)
     df.index = df.index + 1 # love pandas
+
+    tags = df['tags']
+    tag_tag = create_tag_tag_table(lastfm, df)
+    tid_tag = create_tid_tag_table(lastfm, tag_tag)
+
+    # tags.to_sql('tags', conn)
+    # tag_tag.to_sql('tag_tag', conn)
+    # tid_tag.to_sql('tid_tag', conn)
