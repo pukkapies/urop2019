@@ -5,6 +5,24 @@ import pandas as pd
 # from aden import his module
 
 def flatten(df: pd.DataFrame):
+    '''
+    Suppose the tags dataframe looks like this:
+    
+            tags            merge-tags
+    1       rock            ['ROCK']
+    2       pop             []
+    3       hip hip         ['hiphop', 'hip-hop']
+
+    Then this function returns:
+            old-lastfm-tag  new-tag
+    1       rock            1
+    2       ROCK            1
+    3       pop             2
+    4       hip hop         3
+    5       hiphop          3
+    6       hip-hop         3
+    '''
+
     tags = []
     tags_nums = []
 
@@ -12,7 +30,7 @@ def flatten(df: pd.DataFrame):
         tags.append(tag)
         tags_nums.append(num)
 
-        for tag in df['merged_tags'].iloc[num]:
+        for tag in df['merge_tags'].iloc[num]:
             tags.append(tag)
             tags_nums.append(num)
     
@@ -20,11 +38,28 @@ def flatten(df: pd.DataFrame):
     return output
 
 def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
+    '''
+    Same as flatten, but:
+    1) Now use tag number (from original lastfm db) instead of string (for instance, has 95 instead of 'pop')
+    2) Add one line of zeros at the top (...will be used in tag_tag function)
+    '''
+
     output = flatten(df)
     output['old_lastfm_tag'] = output['old_lastfm_tag'].apply(lambda t: db.tag_to_tag_num(t))
+
+    # append row of 0's at the top
+    nul = pd.DataFrame(data={'old_lastfm_tag': [0], 'new_tag': [0]})
+    output = output.append(nul, verify_integrity=True).sort_index()
+
     return output
 
 def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
+    '''
+    Create a dataframe with two columns: 'old_lastfm_tag' contains all the tag nums from the original lastfm database,
+    'new_tag' contains the correspondent 'clean' tag num (that is, the row index in the dataframe produced by Aden). If we
+    don't have a correspondent tag (that means that the tag falls below the threshold) use 'new_tag' = 0
+    '''
+
     flat = flatten_to_tag_num(db, df)
     
     # fetch the tag num's from the original database
@@ -40,6 +75,10 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     return output
 
 def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
+    '''
+    Create a dataframe with two columns: 'tid' contains all the tid's from the original tid_tag table,
+    'tag' contains the new tag. Here all the 0's are dropped.
+    '''
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
     col_1 = db.tid_tag['tid']
     col_2 = db.tid_tag['tag'].apply(lambda t: df_tag_tag['new_tag'].loc[t])
