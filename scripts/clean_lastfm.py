@@ -12,7 +12,7 @@ def flatten(df: pd.DataFrame):
 
         for tag in df['merged_tags'].iloc[num]:
             tags.append(tag)
-            tags_num.append(num)
+            tags_nums.append(num)
     
     output = pd.DataFrame(data={'old_lastfm_tag': tags, 'new_tag': tags_nums})
     return output
