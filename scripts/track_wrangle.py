@@ -244,8 +244,8 @@ if __name__ == "__main__":
     else:
         output = args.output
 
-    if os.path.isfile(args.output):
-       print("WARNING file " + args.output + " already exists!")
+    if os.path.isfile(output):
+       print("WARNING file " + output + " already exists!")
        sys.exit(0)
 
     if args.path_h5:
