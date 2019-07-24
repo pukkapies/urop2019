@@ -5,7 +5,7 @@ import pandas as pd
 # from aden import his module
 
 def flatten(df: pd.DataFrame):
-    tags =[]
+    tags = []
     tags_nums = []
 
     for num, tag in enumerate(df['tags']):
