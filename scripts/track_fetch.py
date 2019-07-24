@@ -67,7 +67,7 @@ def find_tracks(abs_path = False):
             path = os.path.join(folder, file)
             paths.append(path)
     paths = [path for path in paths if path[-4:] == '.mp3']
-    if abs_path == False:
+    if abs_path:
         paths = [os.path.relpath(path, mp3_root_dir) for path in paths]
     return paths
 
@@ -209,19 +209,19 @@ if __name__ == "__main__":
     
     df = find_tracks_with_7dids(args.abs_path)
 
-    if args.debug == True:
+    if args.debug:
         import pdb
         pdb.set_trace()
         sys.exit(0)
 
-    if args.use_os == True:
+    if args.use_os:
         df = check_size(df)
 
-    if args.mutg_length == True and mutg_channels == True:
+    if args.mutg_length or args.mutg_channels:
         df = check_mutagen_info(df, args.verbose)
-        if args.mutg_length == False:
+        if not args.mutg_length:
             df.drop('clip_length', axis=1, inplace=True)
-        if args.mutg_channels == False:
+        if not args.mutg_channels:
             df.drop('channels', axis=1, inplace=True)
     
     # create output csv file

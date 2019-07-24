@@ -222,10 +222,10 @@ def no_sound_count(df, final_check=False):
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
         if os.path.isfile(path_npz):
             count += 1
-        elif final_check == True:
+        elif final_check:
             l.append(path)
     
-    if final_check == True:
+    if final_check:
         print("Processed {:6d} out of {:6d}...".format(count, len(df)))
         return l
     else:
