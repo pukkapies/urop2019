@@ -14,7 +14,7 @@ def flatten(df: pd.DataFrame):
     3       hip hip         ['hiphop', 'hip-hop']
 
     Then this function returns:
-            old-lastfm-tag  new-tag
+            tags            new_tag_num
     1       rock            1
     2       ROCK            1
     3       pop             2
@@ -34,7 +34,7 @@ def flatten(df: pd.DataFrame):
             tags.append(tag)
             tags_nums.append(num)
     
-    output = pd.DataFrame(data={'old_lastfm_tag': tags, 'new_tag': tags_nums})
+    output = pd.DataFrame(data={'tag': tags, 'new_tag_num': tags_nums})
     return output
 
 def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
@@ -45,10 +45,11 @@ def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
     '''
 
     output = flatten(df)
-    output['old_lastfm_tag'] = output['old_lastfm_tag'].apply(lambda t: db.tag_to_tag_num(t))
+    output['tag'] = output['tag'].apply(lambda t: db.tag_to_tag_num(t))
+    output.columns = ['tag_num', "new_tag_num"]
 
     # append row of 0's at the top
-    nul = pd.DataFrame(data={'old_lastfm_tag': [0], 'new_tag': [0]})
+    nul = pd.DataFrame(data={'tag_num': [0], 'new_tag_num': [0]})
     output = output.append(nul, verify_integrity=True).sort_index()
 
     return output
@@ -66,12 +67,12 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     old_tags = db.tag.index.to_series()
 
     # for each tag num, get the corresponding idx in the flattened dataframe (returns idx = 0 if tag falls below the pop threshold)
-    new_tags = old_tags.apply(lambda t: flat['old_lastfm_tag'][flat['old_lastfm_tag'] == t].append(pd.Series([0])).index[0])
+    new_tags = old_tags.apply(lambda t: flat['tag_num'][flat['tag_num'] == t].append(pd.Series([0])).index[0])
     
     # for each tag idx, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
-    new_tags = new_tags.apply(lambda i: flat['new_tag'].loc[i])
+    new_tags = new_tags.apply(lambda i: flat['new_tag_num'].loc[i])
 
-    output = pd.DataFrame(data={'new_tag': new_tags}, index=old_tags.rename('old_lastfm_tag'))
+    output = pd.DataFrame(data={'new_tag_num': new_tags}, index=old_tags.rename('old_lastfm_tag'))
     return output
 
 def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
