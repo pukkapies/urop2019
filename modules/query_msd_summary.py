@@ -1,5 +1,3 @@
-"""
-"""
 ''' Contains simple tools for querying the msd_summary_file.h5 file
 
 
