@@ -73,42 +73,42 @@ class LastFm:
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
 
-    def query(self, query):
-        return self.c.execute(query)
+    def query(self, query, *parameters):
+        return self.c.execute(query, parameters)
 
     def tid_to_tid_num(self, tid):
         ''' Returns tid_num, given tid. '''
 
-        q = "SELECT rowid FROM tids WHERE tid = '" + tid + "'"
-        self.query(q)
+        q = "SELECT rowid FROM tids WHERE tid = ?"
+        self.query(q, tid)
         return self.c.fetchone()[0]
 
     def tid_num_to_tid(self, tid_num):
         ''' Returns tid, given tid_num. '''
 
-        q = "SELECT tid FROM tids WHERE rowid = '" + str(tid_num) + "'"
-        self.query(q)
+        q = "SELECT tid FROM tids WHERE rowid = ?"
+        self.query(q, tid_num)
         return self.c.fetchone()[0]
 
     def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
 
-        q = "SELECT tag FROM tid_tag WHERE tid = '" + str(tid_num) + "'"
-        self.query(q)
+        q = "SELECT tag FROM tid_tag WHERE tid = ?"
+        self.query(q, tid_num)
         return [i[0] for i in self.c.fetchall()]
         
     def tag_num_to_tag(self, tag_num):
         ''' Returns tag given tag_num. '''
 
-        q = "SELECT tag FROM tags WHERE rowid = '" + str(tag_num) + "'"
-        self.query(q)
+        q = "SELECT tag FROM tags WHERE rowid = ?"
+        self.query(q, tag_num)
         return self.c.fetchone()[0]
 
     def tag_to_tag_num(self, tag):
         ''' Returns tag_num given tag. '''
 
-        q = "SELECT rowid FROM tags WHERE tag = '" + tag + "'"
-        self.query(q)
+        q = "SELECT rowid FROM tags WHERE tag = ?"
+        self.query(q, tag)
         return self.c.fetchone()[0]
 
     def get_tids_with_tag(self):
