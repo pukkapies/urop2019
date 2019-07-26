@@ -11,10 +11,7 @@ The lastfm_tags database contains 3 tables: tids, tags, tid_tag.
     - val: number between 0 and 100 (guessing this is how accurate the tag is?)
 - tags, 1-column table containing the tags.
 
-The row number of the tid in the tids table will be refered to as as tid_num.
-Similarly tag_num will refer to the row number of the tag in the tags table.
-
-IMPORTANT: If using this script elsewhere than on Boden then run set_path(db_path) to
+IMPORTANT: If using this script elsewhere than on Boden then run set_path(new_path) to
 set the path of the database. Otherwise it will use the default path, which is the path
 to the database on Boden.
 
@@ -60,7 +57,7 @@ import sqlite3
 path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
 def set_path(new_path):
-    ''' Sets new_path as default path for the lastfm_tags database. '''
+    ''' Sets new_path as default path for the lastfm database. '''
     global path
     path = new_path
 
@@ -72,7 +69,7 @@ class LastFm:
     
     def __del__(self):
         self.conn.close()
-        
+
     def query(self, query):
         return self.c.execute(query)
 
