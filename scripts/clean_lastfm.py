@@ -27,8 +27,8 @@ def flatten(df: pd.DataFrame):
     tags = [] 
     tags_nums = []
     
-    for num, cols in df.iterrows():
-        tag, merge_tags = cols
+    for num, row in df.iterrows():
+        tag, merge_tags = row
         tags.append(tag)
         tags += merge_tags
         tags_nums += list(np.full(len(merge_tags)+1, num))
