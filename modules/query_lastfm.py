@@ -57,7 +57,12 @@ Functions
 
 import sqlite3
 
-# path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
+path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
+
+def set_path(new_path):
+    ''' Sets new_path as default path for the lastfm_tags database. '''
+    global path
+    path = new_path
 
 class LastFm:
 
