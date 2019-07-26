@@ -131,13 +131,15 @@ def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
     df = merged_df[-merged_df['clip_length'].isna()]
     return df
 
-def df_purge_no_tag(merged_df: pd.DataFrame, lastfm_db: str = None):
+def df_purge_no_tag(merged_df: pd.DataFrame, path_db: str = None):
     ''' Remove tracks which are not matched to any tag. '''
 
-    if lastfm_db:
-        db.set_path(lastfm_db)
+    if path_db:
+        db.set_path(path_db)
 
-    tids_with_tag = db.get_tids_with_tag()
+    lastfm = db.LastFm(db.path)
+
+    tids_with_tag = lastfm.get_tids_with_tag()
     tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
     
     return pd.merge(merged_df, tids_with_tag_df, on='track_id', how='inner')
