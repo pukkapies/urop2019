@@ -69,7 +69,10 @@ class LastFm:
     def __init__(self, path):
         self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
-
+    
+    def __del__(self):
+        self.conn.close()
+        
     def query(self, query):
         return self.c.execute(query)
 
