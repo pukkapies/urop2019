@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # import query_lastfm_pd as db
 
@@ -23,17 +24,15 @@ def flatten(df: pd.DataFrame):
     6       hip-hop         3
     '''
 
-    tags = []
+    tags = [] 
     tags_nums = []
-
-    for num, tag in enumerate(df['tags']):
-        tags.append(tag)
-        tags_nums.append(num)
-
-        for tag in df['merge_tags'].iloc[num]:
-            tags.append(tag)
-            tags_nums.append(num)
     
+    for num, cols in df.iterrows():
+        tag, merge_tags = cols
+        tags.append(tag)
+        tags += merge_tags
+        tags_nums += list(np.full(len(merge_tags)+1, num))
+
     output = pd.DataFrame(data={'tag': tags, 'new_tag_num': tags_nums})
     return output
 
@@ -110,4 +109,3 @@ if __name__ = '__main__':
 
     # tags.to_sql('tags', conn)
     # tag_tag.to_sql('tag_tag', conn)
-    # tid_tag.to_sql('tid_tag', conn)
