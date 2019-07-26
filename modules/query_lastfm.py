@@ -70,7 +70,7 @@ def tid_to_tid_num(tid):
     ''' Returns tid_num, given tid. '''
 
     conn = sqlite3.connect(path)
-    q = "SELECT rowid FROM tids WHERE tid ='" + tid + "'"
+    q = "SELECT rowid FROM tids WHERE tid = '" + tid + "'"
     res = conn.execute(q)
     output = res.fetchone()[0]
     conn.close()
@@ -80,7 +80,7 @@ def tid_num_to_tid(tid_num):
     ''' Returns tid, given tid_num. '''
 
     conn = sqlite3.connect(path)
-    q = "SELECT tid FROM tids WHERE rowid ='" + str(tid_num) + "'"
+    q = "SELECT tid FROM tids WHERE rowid = '" + str(tid_num) + "'"
     res = conn.execute(q)
     output = res.fetchone()[0]
     conn.close()
@@ -90,7 +90,7 @@ def tid_num_to_tag_nums(tid_num):
     ''' Returns list of the associated tag_nums to the given tid_num. '''
 
     conn = sqlite3.connect(path)
-    q = "SELECT tag FROM tid_tag WHERE tid ='" + str(tid_num) + "'"
+    q = "SELECT tag FROM tid_tag WHERE tid = '" + str(tid_num) + "'"
     res = conn.execute(q)
     output = [i[0] for i in res.fetchall()]
     conn.close()
@@ -100,7 +100,7 @@ def tag_num_to_tag(tag_num):
     ''' Returns tag given tag_num. '''
 
     conn = sqlite3.connect(path)
-    q = "SELECT tag FROM tags WHERE rowid = " + str(tag_num)
+    q = "SELECT tag FROM tags WHERE rowid = '" + str(tag_num) + "'"
     res = conn.execute(q)
     output = res.fetchone()[0]
     conn.close()
@@ -110,7 +110,7 @@ def tag_to_tag_num(tag):
     ''' Returns tag_num given tag. '''
 
     conn = sqlite3.connect(path)
-    q = "SELECT rowid FROM tags WHERE tag = " + tag 
+    q = "SELECT rowid FROM tags WHERE tag = '" + tag + "'"
     res = conn.execute(q)
     output = res.fetchone()[0]
     conn.close()
