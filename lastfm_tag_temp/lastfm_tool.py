@@ -8,6 +8,7 @@ path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db' # default path
 filename = os.path.basename(path)[:-3]
 #path = 'C://Users/hcw10/UROP2019/lastfm_tags.db'
 output_path = '/srv/data/urop'
+#output_path = 'C://Users/hcw10/UROP2019'
 
 
 def set_path(new_path):
@@ -94,15 +95,49 @@ def percentile(df, perc=0.9):
 
 
 
-def search_genre_exact(df, threshold=2000, min_count=10, verbose=True):
+
+
+def check_plural(x):
+    if len(x)<2:
+        return x
+    
+    elif (x[-1]=='s') & (x[-2]!='s'):
+        return x[:-1]
+    
+    else:
+        return x
+
+
+def clean_1(tag):
+    tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
+    return tag_sub
+
+
+def clean_2(tag):
+    tag_sub = re.sub(r'[^A-Za-z0-9&]', '', tag)
+    tag_sub = re.sub('&', 'n', tag_sub)
+    return tag_sub
+
+def clean_3(tag):
+    tag_sub = re.sub(r'[^A-Za-z0-9&]', '', tag)
+    tag_sub = re.sub('&', 'and', tag_sub)
+    return tag_sub
+    
+
+    
+
+def search_genre_exact(df_input, search_method=clean_1, threshold=2000, min_count=10, verbose=True):
+    
+    df = df_input.copy()
     #append column with tags with non-word characters removed ('pure' form)
     df['tags'] = df['tags'].astype('str')
-    df['tags_sub'] = df.tags.apply(lambda tag: re.sub(r'[^A-Za-z0-9]', '', tag))
+    df['tags_sub'] = df.tags.apply(search_method)
+    df['tags_sub'] = df.tags_sub.apply(check_plural)
     
     df_thr = df[df.counts>=2000]
     
     #store tags that will be merged
-    merge_tags = []
+    merge_tags_list = []
     
     #store tags that 
     useful_tags = []
@@ -110,35 +145,213 @@ def search_genre_exact(df, threshold=2000, min_count=10, verbose=True):
     bool1 = df['counts']>=10
     
     for num, tag in enumerate(df_thr.tags):
-        if not any(tag in sublist for sublist in merge_tags):
-            useful_tags.append(tag)
+        if not any(tag in sublist for sublist in merge_tags_list):
             
             #remove non-word characters
-            tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
+            tag_sub = search_method(tag)
+            tag_sub = check_plural(tag_sub)
             
             #query
-            search = r'^'+tag_sub+r'[s]*'+r'$'
+            search = r'^'+tag_sub+r'$'
             
             #get list of tags that will be merged (tag such that its 'pure' form 
             # matches with tag_sub)
             bool2 = df.tags_sub.str.findall(search, re.IGNORECASE).str.len()>0
             
-            _ = df[(bool1 & bool2)].tags.tolist()
-            merge_tags.append(_)
+            merge_tags = df[(bool1 & bool2)].tags.tolist()
+            merge_tags = [item for item in merge_tags if item != tag]
             
-        if (num+1)%10==0:
-            print('processed {} tags'.format(num+1))
+            if len(set(merge_tags+useful_tags)) == (len(merge_tags) + len(useful_tags)):
+                merge_tags_list.append(merge_tags)
+                useful_tags.append(tag)
+            else:
+                print('overlapped')
+
+                overlapped_tags = list(set(merge_tags).intersection(useful_tags))
+                
+                #tag name and position of the tag that will be used
+                tag_use = overlapped_tags[0]
+                pos_use = useful_tags.index(tag_use)
+                for item in overlapped_tags[1:]:
+                    
+                    #position of item in useful_tags
+                    pos = useful_tags.index(item)
+                    
+                    #the sub-list of merge_tags_list correspond to the item 
+                    _ = merge_tags_list[pos]
+                    
+                    #remove the previous items from list
+                    merge_tags_list.remove(_)
+                    useful_tags.remove(item)
+                    
+                    #combine merge_tags
+                    merge_tags = list(set(_ + merge_tags))
+                    
+                    
+                merge_tags_list[pos_use] = list(set(merge_tags+merge_tags_list[pos_use]))
+                
+        
+        if verbose:
+            if (num+1)%10==0:
+                print('processed {} tags'.format(num+1))
+     
+ 
+        
     
-    df_genre = pd.DataFrame({'tag':useful_tags, 'merge_tag_name':merge_tags})
+    df_genre = pd.DataFrame({'tag':useful_tags, 'merge_tags':merge_tags_list})
+    
+    #indicator    
+    ind = 1
+    #indicator=0 if no overlap between merge_tag sublists 
+    while ind==1:
+        df_genre, ind = check_overlap(df_genre)
+        print(ind)
     
     return df_genre
 
 
-if  __name__ == '__main__':
+
+def check_overlap(df_input):
+    df = df_input.copy()
+    overlapped_idx_list = []
+    #indicator, if no overlap occurs, ind remains 0
+    ind = 0
+    
+    for idx, l in enumerate(df['merge_tags']):
+        for idx2, l2 in enumerate(df['merge_tags'].iloc[:idx]):
+            #check overlap
+            if  set(l2).intersection(l) != set():
+
+                #merge tags to upper list
+                df['merge_tags'].iloc[idx2] = list(set(l2+l))+[df['tag'].iloc[idx]]
+                #clear tags in lower list so no overlap because of this list in the future
+                df['merge_tags'].iloc[idx] = []
+                overlapped_idx_list.append(idx)
+                ind = 1
+                break
+    
+    #drop rows
+    df = df.drop(overlapped_idx_list)
+    return df, ind
+                
+    
+def merge_df(list_of_df):
+    
+    #function for combine elements in two columns for later use
+    def row_op(row):
+        col1, col2 = row.index[-2], row.index[-1]
+        list1, list2 = row[col1], row[col2]
+        if type(list1) != list:
+            list1 = []
+
+        if type(list2) != list:
+            list2 = []
+
+        return list(set(list1+list2))
+    
+    
+    df = list_of_df[0]
+    
+    for df2 in list_of_df[1:]:
+        #outer merge and use row_op to combine the two list of merge_tags
+        df_merge = df.merge(df2, how='outer', on='tag')
+        df_merge['merge_tags'] = df_merge.apply(row_op, axis=1)
+        df_merge = df_merge[['tag','merge_tags']]
+        
+        #search for tags that only exist in one of df and df2
+        new_tags = []
+        new_tags.append(list(set(df_merge.tag).difference(set(df.tag))))
+        new_tags.append(list(set(df_merge.tag).difference(set(df2.tag))))
+        new_tags = [i for sublist in new_tags for i in sublist]
+        
+        #make sure new tags do not exist in any merge_tags lists
+        #(there is no need to check for old tags because we have already ensured
+        # that old common tags and all tags contained in merge_tags column is 
+        # mutually exclusive)
+        for tag in new_tags:
+            for idx, l in enumerate(df_merge.merge_tags):
+                if tag in l:
+                    tag2 = df_merge.iloc[idx, :].tag
+                    df_merge = combine_tags(df_merge, [tag, tag2], merge_idx=idx)
+                    
+                    
+                    #r = df_merge[df_merge.tag==tag]
+                    #_ = df.columns.tolist().index('merge_tags')
+                    #df_merge.iloc[idx, _] = list(set(r.tag.tolist()+r.merge_tags.tolist()[0]+df_merge.iloc[idx, _]))
+                    #df_merge = df_merge.drop(r.index[0])
+                    break
+
+        ind = 1
+        while ind==1:
+            df_merge, ind = check_overlap(df_merge)
+            print(ind)
+        df = df_merge.copy()
+    
+    return df
+
+
+def combine_tags(df_input, list_of_tags, merge_idx=None):
+    df = df_input.copy()
+    #find the index of tag that all other tags will be merged to
+    rows = df[df.tag.isin(list_of_tags)]
+    
+    if merge_idx:
+        merge_index = merge_idx
+    else:
+        merge_index = np.min(rows.index.tolist())
+
+    
+    for idx in range(rows.shape[0]):
+        #merge all rows whose row number is not the merge_index
+        if idx != merge_index:
+            row = rows.iloc[idx,:]
+            print(row)
+            _ = df.columns.tolist().index('merge_tags')
+
+            df.iloc[merge_index, _] = list(set(row.merge_tags+[row.tag]+df.iloc[merge_index, _]))
+            df = df.drop(row.name)
+        
+    return df
+    
+    
+    
+def remove_tag(df_input, tag):
+    
+    df = df_input.copy()
+    if tag in df.tag.tolist():
+        df = df.drop(df[df.tag==tag].index[0])
+    else:
+        #find index of the row the tag belongs to
+        _ = [idx  for idx, row in enumerate(df.merge_tags) if tag in row][0]
+        col = list(df.columns).index('merge_tags')
+        new_list = df.iloc[_,col]
+        df.iloc[_,col]= [item for item in new_list if item != tag]
+    
+    return df
+        
+                
+
+        
+    
+    
+    
+    
+    
+
+def generate_csv():
     
     df = popularity()
     
-    df_output = search_genre_exact(df, threshold=2000, min_count=10, verbose=True)
+    df1 = search_genre_exact(df, search_method=clean_1, 
+                                   threshold=2000, min_count=10, verbose=True)
+    
+    df2 = search_genre_exact(df, search_method=clean_2, 
+                                   threshold=2000, min_count=10, verbose=True)
+    
+    df3 = search_genre_exact(df, search_method=clean_1, 
+                                   threshold=2000, min_count=10, verbose=True)
+    
+    df_output = merge_df([df1, df2, df3])
     
     df_output.to_csv(os.path.join(output_path, 'filtered_tag.csv'))
     
