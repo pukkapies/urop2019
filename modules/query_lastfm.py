@@ -50,10 +50,10 @@ class LastFm:
     - tag_to_tag_num
         Get tag_num given tag.
 
-    - get_tags
+    - query_tags
         Get a list of tags associated to given tid.
 
-    - get_tags_dict
+    - query_tags_dict
         Get a dict with tids as keys and a list of its tags as value.
 
     - tid_tag_count
@@ -111,6 +111,20 @@ class LastFm:
         self.query(q, tag)
         return self.c.fetchone()[0]
 
+    def get_tags(self):
+        ''' Returns a list of all the tags. '''
+
+        q = "SELECT tag FROM tags"
+        self.query(q)
+        return [i[0] for i in self.c.fetchall()]
+
+    def get_tag_nums(self):
+        ''' Returns a list of all the tag_nums. '''
+
+        q = "SELECT rowid FROM tags"
+        self.query(q)
+        return [i[0] for i in self.c.fetchall()]
+
     def get_tids_with_tag(self):
         ''' Gets tids which have at least one tag. '''
 
@@ -118,7 +132,14 @@ class LastFm:
         self.query(q)
         return [i[0] for i in self.c.fetchall()]
 
-    def get_tags(self, tid):
+    def get_tid_nums_with_tag(self):
+        ''' Gets tid_num of tids which have at least one tag. '''
+
+        q = "SELECT rowid FROM tids"
+        self.query(q)
+        return [i[0] for i in self.c.fetchall()]
+
+    def query_tags(self, tid):
         ''' Gets tags for a given tid. '''
         
         tags = []
@@ -126,7 +147,7 @@ class LastFm:
             tags.append(self.tag_num_to_tag(tag_num))
         return tags
 
-    def get_tags_dict(self, tids):
+    def query_tags_dict(self, tids):
         ''' Gets tags for a given list of tids.
         
         Parameters
@@ -143,7 +164,7 @@ class LastFm:
 
         tags_dict = {}
         for tid in tids:
-            tags_dict[tid] = self.get_tags(tid)
+            tags_dict[tid] = self.query_tags(tid)
         return tags_dict
 
     def tag_count(self, tids):
@@ -162,7 +183,7 @@ class LastFm:
         '''
 
         count_dict = {}
-        for tag_list in self.get_tags_dict(tids).values():
+        for tag_list in self.query_tags_dict(tids).values():
             for tag in tag_list:
                 if tag not in count_dict:
                     count_dict[tag] = 1
@@ -187,7 +208,7 @@ class LastFm:
 
         count_dict = {}
         for tid in tids:
-            count_dict[tid] = len(self.get_tags(tid))
+            count_dict[tid] = len(self.query_tags(tid))
         return count_dict
 
     def filter_tags(self, tids, min_tags):
