@@ -1,7 +1,12 @@
+import os
+import sys
+
 import pandas as pd
 import numpy as np
 
-# import query_lastfm_pd as db
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
+
+import query_lastfm as db
 
 # from aden import his module
 
@@ -49,8 +54,8 @@ def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
 
     # append row of 0's at the top
     nul = pd.DataFrame(data={'tag_num': [0], 'new_tag_num': [0]})
+    output.index = output.index + 1
     output = output.append(nul, verify_integrity=True).sort_index()
-
     return output
 
 def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
@@ -59,26 +64,37 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     'new_tag' contains the correspondent 'clean' tag num (that is, the row index in the dataframe produced by Aden). If we
     don't have a correspondent tag (that means that the tag falls below the threshold) use 'new_tag' = 0
     '''
+    
+    def locate_with_except(series):
+        def inner(i):
+            try:
+                return series.loc[i]
+            except KeyError:
+                return 0
+        return inner
 
     flat = flatten_to_tag_num(db, df)
+    flat['index'] = flat.index.to_series()
+    flat = flat.set_index('tag_num', verify_integrity=True).sort_index()
     
     # fetch the tag num's from the original database
-    old_tags = db.tag.index.to_series()
+    tag_tag = pd.Series(db.get_tag_nums())
+    tag_tag.index = tag_tag.index + 1
 
-    # for each tag num, get the corresponding idx in the flattened dataframe (returns idx = 0 if tag falls below the pop threshold)
-    new_tags = old_tags.apply(lambda t: flat['tag_num'][flat['tag_num'] == t].append(pd.Series([0])).index[0])
-    
-    # for each tag idx, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
-    new_tags = new_tags.apply(lambda i: flat['new_tag_num'].loc[i])
+    # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
+    flat['new_tag_num'].loc_except = locate_with_except(flat['new_tag_num'])
 
-    output = pd.DataFrame(data={'new_tag_num': new_tags}, index=old_tags.rename('old_lastfm_tag'))
-    return output
+    # for each tag num, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
+    tag_tag = tag_tag.apply(lambda i: flat['new_tag_num'].loc_except(i))
+
+    return tag_tag
 
 def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
     '''
     Create a dataframe with two columns: 'tid' contains all the tid's from the original tid_tag table,
     'tag' contains the new tag. Here all the 0's are dropped.
     '''
+
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
     col_1 = db.tid_tag['tid']
     col_2 = db.tid_tag['tag'].apply(lambda t: df_tag_tag['new_tag'].loc[t])
@@ -90,7 +106,7 @@ def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
     output = output[output['tag'] != 0]
     return output
 
-if __name__ = '__main__':
+if __name__ == "__main__":
 
     # do an argvparse to get lastfm_db location and output location for the clean_lastfm_db
 
