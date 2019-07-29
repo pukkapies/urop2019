@@ -1,10 +1,9 @@
-"""
-"""
 '''Contains tools for merging and cleaning the lastfm_tags.db file
+
 
 Notes
 -----
-The aim of this file is to produce a dataframe that can be used to map the 
+The file aims to produce a dataframe that can be used to map the 
 useful, clean, and meaningful tags onto the unprocessed tags in the tidtag 
 dataset of the lastfm.db for training a neural network in later modules.
 
@@ -13,19 +12,19 @@ This file can be divided into three parts:
     
 1. Convert the lastfm_tags.db into pd.DataFrame and use the generated 
 dataframe to produce a popularity dataframe with columns:
-    -ranking:
+    - ranking:
         The popularity ranking of the tag.
-    -lastfm_ID:
+    - lastfm_ID:
         The ID of the tag in lastfm_tags.db.
-    -tags:
+    - tags:
         The tags.
-    -counts:
+    - counts:
         The number of occurence of each tag.
     
 2. Contains tools to produce a new dataframe with columns:
-    -tag:
+    - tag:
         The tags that will be used in training a neural network in later modules.
-    -merge_tags:
+    - merge_tags:
         The tags from the lastfm_tags.db that will be merged to the corresponding
         tag.
     Tools include adding new tags, combining existing tags, and remove tags, 
@@ -35,15 +34,146 @@ dataframe to produce a popularity dataframe with columns:
 3. Combine 1 and 2, and txt files for manually selecting useful tags and 
 merge_tags.
 
+
 Procedure
 ---------
 
-The final dataset will contains two categories of tags stacked vertically. The
+The final dataset will contain two categories of tags stacked vertically. The
 categories are:
     1. Genre tags:
-        A threshold is set so that the tags with occurences greater than the 
-        threshold will be kept from the lastfm_tags.db tidtag dataset. The tags
-        above the threshold can be returned by the popularity() function  
+        A threshold is set so that the tags from the lastfm_tags.db with 
+        occurrences greater than or equal to the threshold will be kept. The 
+        tags above the threshold can be returned by the 
+        generate_non_genre_droplist_txt() function as a text file. A manual
+        selection can be done by following the instruction provided printed
+        after the generate_non_genre_droplist_txt() is run. Alternatively, you 
+        may download the non_genre_list_filtered.txt list directly on Github 
+        and save them in the output_path directory.
+        After the selection, by adjusting the parameters in the 
+        generate_final_csv() and run it, a clean dataset consisting of genre
+        and vocal tags are generated.
+        If after inspecting the generated dataframe you wish to add, 
+        combine, drop tags or merge datasets, you may use the 
+        add_tags(), combine_tags(), remove_tag(), and merge_df() to manipulate
+        the final dataset.
+        
+    2. Vocal tags:
+        In this script, the default tags in this category are 
+        ['female', 'instrumental', 'male', 'rap'].
+        Firstly, generate_vocal_txt() will find a list of tags that are closely
+        related to each tag and ouput as txt. After this, similar to the genre
+        tags, a manual selection can be done by following the instruction
+        provided printed after the generation_vocal_txt() function is run. 
+        Alternatively, you may download the four txt files on Github and save 
+        them in the output_path directory.
+        After the selection, by adjusting the parameters in the 
+        generate_final_csv() and run it, a clean dataset consisting of genre
+        and vocal tags is generated.
+        
+        
+IMPORTANT
+----------
+If you want to save a csv at any stage and what to continue the process later,
+if there are columns consisting of lists, you will need to use eval() to 
+convert the elements in the columns from str to list.
+        
+
+Functions
+---------
+- set_path
+    Set path to the lastfm_tags.db.
+    
+- set_output_path
+    Set the output path to any csv files that will be saved, and the path of
+    all the supplementary txt files.
+    
+- db_to_csv
+    Convert lastfm_tags.db into a pd.DataFrame.
+
+- insert_index
+    Insert tags and TID index to dataframes generated from lastfm_tags.db.
+
+- popularity
+    Generate the popularity dataset. For more details, see function 
+    description.
+
+- clean_1
+    Remove all non alphabet and number characters of the input string.
+
+- clean_2
+    Remove all non alphabet and number characters except '&' of the input 
+    string, then replace '&' with 'n'.
+
+- clean_3
+    Remove all non alphabet and number characters except '&' of the input 
+    string, then replace '&' with 'and'.
+     
+- clean_4
+    Replace ' and ' with 'n', then remove all non alphabet and number 
+    characters of the input string.
+
+- clean_5
+    Replace any 'x0s' string with '19x0s'.
+
+- clean_6
+    Replace any 'x0s' string with '20x0s'.
+
+- check_plural
+    Remove the trailing character 's' of the input string if its trailing part
+    only contains only one 's'.
+
+- check_overlap
+    Check if there are any repeated tags in the merge_tags column of the 
+    generated dataframe.
+
+- combine_tags
+    Combine given tags which exist in the tag column.
+    
+- add_tags
+    Add new tags to the chosen tag row and further combine tags if a common tag
+    appears simultaneously in two or more rows followed by combining the 
+    overlapping tags in the merge_tags column.
+
+- remove_tag
+    Remove a given tag from the dataset.
+
+- search_genre_exact
+    Extend a given dataframe (df_output) for list of tags supplied by another
+    dataframe (df_thr) by searching through the tags in the third dataframe 
+    (df_input) using the given cleaning method. For more details, see function 
+    description.
+    
+- merge_df
+    Merge two or more output dataframes and ensure no overlappings between the
+    tag column and the merge_tag column.
+
+- generate_non_genre_droplist_txt
+    Generate a txt file with a list of tags above the threshold that can be used
+    to manually filter out non-genre tags.
+
+- generate_genre_df
+    Combine all genre related tools and various cleaning methods to generate a 
+    clean dataframe of genre with no overlappings between tag and merge_tags 
+    column and within the merge_tags column.
+
+- percentile
+    Return a dataframe with subset of tags (descending order) of the input 
+    dataframe which accounts for a certain percentage of the total counts of 
+    all the tags.
+    
+- generate_vocal_txt
+    Generate a txt file with a list of tags for each of the vocal tag filtered
+    by percentile().
+
+- generate_vocal_df
+    Return a dataframe based on the manually-filtered txt files provided for
+    each of the vocal tags.
+
+- generate_final_csv
+    Combine all the tools and generate the final dataframe consisting of 
+    merging tags for each genre tag and vocal tag respectively.
+
+
 '''
 import pandas as pd
 import numpy as np
@@ -60,7 +190,7 @@ output_path = '/srv/data/urop'
 
 
 def set_path(new_path):
-    ''' Sets new_path as default path for the lastfm_tags database. '''
+    ''' Set new_path as default path for the lastfm_tags.db database. '''
     global path
     global filename
     path = new_path
@@ -101,7 +231,11 @@ def insert_index(df):
 
 
 
-def popularity():
+def popularity(csv_from_db=False):
+    
+    if csv_from_db:
+        db_to_csv()
+    
     #table names
     tables = ['tags', 'tid_tag']
     
@@ -136,7 +270,7 @@ def clean_1(tag):
 
 
 
-def clean_2(tag, reverse=True):
+def clean_2(tag):
     tag_sub = re.sub(r'[^A-Za-z0-9&]', '', tag)
     tag_sub = re.sub('&', 'n', tag_sub)
     return tag_sub
@@ -154,14 +288,14 @@ def clean_4(tag):
 
 
 def clean_5(tag):
-    tag_sub = re.sub(r'[^A-Za-z0-9&]', '', tag)
-    tag_sub = re.sub(r'\b\d\ds', lambda x:'19'+x.group(), tag_sub)
+    tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
+    tag_sub = re.sub(r'\b\d0s', lambda x:'19'+x.group(), tag_sub)
     return tag_sub
 
 
 def clean_6(tag):
-    tag_sub = re.sub(r'[^A-Za-z0-9&]', '', tag)
-    tag_sub = re.sub(r'\b\d\ds', lambda x:'20'+x.group(), tag_sub)
+    tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
+    tag_sub = re.sub(r'\b\d0s', lambda x:'20'+x.group(), tag_sub)
     return tag_sub
     
 
@@ -364,7 +498,7 @@ def merge_df(list_of_df):
         new_tags.append(list(set(df_merge.tag).difference(set(df2.tag))))
         new_tags = [i for sublist in new_tags for i in sublist]
         
-        #make sure new tags do not exist in any merge_tags lists
+        #make sure new standalone tags do not exist in any of themerge_tags lists
         #(there is no need to check for old tags because we have already ensured
         # that old common tags and all tags contained in merge_tags column is 
         # mutually exclusive)
@@ -381,40 +515,34 @@ def merge_df(list_of_df):
     return df_merge
 
 
-
-
-def percentile(df, perc=0.9):
-    tot_counts = df.counts.sum()
-    threshold = perc * tot_counts
-    counter = 0
     
-    for i, row in enumerate(df.counts):
-        if counter < threshold:
-            counter += row
-        else:
-            return df.iloc[:i,]
+def generate_non_genre_droplist_txt(threshold=2000, csv_from_db=False):
+    df = popularity(csv_from_db=csv_from_db)
     
-     
+    tag_list = df[df.counts>=threshold].tags.tolist()
+    with open(os.path.join(output_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
+        for tag in tag_list:
+            f.write("%s\n" % tag)
+
 
 def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=True, 
-                      drop_list_filename='non_genre_list.txt'):
+                      drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
     
-    if csv_from_db:
-        db_to_csv()
     
     txt_path = os.path.join(output_path, drop_list_filename)
     drop_list = []
-    with open(txt_path, 'r') as f:
+    with open(txt_path, 'r', encoding='utf8') as f:
         for item in f:
-            if ((item[0]!='-') and (not item.isspace()) and (item!='')):
-                drop_list.append(item.rstrip('\n'))
+            if ((item[0]==indicator) and (not item.isspace()) and (item!='')):
+                drop_list.append(item.rstrip('\n').lstrip(indicator))
                 
     
     
     
     print('Genre-Step 1/8')
-    df = popularity()
+    df = popularity(csv_from_db=csv_from_db)
     #drop tags
+    df.tags = df.tags.astype(str)
     df = df[-df.tags.isin(drop_list)]
     
     df_thr = df[df.counts>=threshold]
@@ -450,46 +578,66 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
     return df_filter
     
 
-def generate_genre_droplist_txt():
+
+def percentile(df, perc=0.9):
+    tot_counts = df.counts.sum()
+    threshold = perc * tot_counts
+    counter = 0
+    
+    for i, row in enumerate(df.counts):
+        if counter < threshold:
+            counter += row
+        else:
+            return df.iloc[:i,]
     
     
 
-def generate_vocal_txt(df, perc_list=[0.9, 0.9, 0.9, 0.8]):
+def generate_vocal_txt(csv_from_db=False,
+                       tag_list = ['female', 'instrumental', 'male', 'rap'],
+                       perc_list=[0.9, 0.9, 0.9, 0.8]):
+    
+    df = popularity(csv_from_db=csv_from_db)
+    
     def generate_txt(df, tag, perc):
         df_thr = df[df.tags.str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
         df_thr = percentile(df_thr, perc=perc).tags.tolist()
-        with open(os.path.join(output_path, tag+'_list.txt'), 'w') as f:
+        with open(os.path.join(output_path, tag+'_list.txt', encoding='utf8'), 'w') as f:
             for item in df_thr:
                 f.write("%s\n" % item)
     
+    if len(tag_list) != len(perc_list):
+        print('length of tag_list is unequal to length of perc_list')
     
-    generate_txt(df, 'female', perc_list[0])
-    generate_txt(df, 'instrumental', perc_list[1])
-    generate_txt(df, 'male', perc_list[2])
-    generate_txt(df, 'rap', perc_list[3])
-    print('Please deselect tags from generated txts by putting a "-" sign at \
-          the front of the term. E.g. If you want to deselect "female", put \
+    for idx in range(len(tag_list)):
+        generate_txt(df, tag_list[idx], perc_list[idx])
+
+    print('Please deselect tags from generated txts by putting a "-" sign \
+          the front of the term, or other symbol by adjusting the indicator \
+          input variable in the generate_vocal_df() function.\n \
+           E.g. If you want to deselect "female", put \
           "-female". Finally, please rename the files under the same \
           directory as the output files by adding a suffix _filtered. E.g.\
           save the filtered "female_list.txt" as "female_list_filtered.txt"')
     
 
-def generate_vocal_df():
+def generate_vocal_df(indicator='-', 
+                      tag_list = ['female', 'instrumental', 'male', 'rap']):
+    
     def load_txt(filename):
         txt_path = os.path.join(output_path, filename)
     
         tag_name = re.findall(r'([A-Za-z0-9]+)_list', txt_path)[0]
         tags = []
-        with open(txt_path, 'r') as f:
+        with open(txt_path, 'r', encoding='utf8') as f:
             for item in f:
-                if ((item[0]!='-') and (not item.isspace()) and (item!='')):
+                if ((item[0]!=indicator) and (not item.isspace()) and (item!='')):
                     tags.append(item.rstrip('\n'))
         return tags, tag_name 
     
     tag_list = []
     merge_tags_list=[]
     
-    for filename in ['female', 'instrumental', 'male', 'rap']:
+    for filename in tag_list:
         tags, tag_name = load_txt(filename+'_list_filtered.txt')
         tag_list.append(tag_name)
         if filename in tags:
@@ -503,7 +651,7 @@ def generate_vocal_df():
 
 
 def generate_final_csv(csv_from_db=True, threshold=2000, min_count=10, verbose=True,
-                       pre_drop_list_filename='non_genre_list.txt',
+                       pre_drop_list_filename='non_genre_list_filtered.txt',
                        combine_list=[['rhythm and blues', 'rnb']], 
                        drop_list=['2000', '00', '90', '80', '70', '60'],
                        add_list=None, add_target=None, add_target_merge_index=True):
