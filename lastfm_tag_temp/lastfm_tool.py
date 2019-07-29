@@ -1,3 +1,50 @@
+"""
+"""
+'''Contains tools for merging and cleaning the lastfm_tags.db file
+
+Notes
+-----
+The aim of this file is to produce a dataframe that can be used to map the 
+useful, clean, and meaningful tags onto the unprocessed tags in the tidtag 
+dataset of the lastfm.db for training a neural network in later modules.
+
+
+This file can be divided into three parts:
+    
+1. Convert the lastfm_tags.db into pd.DataFrame and use the generated 
+dataframe to produce a popularity dataframe with columns:
+    -ranking:
+        The popularity ranking of the tag.
+    -lastfm_ID:
+        The ID of the tag in lastfm_tags.db.
+    -tags:
+        The tags.
+    -counts:
+        The number of occurence of each tag.
+    
+2. Contains tools to produce a new dataframe with columns:
+    -tag:
+        The tags that will be used in training a neural network in later modules.
+    -merge_tags:
+        The tags from the lastfm_tags.db that will be merged to the corresponding
+        tag.
+    Tools include adding new tags, combining existing tags, and remove tags, 
+    merging similar dataframes and checking overlappings within the merge_tags 
+    column and between the tag and merge_tags column.
+    
+3. Combine 1 and 2, and txt files for manually selecting useful tags and 
+merge_tags.
+
+Procedure
+---------
+
+The final dataset will contains two categories of tags stacked vertically. The
+categories are:
+    1. Genre tags:
+        A threshold is set so that the tags with occurences greater than the 
+        threshold will be kept from the lastfm_tags.db tidtag dataset. The tags
+        above the threshold can be returned by the popularity() function  
+'''
 import pandas as pd
 import numpy as np
 import os
@@ -164,6 +211,9 @@ def check_overlap(df_input):
 
 def combine_tags(df_input, list_of_tags, merge_idx=None):
     df = df_input.copy()
+    
+    list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
+    
     #find the index of tag that all other tags will be merged to
     rows = df[df.tag.isin(list_of_tags)]
     
@@ -188,6 +238,10 @@ def combine_tags(df_input, list_of_tags, merge_idx=None):
 def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
     df = df_input.copy()
     
+    list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
+    
+    if type(target_tag) != str:
+        target_tag = str(target_tag)
     
     if target_tag not in df.tag.tolist():
         #find index of the row the tag belongs to
@@ -223,6 +277,9 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
     
     
 def remove_tag(df_input, tag):
+    
+    if type(tag) != str:
+            tag = str(tag)
     
     df = df_input.copy()
     if tag in df.tag.tolist():
@@ -393,9 +450,12 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
     return df_filter
     
 
+def generate_genre_droplist_txt():
+    
+    
 
 def generate_vocal_txt(df, perc_list=[0.9, 0.9, 0.9, 0.8]):
-    def generate_txt(df, tag, perc=0.9):
+    def generate_txt(df, tag, perc):
         df_thr = df[df.tags.str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
         df_thr = percentile(df_thr, perc=perc).tags.tolist()
         with open(os.path.join(output_path, tag+'_list.txt'), 'w') as f:
@@ -442,12 +502,42 @@ def generate_vocal_df():
     return df_filter
 
 
-def generate_final_csv(csv_from_db=True, threshold=2000, min_count=10, verbose=True):
+def generate_final_csv(csv_from_db=True, threshold=2000, min_count=10, verbose=True,
+                       pre_drop_list_filename='non_genre_list.txt',
+                       combine_list=[['rhythm and blues', 'rnb']], 
+                       drop_list=['2000', '00', '90', '80', '70', '60'],
+                       add_list=None, add_target=None, add_target_merge_index=True):
+    
     vocal = generate_vocal_df()
     genre = generate_genre_df(csv_from_db=csv_from_db, threshold=threshold,
-                              min_count=min_count, verbose=verbose)
+                              min_count=min_count, verbose=verbose,
+                              drop_list_filename=pre_drop_list_filename)
     
     df_final = pd.concat([genre, vocal])
+    
+    for item in combine_list:
+        df_final = combine_tags(df_final, item)
+        
+    for item in drop_list:
+        df_final = remove_tag(df_final, item)
+    
+    if add_list is not None:
+        if len(add_list)!=len(add_target):
+            print('length of add_list is unequal to length of add_target.')
+        
+        for idx in range(len(add_list)):
+            if len(add_target_merge_index)==1:
+                df_final = add_tags(df_final, add_list[idx], add_target[idx],
+                                    target_merge_index=add_target_merge_index)
+            
+            if len(add_list)>1 and len(add_target_merge_index) == len(add_list):
+                df_final = add_tags(df_final, add_list[idx], add_target[idx],
+                                    target_merge_index=add_target_merge_index[idx])
+                
+            if len(add_list)!=len(add_target_merge_index):
+                print('lenght of add_list is unequal to length of \
+                      add_target_merge_index')
+    
     df_final = df_final.reset_index(drop=True)
     
     return df_final
