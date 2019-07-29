@@ -139,6 +139,19 @@ class LastFm:
         self.query(q)
         return [i[0] for i in self.c.fetchall()]
 
+    def fetch_all_tids_tags(self, threshold):
+        ''' Returns a tuple containing a list of tids and a list of tags (as in the tid_tag table) satisfying val >= threshold. '''
+
+        q = "SELECT tid FROM tid_tag WHERE val >= ?"
+        self.query(q, threshold)
+        tids = [i[0] for i in self.c.fetchall()]
+
+        q = "SELECT tag FROM tid_tag WHERE val >= ?"
+        self.query(q, threshold)
+        tags = [i[0] for i in self.c.fetchall()]
+
+        return (tids, tags)
+
     def query_tags(self, tid):
         ''' Gets tags for a given tid. '''
         
