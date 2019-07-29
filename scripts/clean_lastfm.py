@@ -124,6 +124,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input db filename or path")
     parser.add_argument("output", help="output db filename or path")
+    parser.add_argument('--val-thresh', dest='val', type=float, help="discard tags with val less than threshold"
     
     args = parser.parse_args()
     
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     tag_tag = create_tag_tag_table(lastfm, df)
     print('done')
     print('Matching all tids to tags...', end=' ', flush=True)
-    tid_tag = create_tid_tag_table(lastfm, tag_tag)
+    tid_tag = create_tid_tag_table(lastfm, tag_tag, argv.val)
     print('done')
     print('Purging tids...', end=' ', flush=True)
     tids = tid_tag['tid'].drop_duplicates()
