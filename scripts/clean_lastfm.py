@@ -50,10 +50,10 @@ def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
 
     output = flatten(df)
     output['tag'] = output['tag'].apply(lambda t: db.tag_to_tag_num(t))
-    output.columns = ['tag_num', "new_tag_num"]
+    output.columns = ['tag', 'new_tag']
 
     # append row of 0's at the top
-    nul = pd.DataFrame(data={'tag_num': [0], 'new_tag_num': [0]})
+    nul = pd.DataFrame(data={'tag': [0], 'new_tag': [0]})
     output.index = output.index + 1
     output = output.append(nul, verify_integrity=True).sort_index()
     return output
@@ -75,36 +75,47 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
 
     flat = flatten_to_tag_num(db, df)
     flat['index'] = flat.index.to_series()
-    flat = flat.set_index('tag_num', verify_integrity=True).sort_index()
+    flat = flat.set_index('tag', verify_integrity=True).sort_index()
     
     # fetch the tag num's from the original database
     tag_tag = pd.Series(db.get_tag_nums())
     tag_tag.index = tag_tag.index + 1
 
     # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
-    flat['new_tag_num'].loc_except = locate_with_except(flat['new_tag_num'])
+    flat['new_tag'].loc_except = locate_with_except(flat['new_tag'])
 
     # for each tag num, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
-    tag_tag = tag_tag.apply(lambda i: flat['new_tag_num'].loc_except(i))
+    tag_tag = tag_tag.apply(lambda i: flat['new_tag'].loc_except(i))
 
     return tag_tag
 
-def create_tid_tag_table(db: db.LastFm, df_tag_tag: pd.DataFrame):
+def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
     '''
     Create a dataframe with two columns: 'tid' contains all the tid's from the original tid_tag table,
     'tag' contains the new tag. Here all the 0's are dropped.
     '''
-
+    
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
-    col_1 = db.tid_tag['tid']
-    col_2 = db.tid_tag['tag'].apply(lambda t: df_tag_tag['new_tag'].loc[t])
+    if tid_tag_threshold is not None:
+        tid_tag = db.fetch_all_tids_tags_threshold(tid_tag_threshold)
+    else:
+        tid_tag = db.fetch_all_tids_tags()
+    
+    if not isinstance(tid_tag, pd.DataFrame):
+        tids = [tup[0] for tup in tid_tag]
+        tags = [tup[1] for tup in tid_tag]
+        tid_tag = pd.DataFrame(data={'tid': tids, 'tag': tags}).sort_values('tid')
+        tid_tag.reset_index(drop=True, inplace=True)
+    
+    col_1 = tid_tag['tid']
+    col_2 = tid_tag['tag'].map(tag_tag)
 
     # concatenate columns in a dataframe
-    output = pd.concat([col_1, col_2], axis=1)
+    tid_tag = pd.concat([col_1, col_2], axis=1)
 
     # remove tags which fall below the popularity theshold
-    output = output[output['tag'] != 0]
-    return output
+    tid_tag = tid_tag[tid_tag['tag'] != 0]
+    return tid_tag
 
 if __name__ == "__main__":
 
@@ -116,7 +127,7 @@ if __name__ == "__main__":
     # lastfm = db.LastFm(path-to-db)
     
     # df = aden module .generate_df()
-    df.reset_index(inplace=True)
+    df.reset_index(drop=True, inplace=True)
     df.index = df.index + 1 # love pandas
 
     tags = df['tags'] # read the 'clean' tags table straight from Aden's dataframe
