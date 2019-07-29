@@ -198,29 +198,29 @@ def ultimate_output(df: pd.DataFrame, discard_no_tag: bool = False, discard_dupl
         The entries are the ones specified by the given parameters.
     '''
 
-    print("Fetching mp3 files from input dataframe...", end=" ")
+    print("Fetching mp3 files from input dataframe...", end=" ", flush=True)
     merged_df = df_merge(extract_ids_from_summary(), df)
     print("done")
 
-    print("Purging mismatches...", end=" ")
+    print("Purging mismatches...", end=" ", flush=True)
     merged_df = df_purge_mismatches(merged_df)
     print("done")
 
     print("Purging faulty mp3 files...")
-    print("    Checking mp3 files which have size 0...", end=" ")
+    print("    Checking mp3 files which have size 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_1(merged_df)
     print("done")
-    print("    Checking mp3 files which can't be opened and have length 0...", end=" ")
+    print("    Checking mp3 files which can't be opened and have length 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
     if discard_no_tag:
-        print("Purging tracks with no tags...", end=" ")
+        print("Purging tracks with no tags...", end=" ", flush=True)
         merged_df = df_purge_no_tag(merged_df)
         print("done")
     
     if discard_dupl:
-        print("Purging duplicate tracks...", end=" ")
+        print("Purging duplicate tracks...", end=" ", flush=True)
         merged_df = df_purge_duplicates(merged_df)
         print("done")
     
