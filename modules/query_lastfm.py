@@ -3,7 +3,7 @@
 
 Notes
 -----
-The lastfm database contains 3 tables: tids, tags, tid_tag.
+The LastFm database contains 3 tables: tids, tags, tid_tag.
 - tids, 1-column table containing the track ids.
 - tid_tags, contains 3 columns:
     - tid: rowid of the track id in the tids table.

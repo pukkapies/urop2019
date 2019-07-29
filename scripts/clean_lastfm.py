@@ -1,4 +1,7 @@
+import argparse
+import ast
 import os
+import sqlite3
 import sys
 
 import pandas as pd
@@ -7,8 +10,6 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
 import query_lastfm as db
-
-# from aden import his module
 
 def flatten(df: pd.DataFrame):
     '''
@@ -86,7 +87,6 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
 
     # for each tag num, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
     tag_tag = tag_tag.map(flat['new_tag'].loc_except)
-
     return tag_tag
 
 def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
@@ -119,20 +119,54 @@ def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold
 
 if __name__ == "__main__":
 
-    # do an argvparse to get lastfm_db location and output location for the clean_lastfm_db
-
-    # open sql connection as conn
-
-    # create an instance of LastFm class (will be in the new query_lastfm_pd.py module)
-    # lastfm = db.LastFm(path-to-db)
+    description = "Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track."
+    epilog = "Example: python clean_lastfm.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db"
+    parser = argparse.ArgumentParser(description=description, epilog=epilog)
+    parser.add_argument("input", help="input db filename or path")
+    parser.add_argument("output", help="output db filename or path")
     
-    # df = aden module .generate_df()
+    args = parser.parse_args()
+    
+    if args.output[-3:] != '.db':
+        args.output += '.db'
+
+    if os.path.isfile(args.output):
+       print("WARNING file " + args.output + " already exists!")
+       sys.exit(0)
+
+    lastfm = db.LastFm(args.input)
+
+    # replace with code to generate dataframe on-the-fly
+    debug = True
+
+    if debug == True:
+        df = pd.read_csv('tags_temp.csv', usecols=[1,2])
+
+    assert all(df.columns == ['tag', 'merge_tag'])
+
     df.reset_index(drop=True, inplace=True)
-    df.index = df.index + 1 # love pandas
+    df.index = df.index + 1
+    df['merge_tag'] = df['merge_tag'].map(ast.literal_eval) # without this, lists are parsed are strings
 
-    tags = df['tags'] # read the 'clean' tags table straight from Aden's dataframe
+    # generate tables which will go into output database
+    tags = df['tag']
+    print('Matching all tags to the "clean" few ones...', end=' ', flush=True)
     tag_tag = create_tag_tag_table(lastfm, df)
+    print('done')
+    print('Matching all tids to tags...', end=' ', flush=True)
     tid_tag = create_tid_tag_table(lastfm, tag_tag)
+    print('done')
+    print('Purging tids...', end=' ', flush=True)
+    tids = tid_tag['tid'].drop_duplicates()
+    tids.index = tids.values
+    tids = tids.map(lastfm.tid_num_to_tid).reindex(pd.RangeIndex(1, 505217))
+    print('done')
 
-    # tags.to_sql('tags', conn)
-    # tag_tag.to_sql('tag_tag', conn)
+    # generate output
+    print('Saving new tables as a db file...', end=' ', flush=True)
+    conn = sqlite3.connect(args.output)
+    tags.to_sql('tags', conn, index=False)
+    tids.to_sql('tids', conn, index=False)
+    tid_tag.to_sql('tid_tag', conn, index=False)
+    print('done')
+    conn.close()
