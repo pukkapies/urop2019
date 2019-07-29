@@ -49,7 +49,7 @@ def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
     '''
 
     output = flatten(df)
-    output['tag'] = output['tag'].apply(lambda t: db.tag_to_tag_num(t))
+    output['tag'] = output['tag'].map(db.tag_to_tag_num)
     output.columns = ['tag', 'new_tag']
 
     # append row of 0's at the top
@@ -85,7 +85,7 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     flat['new_tag'].loc_except = locate_with_except(flat['new_tag'])
 
     # for each tag num, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
-    tag_tag = tag_tag.apply(lambda i: flat['new_tag'].loc_except(i))
+    tag_tag = tag_tag.map(flat['new_tag'].loc_except)
 
     return tag_tag
 
@@ -101,7 +101,7 @@ def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold
     else:
         tid_tag = db.fetch_all_tids_tags()
     
-    if not isinstance(tid_tag, pd.DataFrame):
+    if not isinstance(tid_tag, pd.DataFrame): # type(tid_tag) varies depending on whether db.LastFm or db.LastFm2Pandas is being used
         tids = [tup[0] for tup in tid_tag]
         tags = [tup[1] for tup in tid_tag]
         tid_tag = pd.DataFrame(data={'tid': tids, 'tag': tags}).sort_values('tid')
