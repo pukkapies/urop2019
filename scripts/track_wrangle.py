@@ -139,7 +139,7 @@ def df_purge_no_tag(merged_df: pd.DataFrame, path_db: str = None):
 
     lastfm = db.LastFm(db.path)
 
-    tids_with_tag = lastfm.get_tids_with_tag()
+    tids_with_tag = lastfm.get_tids()
     tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
     
     return pd.merge(merged_df, tids_with_tag_df, on='track_id', how='inner')

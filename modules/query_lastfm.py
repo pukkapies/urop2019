@@ -124,17 +124,17 @@ class LastFm:
         self.query(q)
         return [i[0] for i in self.c.fetchall()]
 
-    def get_tids_with_tag(self):
+    def get_tids(self):
         ''' Gets tids which have at least one tag. '''
 
-        q = "SELECT tid FROM tids"
+        q = "SELECT tid FROM tids WHERE tid IS NOT NULL"
         self.query(q)
         return [i[0] for i in self.c.fetchall()]
 
-    def get_tid_nums_with_tag(self):
+    def get_tid_nums(self):
         ''' Gets tid_num of tids which have at least one tag. '''
 
-        q = "SELECT rowid FROM tids"
+        q = "SELECT rowid FROM tids WHERE tid IS NOT NULL"
         self.query(q)
         return [i[0] for i in self.c.fetchall()]
 
