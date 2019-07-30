@@ -18,7 +18,7 @@ dataframe to produce a popularity dataframe with columns:
         The ID of the tag in lastfm_tags.db.
     - tags:
         The tags.
-    - counts:
+    - count:
         The number of occurence of each tag.
     
 2. Contains tools to produce a new dataframe with columns:
@@ -160,7 +160,7 @@ Functions
 
 - percentile
     Return a dataframe with subset of tags (descending order) of the input 
-    dataframe which accounts for a certain percentage of the total counts of 
+    dataframe which accounts for a certain percentage of the total count of 
     all the tags.
     
 - generate_vocal_txt
@@ -178,11 +178,16 @@ Functions
 
 
 '''
-import pandas as pd
 import numpy as np
 import os
-import sqlite3
+import pandas as pd
 import re
+import sqlite3
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
+
+import query_lastfm as db
 
 path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db' # default path
 #path = 'C://Users/hcw10/UROP2019/lastfm_tags.db'
@@ -191,6 +196,7 @@ filename = os.path.basename(path)[:-3]
 output_path = '/srv/data/urop'
 #output_path = 'C://Users/hcw10/UROP2019'
 
+default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
 def set_path(new_path):
     ''' Set new_path as default path for the lastfm_tags.db database. 
@@ -266,70 +272,6 @@ def insert_index(df):
     df['lastfm_ID']=np.arange(1, len(df)+1)
     df = df.set_index('lastfm_ID')
     return df
-
-
-
-def popularity(csv_from_db=False):
-    '''Generate the popularity dataset that will be used throughout this file
-    
-    Parameters
-    ----------
-    csv_from_db: bool
-        If True, the dataframes will be converted from the .db files by the 
-        db_to_csv() function.
-        
-    Returns
-    -------
-    df: pd.DataFrame
-        The dataframe will consist of four columns:
-        
-        'ranking': int
-        The popularity ranking of the tag based on its occurence in the tidtag
-        dataset of the database.
-        
-        
-        'lastfm_ID': int
-            The ID of the tag in lastfm_tags.db.
-            
-        'tags': str/float
-            The tags contain in the lastfm_tags.db.
-            
-       'counts':
-            The number of occurence of each tag in the tidtag dataset of the 
-            database.
-    
-    '''
-    
-    if csv_from_db:
-        db_to_csv()
-    
-    #table names
-    tables = ['tags', 'tid_tag']
-    
-    #load two of the csv saved
-    filenames = [filename + '_' +table + '.csv' for table in tables]
-    file_paths = [os.path.join(output_path, filename) for filename in filenames]
-    tag = pd.read_csv(file_paths[0])
-    tt = pd.read_csv(file_paths[1])
-    
-    #insert row_num from database
-    tag = insert_index(tag)
-    
-    #count number of occurence of each tag
-    right = tt.tag.value_counts().to_frame()
-    left = tag.tag.to_frame()
-    
-    popularity = left.merge(right, left_index=True, right_index=True)
-    colnames = popularity.columns
-    popularity.rename(columns={colnames[0]:'tags', colnames[1]:'counts'}, inplace=True)
-    popularity = popularity.sort_values('counts', ascending=False)
-    popularity['ranking'] = np.arange(1, len(popularity)+1)
-    popularity.reset_index(inplace=True)
-    popularity.set_index('ranking', inplace=True)
-    popularity.rename(columns={'index':'lastfm_ID'}, inplace=True)
-    
-    return popularity
-
 
 def clean_1(tag):
     '''Remove all non alphabet and number characters of the input string.
@@ -729,7 +671,7 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
     ----------
     df_input: pd.DataFrame
         The popularity dataframe or a dataframe with similar structure, i.e. 
-        with columns 'tags', 'counts'. This dataframe provides a list of tags
+        with columns 'tag', 'count'. This dataframe provides a list of tags
         as a pool where another tag can find corresponding matching tags from.
         
     df_output: pd.DataFrame
@@ -750,22 +692,28 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
             
             For example:
         
-            search_tags_list = df_input[df_input.counts>=2000].tags.tolist()
+            search_tags_list = df_input[df_input.count>=threshold]
         
-            df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
+            df_output = pd.DataFrame({'tag':search_tags_list['tag'].tolist(), 'merge_tags':[[]]*len(search_tags_list)})
         
     search_method: func
         A function that takes a string and transform that to a new string.
         clean_1, clean_2 etc. are some examples.
         
-  
+    threshold: int
+        Searches will be run on tags with count above or equal to the 
+        threshold and merge into the df_output dataframe. If threshold=None, 
+        searches will be run on all the tags in the df_output. Note that 
+        threshold does not have any effect if search_tags_list is not None.
+    
     search_tags_list: pd.DataFrame
-        A list of tags corresponding to the tags in df_ouput which you want
-        to find new matches. You may get such a list by selecting appropriate
-        tags from the popularity dataframe.
+        A reduced version of the popularity dataframe or a dataframe with 
+        columns: 'tag', 'count'. The 'tag' column consists of all the tags
+        that a search will be run on. None that f search_tags_list is not None, threshold 
+        will have no effect.
         
     min_count: int
-        Only the tags with counts greater than or equal to min_count in the
+        Only the tags with count greater than or equal to min_count in the
         df_input dataframe will be in the search pool. If min_count=None, 
         min_count is assumed to be zero.
         
@@ -797,21 +745,21 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         
     '''
     assert all([True if col in df_output.columns else False for col in ['tag', 'merge_tags']])
-    assert all([True if col in df_input.columns else False for col in ['tags', 'counts']])
+    assert all([True if col in df_input.columns else False for col in ['tag', 'count']])
     df = df_input.copy()
-    df['tags'] = df['tags'].astype('str')
-    df['tags_sub'] = df.tags.apply(search_method)
+    df['tag'] = df['tag'].astype('str')
+    df['tag_sub'] = df['tag'].apply(search_method)
     if remove_plural:
-        df['tags_sub'] = df.tags_sub.apply(check_plural)
+        df['tag_sub'] = df['tag_sub'].apply(check_plural)
     
     if search_tags_list is None:
         search_tags_list = df_output.tag.tolist()
     
     tot = len(search_tags_list)
     if min_count is not None:
-        bool1 = df['counts']>=min_count
+        bool1 = df['count']>=min_count
     else:
-        bool1 = df['counts']>=0
+        bool1 = df['count']>=0
     
     
     for num, tag in enumerate(search_tags_list):
@@ -826,9 +774,9 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
             
         #get list of tags that will be merged (tag such that its 'pure' form 
         # matches with tag_sub)
-        bool2 = df.tags_sub.str.findall(search, re.IGNORECASE).str.len()>0
+        bool2 = df['tag_sub'].str.findall(search, re.IGNORECASE).str.len()>0
             
-        merge_tags = df[(bool1 & bool2)].tags.tolist()
+        merge_tags = df[(bool1 & bool2)]['tag'].tolist()
         merge_tags = [item for item in merge_tags if item != tag] 
             
         df_output = add_tags(df_output, merge_tags, tag, False)
@@ -913,7 +861,7 @@ def merge_df(list_of_df):
 
 
     
-def generate_non_genre_droplist_txt(threshold=2000, csv_from_db=False):
+def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
     '''Generate a txt file with a list of tags above the threshold that can be 
     used to manually filter out non-genre tags.
     
@@ -936,9 +884,9 @@ def generate_non_genre_droplist_txt(threshold=2000, csv_from_db=False):
     
     
     '''
-    df = popularity(csv_from_db=csv_from_db)
     
-    tag_list = df[df.counts>=threshold].tags.tolist()
+    tag_list = df['tag'][df['count'] >= threshold].tolist()
+
     with open(os.path.join(output_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
         for tag in tag_list:
             f.write("%s\n" % tag)
@@ -955,9 +903,7 @@ variable - output_path
 
     print(message)
 
-
-def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=True, 
-                      drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
+def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, min_count: int = 200, verbose=True, drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
     
     '''Combine all genre related tools and various cleaning methods to generate a 
     clean dataframe of genre with no overlappings between tag and merge_tags 
@@ -971,11 +917,11 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
         produce the popularity dataframe.
         
     threshold: int
-        Searches will be run on tags with counts above or equal to the 
+        Searches will be run on tags with count above or equal to the 
         threshold.
         
     min_count: int
-        Only the tags with counts greater than or equal to min_count in the
+        Only the tags with count greater than or equal to min_count in the
         will be in the search pool. If min_count=None, min_count is assumed to 
         be zero.
         
@@ -998,7 +944,7 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
     -------
     df_filter: pd.DataFrame
         The dataframe with columns: tag', 'merge_tags'. The tag column consists
-        of tags with counts greater than or equal to threshold. 
+        of tags with count greater than or equal to threshold. 
         This is produced based on the popularity dataframe, by applying 
         the search_genre() function using clean_1 up to clean_6. All the tags 
         in the 'merge_tags' and 'tag' columns altogether are unique.
@@ -1021,14 +967,13 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
             if ((item[0]==indicator) and (not item.isspace()) and (item!='')):
                 drop_list.append(item.rstrip('\n').lstrip(indicator))
                 
-    
-    df = popularity(csv_from_db=csv_from_db)
+    df = popularity.copy()
     
     #drop tags
-    df.tags = df.tags.astype(str)
-    df = df[-df.tags.isin(drop_list)]
+    df.tag = df.tag.astype(str)
+    df = df[-df.tag.isin(drop_list)]
     
-    search_tags_list = df[df.counts>=threshold].tags.tolist()
+    search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     
     print('Genre-Step 2/7  --cleaning_1')
     #generate empty dataframe structure
@@ -1048,13 +993,13 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
                              min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
     
     print('Genre-Step 5/7  --cleaning_4')
-    search_tags_list = df[df.counts>=threshold].tags.tolist()
+    search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     search_tags_list = search_matching_items(search_tags_list, r'.* and .*')
     df_filter = search_genre(df, df_filter, search_method=clean_4,
                              min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
     
     print('Genre-Step 6/7  --cleaning_5')
-    search_tags_list = df[df.counts>=threshold].tags.tolist()
+    search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     search_tags_list = search_matching_items(search_tags_list, r'\b\d0s')
     df_filter =  search_genre(df, df_filter, search_method=clean_5,
                               min_count=min_count, search_tags_list=search_tags_list, 
@@ -1073,16 +1018,16 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
 
 def percentile(df, perc=90):
     '''Return a dataframe with subset of tags (descending order) of the input 
-    dataframe which accounts for a certain percentage of the total counts of 
+    dataframe which accounts for a certain percentage of the total count of 
     all the tags.
     
     Parameters
     ----------
     df: pd.DataFrame
-        A dataframe with columns: 'tags', 'counts'.
+        A dataframe with columns: 'tag', 'count'.
         
     perc: float
-        The percentage of the total counts of all the tags that will be 
+        The percentage of the total count of all the tags that will be 
         considered.
         
     Returns
@@ -1091,12 +1036,12 @@ def percentile(df, perc=90):
         The input df that is cut based on the perc parameter.
     
     '''
-    assert all([True if col in df.columns else False for col in ['tags', 'counts']])
-    tot_counts = df.counts.sum()
+    assert all([True if col in df.columns else False for col in ['tag', 'count']])
+    tot_counts = df['count'].sum()
     threshold = perc * tot_counts /100
     counter = 0
     
-    for i, row in enumerate(df.counts):
+    for i, row in enumerate(df['count']):
         if counter < threshold:
             counter += row
         else:
@@ -1137,8 +1082,8 @@ def generate_vocal_txt(csv_from_db=False,
     df = popularity(csv_from_db=csv_from_db)
     
     def generate_txt(df, tag, perc):
-        df_thr = df[df.tags.str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
-        df_thr = percentile(df_thr, perc=perc).tags.tolist()
+        df_thr = df[df['tag'].str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
+        df_thr = percentile(df_thr, perc=perc).tag.tolist()
         with open(os.path.join(output_path, tag+'_list.txt'), 'w', encoding='utf8') as f:
             for item in df_thr:
                 f.write("%s\n" % item)
@@ -1218,7 +1163,8 @@ def generate_vocal_df(indicator='-',
     return df_filter
 
 
-def generate_final_csv(csv_from_db=True, min_count=10, verbose=True, threshold=2000,
+def generate_final_csv(lastfm=None, from_db_path=None, from_csv_path=default, file_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'],
+                       min_count=10, verbose=True, threshold=2000,
                        pre_drop_list_filename='non_genre_list_filtered.txt',
                        combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], 
                        drop_list=['2000', '00', '90', '80', '70', '60'],
@@ -1235,11 +1181,11 @@ def generate_final_csv(csv_from_db=True, min_count=10, verbose=True, threshold=2
         produce the popularity dataframe.
         
     threshold: int
-        Searches will be run on tags with counts above or equal to the 
+        Searches will be run on tags with count above or equal to the 
         threshold for genre tags.
         
     min_count: int
-        Only the tags with counts greater than or equal to min_count in the
+        Only the tags with count greater than or equal to min_count in the
         will be in the search pool for genre tag. If min_count=None, min_count 
         is assumed to be zero.
         
@@ -1306,10 +1252,20 @@ def generate_final_csv(csv_from_db=True, min_count=10, verbose=True, threshold=2
         generate_genre_df() based on the parameters provided.
         
     '''
-    
+
+    if lastfm is not None:
+        df = lastfm.popularity()
+    elif from_csv_path is not None:
+        lastfm = db.LastFm2Pandas(from_csv_path=from_csv_path, file_split=file_split)
+        df = lastfm.popularity()
+    elif from_sql_path is not None:
+        lastfm = db.LastFm2Pandas(from_sql_path)
+        df = lastfm.popularity()
+    else:
+        raise AttributeError('please provide at least one of the following: lastfm, from_csv_path, from_sql_path.')
     
     vocal = generate_vocal_df(indicator=vocal_indicator)
-    genre = generate_genre_df(csv_from_db=csv_from_db, threshold=2000,
+    genre = generate_genre_df(popularity=df, threshold=2000,
                               min_count=min_count, verbose=verbose,
                               drop_list_filename=pre_drop_list_filename,
                               indicator=genre_indicator)
@@ -1342,33 +1298,3 @@ def generate_final_csv(csv_from_db=True, min_count=10, verbose=True, threshold=2
     
     print('Done --dataframe generated')
     return df_final
-
-
-
-
-    
-
-
-
-
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-        
-
-
-
-
-    
-    
-    
