@@ -264,7 +264,7 @@ def insert_index(df):
     
     
     df['lastfm_ID']=np.arange(1, len(df)+1)
-    df.set_index('lastfm_ID')
+    df = df.set_index('lastfm_ID')
     return df
 
 
@@ -314,7 +314,6 @@ def popularity(csv_from_db=False):
     
     #insert row_num from database
     tag = insert_index(tag)
-    tag.set_index('lastfm_ID', inplace=True)
     
     #count number of occurence of each tag
     right = tt.tag.value_counts().to_frame()
@@ -490,7 +489,9 @@ def check_overlap(df_input):
     Parameters
     ----------
     df_input: pd.DataFrame
-        A dataframe with columns: 'tag', 'merge_tags'.
+        A dataframe with columns: 'tag', 'merge_tags'. The tags contained in 
+        the 'tag' and 'merge_tags' column should be mutually exclusive.
+        
         
     Returns
     -------
