@@ -84,7 +84,7 @@ class LastFm:
         self.conn.close()
 
     def query(self, query, *parameters):
-        return self.c.execute(query, parameters)
+        self.c.execute(query, parameters)
 
     def tid_to_tid_num(self, tid):
         ''' Returns tid_num, given tid. '''
