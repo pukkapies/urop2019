@@ -10,6 +10,7 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
 import query_lastfm as db
+import lastfm_tool as lf
 
 def flatten(df: pd.DataFrame):
     '''
@@ -138,10 +139,12 @@ if __name__ == "__main__":
     lastfm = db.LastFm(args.input)
 
     # replace with code to generate dataframe on-the-fly
-    debug = True
+    debug = False
 
     if debug == True:
         df = pd.read_csv('tags_temp.csv', usecols=[1,2])
+    else:
+        df = lf.generate_final_csv()
 
     assert all(df.columns == ['tag', 'merge_tag'])
 
