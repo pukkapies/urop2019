@@ -11,6 +11,21 @@ lastfm_tool module to obatain a dataframe with the tags to retain and the tags t
 
 The script will output a db file similar in structure to the original lastfm_tags.db. The query_lastfm
 module will work on the new db file as well.
+
+
+Functions
+---------
+- flatten
+    Take the tag dataframe and flatten the tags of the merge-tags column into separate rows.
+
+- flatten_to_tag_num
+    Take the tag dataframe and flatten, then replace tag with tag nums from the original database, then add one row of 0's at the top of the output dataframe.
+
+- create_tag_tag_table
+    Create a dataframe linking the tag num's in the original lastfm database to the tag num's in the new "clean" database.
+
+- create_tid_tag_table
+    Create a dataframe containing all the "clean" tags for each tid.
 '''
 
 import argparse
@@ -28,22 +43,33 @@ import query_lastfm as db
 import lastfm_tool as lf
 
 def flatten(df: pd.DataFrame):
-    '''
-    Suppose the tags dataframe looks like this:
-    
-            tags            merge-tags
-    1       rock            ['ROCK']
-    2       pop             []
-    3       hip hip         ['hiphop', 'hip-hop']
+    ''' Produce a dataframe with the following columns: 'tag', 'new_tag_num'.
 
-    Then this function returns:
-            tags            new_tag_num
-    1       rock            1
-    2       ROCK            1
-    3       pop             2
-    4       hip hop         3
-    5       hiphop          3
-    6       hip-hop         3
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The new tags dataframe to flatten.
+
+    Examples
+    --------
+    If the original df looks like...
+
+        |    tags        |  merge-tags
+    ---------------------------------------------
+    1   |    rock        |  ['ROCK']
+    2   |    pop         |  []
+    3   |    hip hip     |  ['hiphop', 'hip-hop']
+
+                                ...then flatten(df) returns:
+
+        |    tag         |  tag_num
+    ---------------------------------------------
+    1   |   rock         |  1
+    2   |   ROCK         |  1
+    3   |   pop          |  2
+    4   |   hip hop      |  3
+    5   |   hiphop       |  3
+    6   |   hip-hop      |  3
     '''
 
     tags = [] 
@@ -59,27 +85,38 @@ def flatten(df: pd.DataFrame):
     return output
 
 def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
-    '''
-    Same as flatten, but:
-    1) Now use tag number (from original lastfm db) instead of string (for instance, has 95 instead of 'pop')
-    2) Add one line of zeros at the top (...will be used in tag_tag function)
+    ''' Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. The tags in the tag column in flatten() are substituted by their original tag nums.
+    
+    Parameters
+    ----------
+    db : db.LastFm, db.LastFm2Pandas
+        Any instance of the tags database.
+
+    df : pd.DataFrame
+        The new tags dataframe to flatten.
     '''
 
     output = flatten(df)
     output['tag'] = output['tag'].map(db.tag_to_tag_num)
-    output.columns = ['tag', 'new_tag']
+    output.columns = ['tag_num', 'new_tag_num']
 
     # append row of 0's at the top
-    nul = pd.DataFrame(data={'tag': [0], 'new_tag': [0]})
+    nul = pd.DataFrame(data={'tag_num': [0], 'new_tag_num': [0]})
     output.index = output.index + 1
     output = output.append(nul, verify_integrity=True).sort_index()
     return output
 
 def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     '''
-    Create a dataframe with two columns: 'old_lastfm_tag' contains all the tag nums from the original lastfm database,
-    'new_tag' contains the correspondent 'clean' tag num (that is, the row index in the dataframe produced by Aden). If we
-    don't have a correspondent tag (that means that the tag falls below the threshold) use 'new_tag' = 0
+    Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
+    
+    Parameters
+    ----------
+    db : db.LastFm, db.LastFm2Pandas
+        Any instance of the tags database.
+
+    df : pd.DataFrame
+        The new tags dataframe.
     '''
     
     def locate_with_except(series):
@@ -92,23 +129,33 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
 
     flat = flatten_to_tag_num(db, df)
     flat['index'] = flat.index.to_series()
-    flat = flat.set_index('tag', verify_integrity=True).sort_index()
+    flat = flat.set_index('tag_num', verify_integrity=True).sort_index()
     
     # fetch the tag num's from the original database
     tag_tag = pd.Series(db.get_tag_nums())
     tag_tag.index = tag_tag.index + 1
 
     # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
-    flat['new_tag'].loc_except = locate_with_except(flat['new_tag'])
+    flat['new_tag_num'].loc_except = locate_with_except(flat['new_tag_num'])
 
     # for each tag num, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
-    tag_tag = tag_tag.map(flat['new_tag'].loc_except)
+    tag_tag = tag_tag.map(flat['new_tag_num'].loc_except)
     return tag_tag
 
 def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
     '''
-    Create a dataframe with two columns: 'tid' contains all the tid's from the original tid_tag table,
-    'tag' contains the new tag. Here all the 0's are dropped.
+    Produce a dataframe with the following columns: 'tid', 'tag'. 
+
+    Parameters
+    ----------
+    db : db.LastFm, db.LastFm2Pandas
+        Any instance of the tags database.
+
+    tag_tag : pd.DataFrame
+        The tag_tag dataframe produced with create_tag_tag_table().
+    
+    tid_tag_threshold : int
+        The minimum value for val (see original tags database) to allow in the new tid_tag table.
     '''
     
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
@@ -153,13 +200,7 @@ if __name__ == "__main__":
 
     lastfm = db.LastFm(args.input)
 
-    # replace with code to generate dataframe on-the-fly
-    debug = False
-
-    if debug == True:
-        df = pd.read_csv('tags_temp.csv', usecols=[1,2])
-    else:
-        df = lf.generate_final_csv()
+    df = lf.generate_final_csv()
 
     assert all(df.columns == ['tag', 'merge_tag'])
 

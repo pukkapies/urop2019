@@ -178,7 +178,7 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     return df.reset_index()
 
 def ultimate_output(df: pd.DataFrame, discard_no_tag: bool = False, discard_dupl: bool = False):
-    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'.
+    ''' Produce a dataframe with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'.
     
     Parameters
     ----------
