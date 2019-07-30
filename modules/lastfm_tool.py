@@ -138,8 +138,8 @@ Functions
     Remove a given tag from the dataset.
 
 - search_genre
-    Extend a given dataframe (df_output) for list of tags supplied by another
-    dataframe (search_tags_list) by searching through the tags in the third dataframe 
+    Extend a given dataframe (df_output) for list of tags supplied by a list 
+    (search_tags_list) by searching through the tags in the third dataframe 
     (df_input) using the given cleaning method. For more details, see function 
     description.
     
@@ -562,6 +562,7 @@ def combine_tags(df_input, list_of_tags, merge_idx=None):
     
     '''
     assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
+    assert all([True if tag in df_input.tag.tolist() else False for tag in list_of_tags])
     df = df_input.copy()
     
     list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
@@ -719,9 +720,10 @@ def remove_tag(df_input, tag):
 def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=None, 
                  min_count=10, verbose=True, remove_plural=True):
     
-    '''Extend a given dataframe (df_output) for list of tags supplied by another
-    dataframe (search_tags_list) by searching through the tags in the third dataframe 
-    (df_input) using the given cleaning method.
+    '''Extend a given dataframe (df_output) for list of tags supplied by a list 
+    (search_tags_list) by searching through the tags in the third dataframe 
+    (df_input) using the given cleaning method. For more details, see function 
+    description.
     
     Parameters
     ----------
@@ -740,34 +742,27 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
             1. 'tag' -- contains all the desired tags that a search will
             be run on to find matching tags. (It may contain tags which a 
             search will not be run on. You may specify what tags you wish to 
-            be run on by specifying the threshold parameter or the 
-            search_tags_list parameter.) The tags, however, should be consistent with 
-            the threshold parameter if the threshold parameter is not None and
-            search_tags_list is None.
+            be run on by specifying the search_tags_list parameter.) 
+            i.e., search_tags_list must be a subset of the list of tags in 
+            the 'tag' column.
             
             2. 'merge_tags'  -- fill all the entry with empty list [ ].  
             
             For example:
         
-            search_tags_list = df_input[df_input.counts>=threshold]
+            search_tags_list = df_input[df_input.counts>=2000].tags.tolist()
         
-            df_output = pd.DataFrame({'tag':search_tags_list.tags.tolist(), 'merge_tags':[[]]*len(search_tags_list)})
+            df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
         
     search_method: func
         A function that takes a string and transform that to a new string.
         clean_1, clean_2 etc. are some examples.
         
-    threshold: int
-        Searches will be run on tags with counts above or equal to the 
-        threshold and merge into the df_output dataframe. If threshold=None, 
-        searches will be run on all the tags in the df_output. Note that 
-        threshold does not have any effect if search_tags_list is not None.
-    
+  
     search_tags_list: pd.DataFrame
-        A reduced version of the popularity dataframe or a dataframe with 
-        columns: 'tags', 'counts'. The 'tags' column consists of all the tags
-        that a search will be run on. None that f search_tags_list is not None, threshold 
-        will have no effect.
+        A list of tags corresponding to the tags in df_ouput which you want
+        to find new matches. You may get such a list by selecting appropriate
+        tags from the popularity dataframe.
         
     min_count: int
         Only the tags with counts greater than or equal to min_count in the
