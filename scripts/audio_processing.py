@@ -83,10 +83,10 @@ def process_array(array, sr, audio_format):
     
     return array
 
-def get_encoded_tags(tid):
+def get_encoded_tags(tid, tag_path):
     ''' Given a tid gets the tags and encodes them with a one-hot encoding '''
     
-    lastfm = q_fm.LastFm(PATH)
+    lastfm = q_fm.LastFm(tag_path)
     tag_nums = lastfm.tid_num_to_tag_num(lastfm.tid_to_tid_num(tid)).sort()
 
     encoded_tags = ""
@@ -134,7 +134,7 @@ def get_example(array, tid, encoded_tags):
 
 
 
-def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, verbose):
+def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, tag_path, verbose):
     """ Given paths to .npz files, this function processes them and then creates and saves them to a tf_record file 
 
     TODO: More documentation here
@@ -161,7 +161,7 @@ def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, verbose):
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
 
-            encoded_tags = get_encoded_tags(tid) 
+            encoded_tags = get_encoded_tags(tid, tag_path) 
 
             # TODO: Refine get_example() 
             example = get_example(processed_array, tid, encoded_tags)
@@ -181,6 +181,7 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
     parser.add_argument("-s", "--split", default='0.7/0.2/0.1' help"train/val/test split, supply as TRAIN/VAL/TEST. Defaults to 0.7/0.2/0.1")
     parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
+    parser.add_argument("--tag-path", help="Set absolute path to .db file containing the 'clean' tags.")
     
     args = parser.parse_args()
     
@@ -199,6 +200,6 @@ if __name__ == '__main__':
     val_df = df[size*(train+val):]
     
     base_name = args.format + "_" + args.split 
-    save_examples_to_tffile(train_df, "train_"+base_name, args.format, args.root_dir, args.verbose)
-    save_examples_to_tffile(test_df, "test_"+base_name, args.format, args.root_dir, args.verbose)
-    save_examples_to_tffile(val_df, "val_"+base_name, args.format, args.root_dir, args.verbose)
+    save_examples_to_tffile(train_df, "train_"+base_name, args.format, args.root_dir, args.tag_path, args.verbose)
+    save_examples_to_tffile(test_df, "test_"+base_name, args.format, args.root_dir, args.tag_path, args.verbose)
+    save_examples_to_tffile(val_df, "val_"+base_name, args.format, args.root_dir, args.tag_path, args.verbose)
