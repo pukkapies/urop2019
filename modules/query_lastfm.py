@@ -15,10 +15,6 @@ IMPORTANT: If using this script elsewhere than on Boden then run set_path(new_pa
 set the path of the database. Otherwise it will use the default path, which is the path
 to the database on Boden.
 
-Functions
----------
-- set_path
-    Set path to the lastfm_tags.db.
 
 Classes
 -------
@@ -32,13 +28,6 @@ Classes
 '''
 
 import sqlite3
-
-path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
-
-def set_path(new_path):
-    ''' Sets new_path as default path for the last.fm database. '''
-    global path
-    path = new_path
 
 class LastFm:
     ''' Opens a SQLite connection to the last.fm database. Provides methods to perform advanced queries on it.
@@ -171,7 +160,7 @@ class LastFm:
             tags.append(self.tag_num_to_tag(tag_num))
         return tags
 
-    def query_tags_dict(self, tids):
+    def query_tags_dict(self, tids): # pandas series would perform a bit faster here...
         ''' Gets tags for a given list of tids.
         
         Parameters
