@@ -102,7 +102,7 @@ def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
 
     # append row of 0's at the top
     nul = pd.DataFrame(data={'tag_num': [0], 'new_tag_num': [0]})
-    output.index = output.index + 1
+    output.index += 1 # otherwise output.append(verify_integrity=True) returns an error
     output = output.append(nul, verify_integrity=True).sort_index()
     return output
 
@@ -133,7 +133,7 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     
     # fetch the tag num's from the original database
     tag_tag = pd.Series(db.get_tag_nums())
-    tag_tag.index = tag_tag.index + 1
+    tag_tag.index += 1
 
     # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
     flat['new_tag_num'].loc_except = locate_with_except(flat['new_tag_num'])
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     assert all(df.columns == ['tag', 'merge_tag'])
 
     df.reset_index(drop=True, inplace=True)
-    df.index = df.index + 1
+    df.index += 1
     df['merge_tag'] = df['merge_tag'].map(ast.literal_eval) # without this, lists are parsed are strings
 
     # generate tables which will go into output database
