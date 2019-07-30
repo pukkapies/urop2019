@@ -23,17 +23,14 @@ Functions
 
 '''
 
-# TODO: Maybe "recycle" this script to also create TFRecords from raw waveforms.
-# Could utilize arguments for this
-
 import os
 import sys
 import argparse
 
 import librosa
 import numpy as np
+import pandas as pd
 import tensorflow as tf
-import random
 
 if os.path.basename(os.getcwd()) == 'scripts':
     sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '../modules')))
@@ -41,41 +38,9 @@ else:
     sys.path.insert(0, os.path.join(os.getcwd(), 'modules'))
 
 import query_lastfm as q_fm
-import query_msd_summary as q_msd
-
-
-root_dir = '/srv/data/urop/7digital_numpy/'
-TAGS = [] # Allowed tags
-
-
-def get_filepaths():
-    ''' Gets paths to all .npz files 
-    
-    Returns
-    -------
-    list
-        list containing paths (str) to every file under the root_dir directory.
-    
-    Notes
-    -----
-    All of the .npz files are located in the root_dir directory by the following structure:
-    The name of each file is given by its 7digital_id, it is then located under the path
-    "root_dir/digit 1/digit 2/7digital id.npz". Digit 1 and 2 refers to the first and second
-    digit in the 7digital id.
-    '''
-
-    paths = [] 
-    for i in range(10):
-        for j in range(10):
-            dir = os.path.join(root_dir, str(i), str(j)) # Current directory
-            # Loop through files in directory
-            for file_name in os.listdir(dir):
-                paths.append(os.path.join(dir, file_name))
-    return paths
 
 
 def process_array(array, sr, audio_format):
-    # TODO: Change name of audio format
     ''' Processesing array and applying desired audio format 
     
     The array is processed by the following steps:
@@ -118,27 +83,21 @@ def process_array(array, sr, audio_format):
     
     return array
 
-def get_tid_from_path(path):
-    '''  '''
+def get_encoded_tags(tid):
+    ''' Given a tid gets the tags and encodes them with a one-hot encoding '''
+    
+    lastfm = q_fm.LastFm(PATH)
+    tag_nums = lastfm.tid_num_to_tag_num(lastfm.tid_to_tid_num(tid)).sort()
 
-    # TODO: Get TID using Davides+Adens new database
-    # id_7digital = file_name[:-4]
-    return tid
+    encoded_tags = ""
+    for num in tag_nums:
+        encoded_tags += ((num-1)-len(encoded_tags))*"0" + "1"
 
-def filter_tags(tags):
-    '''  '''
+    return encoded_tags
 
-    # TODO
-    return tags
-
-def encode_tags(tags):
-    ''' Encodes tags for the TFRecords file '''
-
-    # TODO
-    return #???
 
 def _bytes_feature(value):
-    '''  '''
+    ''' Creates a BytesList Feature '''
 
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
@@ -167,7 +126,7 @@ def get_example(array, tid, encoded_tags):
                 feature={
                     'spectrogram' : _bytes_feature(array_str),
                     'tid' :         _bytes_feature(bytes(tid)),
-                    'tags' :        encoded_tags # TODO: After knowing encoding?
+                    'tags' :        _bytes_feature(bytes(encoded_tags))
             }))
     return example
 
@@ -175,7 +134,7 @@ def get_example(array, tid, encoded_tags):
 
 
 
-def save_examples_to_tffile(paths, tf_filename, audio_format):
+def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, verbose):
     """ Given paths to .npz files, this function processes them and then creates and saves them to a tf_record file 
 
     TODO: More documentation here
@@ -190,25 +149,28 @@ def save_examples_to_tffile(paths, tf_filename, audio_format):
         desired audio format, if none of the above it defaults to "waveform"
     """
 
-    with tf.python_io.TFRecordWriter(tf_filename) as writer: # TODO: Decide filename 
-        for path in paths:
+    with tf.python_io.TFRecordWriter(tf_filename) as writer:
+        start = time.time()
+        for i, cols in df.iterrows():
+            # unpack columns
+            tid, file_path = cols
+            path = os.path.join(root_dir, file_path)
 
-            # Loading the unsampled file from path of npz file   
+            # Loading the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
 
-            # TODO: make get_tid_from_path()
-            tid = get_tid_from_path(path)
-            tags = q_fm.get_tags(tid) 
-            # TODO: make filter_tags() (when we decide how)
-            tags = filter_tags(tags)
-            # TODO: make encode_tags() (when we decide how)
-            encoded_tags = encode_tags(tags) 
+            encoded_tags = get_encoded_tags(tid) 
 
             # TODO: Refine get_example() 
             example = get_example(processed_array, tid, encoded_tags)
             writer.write(example.SerializeToString())
+
+            if verbose and i % 500 == 0:
+                end = time.time()
+                print("{}/{} tracks saved. Last 500 tracks took {} s".format(i, len(df), end-start))
+                start = time.time()
 
 
 
@@ -217,31 +179,26 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
-    parser.add_argument("-s", "--split", help"train/val/test split, supply as TRAIN/VAL/TEST. Defaults to 0.7/0.2/0.1")
-    parser.add_argument("--root-dir", help="Set absolute path to directory containing the .npz files, defaults to path on boden")
+    parser.add_argument("-s", "--split", default='0.7/0.2/0.1' help"train/val/test split, supply as TRAIN/VAL/TEST. Defaults to 0.7/0.2/0.1")
+    parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     
     args = parser.parse_args()
-
-    train = 0.7
-    val = 0.2
-    test = 0.1
-
-    if args.root_dir:
-       root_dir = args.path 
-    if args.split:
-        values = [float(_) for _ in args.split.split("/") ]
-        tot = sum(values)
-        train, val, test = [val/tot for val in values]
     
-    paths = get_filepaths()
-    np.random.seed(1)
-    paths = np.random.shuffle(paths)
-    size = len(paths)
-
-    train_paths = paths[:size*train]
-    test_paths = paths[size*train:size*(train+val)]
-    val_paths = paths[size*(train+val):]
-
-    save_examples_to_tffile(train_paths, "tf_train_"+args.format, args.format)
-    save_examples_to_tffile(test_paths, "tf_test_"+args.format, args.format)
-    save_examples_to_tffile(val_paths, "tf_val_"+args.format, args.format)
+    # Setting up train, val, test from args.split and ensuring their sum is 1.
+    values = [float(_) for _ in args.split.split("/") ]
+    tot = sum(values)
+    train, val, test = [val/tot for val in values]
+    
+    # Gets usefule columns from ultimate_csv.csv and shuffles the data.
+    df = pd.read_csv(PATH, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
+    
+    # Splits the DataFrame according to train/val/test.
+    size = len(df)
+    train_df = df[:size*train]
+    test_df = df[size*train:size*(train+val)]
+    val_df = df[size*(train+val):]
+    
+    base_name = args.format + "_" + args.split 
+    save_examples_to_tffile(train_df, "train_"+base_name, args.format, args.root_dir, args.verbose)
+    save_examples_to_tffile(test_df, "test_"+base_name, args.format, args.root_dir, args.verbose)
+    save_examples_to_tffile(val_df, "val_"+base_name, args.format, args.root_dir, args.verbose)
