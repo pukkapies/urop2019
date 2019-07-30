@@ -265,9 +265,6 @@ class LastFm2Pandas():
 
     - tid_to_tags
         Get tags for given tid(s).
-    
-    - genre
-        Get all tids which have some certain tag(s).
 
     - popularity
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
@@ -465,14 +462,6 @@ class LastFm2Pandas():
             return tags
 
         return tags.rename(self.tid_num_to_tid)
-
-    def genre(self, tag):
-        ''' Gets all tracks that have one specified tag. '''
-
-        tag_num = self.tag_to_tag_num(tag)
-        tids = self.tid_tag['tid'][self.tid_tag['tag'] == tag_num]
-        tids = tids.map(self.tids['tid'])
-        return tids.tolist()
 
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
