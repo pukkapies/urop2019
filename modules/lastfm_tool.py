@@ -139,7 +139,7 @@ Functions
 
 - search_genre
     Extend a given dataframe (df_output) for list of tags supplied by another
-    dataframe (df_thr) by searching through the tags in the third dataframe 
+    dataframe (search_tags_list) by searching through the tags in the third dataframe 
     (df_input) using the given cleaning method. For more details, see function 
     description.
     
@@ -500,7 +500,7 @@ def check_overlap(df_input):
         between the lists in the merge_tags columns.
     
     '''
-    
+    assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
     df = df_input.copy()
     
     #indicator
@@ -561,7 +561,7 @@ def combine_tags(df_input, list_of_tags, merge_idx=None):
         provided that the df_input satisfies this condition.
     
     '''
-    
+    assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
     df = df_input.copy()
     
     list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
@@ -629,7 +629,7 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
         unique, provided that the df_input satisfies this condition.
     
     '''
-    
+    assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
     df = df_input.copy()
     
     list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
@@ -645,11 +645,10 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
         if len(_)>0:
             _ = _[0]
         else:
-            print('target tag does not exist')
+            raise ValueError('target tag does not exist')
             
         target_tag = df_input.iloc[_].tag
         
-    
     if target_tag in list_of_tags:
         list_of_tags.remove(target_tag)
     
@@ -699,6 +698,8 @@ def remove_tag(df_input, tag):
         
     '''
     
+    assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
+    
     if type(tag) != str:
             tag = str(tag)
     
@@ -715,11 +716,11 @@ def remove_tag(df_input, tag):
     return df
 
 
-def search_genre(df_input, df_output, search_method=clean_1, threshold=2000, 
-                 df_thr=None, min_count=10, verbose=True, remove_plural=True):
+def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=None, 
+                 min_count=10, verbose=True, remove_plural=True):
     
     '''Extend a given dataframe (df_output) for list of tags supplied by another
-    dataframe (df_thr) by searching through the tags in the third dataframe 
+    dataframe (search_tags_list) by searching through the tags in the third dataframe 
     (df_input) using the given cleaning method.
     
     Parameters
@@ -740,17 +741,17 @@ def search_genre(df_input, df_output, search_method=clean_1, threshold=2000,
             be run on to find matching tags. (It may contain tags which a 
             search will not be run on. You may specify what tags you wish to 
             be run on by specifying the threshold parameter or the 
-            df_thr parameter.) The tags, however, should be consistent with 
+            search_tags_list parameter.) The tags, however, should be consistent with 
             the threshold parameter if the threshold parameter is not None and
-            df_thr is None.
+            search_tags_list is None.
             
             2. 'merge_tags'  -- fill all the entry with empty list [ ].  
             
             For example:
         
-            df_thr = df_input[df_input.counts>=threshold]
+            search_tags_list = df_input[df_input.counts>=threshold]
         
-            df_output = pd.DataFrame({'tag':df_thr.tags.tolist(), 'merge_tags':[[]]*len(df_thr)})
+            df_output = pd.DataFrame({'tag':search_tags_list.tags.tolist(), 'merge_tags':[[]]*len(search_tags_list)})
         
     search_method: func
         A function that takes a string and transform that to a new string.
@@ -760,12 +761,12 @@ def search_genre(df_input, df_output, search_method=clean_1, threshold=2000,
         Searches will be run on tags with counts above or equal to the 
         threshold and merge into the df_output dataframe. If threshold=None, 
         searches will be run on all the tags in the df_output. Note that 
-        threshold does not have any effect if df_thr is not None.
+        threshold does not have any effect if search_tags_list is not None.
     
-    df_thr: pd.DataFrame
+    search_tags_list: pd.DataFrame
         A reduced version of the popularity dataframe or a dataframe with 
         columns: 'tags', 'counts'. The 'tags' column consists of all the tags
-        that a search will be run on. None that f df_thr is not None, threshold 
+        that a search will be run on. None that f search_tags_list is not None, threshold 
         will have no effect.
         
     min_count: int
@@ -800,27 +801,25 @@ def search_genre(df_input, df_output, search_method=clean_1, threshold=2000,
         this condition.
         
     '''
-    
+    assert all([True if col in df_output.columns else False for col in ['tag', 'merge_tags']])
+    assert all([True if col in df_input.columns else False for col in ['tags', 'counts']])
     df = df_input.copy()
     df['tags'] = df['tags'].astype('str')
     df['tags_sub'] = df.tags.apply(search_method)
     if remove_plural:
         df['tags_sub'] = df.tags_sub.apply(check_plural)
     
-    if df_thr is None:
-        if threshold is not None:
-            df_thr = df[df.counts>=threshold]
-        else:
-            df_thr = pd.DataFrame({'tags':df_output.tag.tolist()})
+    if search_tags_list is None:
+        search_tags_list = df_output.tag.tolist()
     
-    tot = len(df_thr)
+    tot = len(search_tags_list)
     if min_count is not None:
         bool1 = df['counts']>=min_count
     else:
         bool1 = df['counts']>=0
     
     
-    for num, tag in enumerate(df_thr.tags):
+    for num, tag in enumerate(search_tags_list):
         
         #remove non-word characters
         tag_sub = search_method(tag)
@@ -883,6 +882,8 @@ def merge_df(list_of_df):
 
         return list(set(list1+list2))
     
+    for df in list_of_df:
+        assert all([True if col in df.columns else False for col in ['tag', 'merge_tags']])
     
     df = list_of_df[0].copy()
     
@@ -1009,6 +1010,14 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
         
     '''
     
+    def search_matching_items(l, regex):
+        output_list = []
+        for item in l:
+            item = re.search(regex, item)
+            if item is not None:
+                output_list.append(item.group(0))
+        return output_list
+    
     print('Genre progress 1/7  --dropping tags')
     txt_path = os.path.join(output_path, drop_list_filename)
     drop_list = []
@@ -1024,39 +1033,42 @@ def generate_genre_df(csv_from_db=True, threshold=2000, min_count=10, verbose=Tr
     df.tags = df.tags.astype(str)
     df = df[-df.tags.isin(drop_list)]
     
-    df_thr = df[df.counts>=threshold]
+    search_tags_list = df[df.counts>=threshold].tags.tolist()
     
     print('Genre-Step 2/7  --cleaning_1')
     #generate empty dataframe structure
-    df_output = pd.DataFrame({'tag':df_thr.tags.tolist(), 'merge_tags':[[]]*len(df_thr)})
+    df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
     
-    df_filter = search_genre(df, df_output, search_method=clean_1, threshold=threshold,
+    df_filter = search_genre(df, df_output, search_method=clean_1, search_tags_list=None,
                              min_count=min_count, verbose=verbose)
     
     print('Genre-Step 3/7  --cleaning_2')
-    df_thr = df_thr[df_thr.tags.str.contains('&')]
+    
+    search_tags_list = search_matching_items(search_tags_list, r'.*&.*')
 
-    df_filter = search_genre(df, df_filter, search_method=clean_2, threshold=threshold, 
-                                   min_count=min_count, df_thr=df_thr, verbose=verbose)
+    df_filter = search_genre(df, df_filter, search_method=clean_2, 
+                             min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
     print('Genre-Step 4/7  --cleaning_3')
-    df_filter = search_genre(df, df_filter, search_method=clean_3, threshold=threshold,
-                             min_count=min_count, df_thr=df_thr, verbose=verbose)
+    df_filter = search_genre(df, df_filter, search_method=clean_3,
+                             min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
     
     print('Genre-Step 5/7  --cleaning_4')
-    df_thr = df[df.counts>=threshold]
-    df_thr = df_thr[df_thr.tags.str.contains(' and ')]
-    df_filter = search_genre(df, df_filter, search_method=clean_4, threshold=threshold,
-                             min_count=min_count, df_thr=df_thr, verbose=verbose)
+    search_tags_list = df[df.counts>=threshold].tags.tolist()
+    search_tags_list = search_matching_items(search_tags_list, r'.* and .*')
+    df_filter = search_genre(df, df_filter, search_method=clean_4,
+                             min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
     
     print('Genre-Step 6/7  --cleaning_5')
-    df_thr = df[df.counts>=threshold]
-    df_thr = df_thr[df_thr.tags.str.contains(r'\b\d0s')]
-    df_filter =  search_genre(df, df_filter, search_method=clean_5, threshold=threshold,
-                              min_count=min_count, df_thr=df_thr, remove_plural=False, verbose=verbose)
+    search_tags_list = df[df.counts>=threshold].tags.tolist()
+    search_tags_list = search_matching_items(search_tags_list, r'\b\d0s')
+    df_filter =  search_genre(df, df_filter, search_method=clean_5,
+                              min_count=min_count, search_tags_list=search_tags_list, 
+                              remove_plural=False, verbose=verbose)
     
     print('Genre-Step 7/7  --cleaning_6')
-    df_filter =  search_genre(df, df_filter, search_method=clean_6, threshold=threshold,
-                              min_count=min_count, df_thr=df_thr, remove_plural=False, verbose=verbose)
+    df_filter =  search_genre(df, df_filter, search_method=clean_6,
+                              min_count=min_count, search_tags_list=search_tags_list, 
+                              remove_plural=False, verbose=verbose)
     
     print('Genre--Done')
     
@@ -1084,7 +1096,7 @@ def percentile(df, perc=90):
         The input df that is cut based on the perc parameter.
     
     '''
-    
+    assert all([True if col in df.columns else False for col in ['tags', 'counts']])
     tot_counts = df.counts.sum()
     threshold = perc * tot_counts /100
     counter = 0
@@ -1137,7 +1149,7 @@ def generate_vocal_txt(csv_from_db=False,
                 f.write("%s\n" % item)
     
     if len(tag_list) != len(perc_list):
-        print('length of tag_list is unequal to length of perc_list')
+        raise ValueError('length of tag_list is unequal to length of perc_list')
     
     for idx in range(len(tag_list)):
         generate_txt(df, tag_list[idx], perc_list[idx])
@@ -1211,7 +1223,7 @@ def generate_vocal_df(indicator='-',
     return df_filter
 
 
-def generate_final_csv(csv_from_db=True, threshold=2000, min_count=10, verbose=True,
+def generate_final_csv(csv_from_db=True, min_count=10, verbose=True, threshold=2000,
                        pre_drop_list_filename='non_genre_list_filtered.txt',
                        combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], 
                        drop_list=['2000', '00', '90', '80', '70', '60'],
@@ -1302,7 +1314,7 @@ def generate_final_csv(csv_from_db=True, threshold=2000, min_count=10, verbose=T
     
     
     vocal = generate_vocal_df(indicator=vocal_indicator)
-    genre = generate_genre_df(csv_from_db=csv_from_db, threshold=threshold,
+    genre = generate_genre_df(csv_from_db=csv_from_db, threshold=2000,
                               min_count=min_count, verbose=verbose,
                               drop_list_filename=pre_drop_list_filename,
                               indicator=genre_indicator)
@@ -1317,7 +1329,7 @@ def generate_final_csv(csv_from_db=True, threshold=2000, min_count=10, verbose=T
     
     if add_list is not None:
         if len(add_list)!=len(add_target):
-            print('length of add_list is unequal to length of add_target.')
+            raise ValueError('length of add_list is unequal to length of add_target.')
         
         for idx in range(len(add_list)):
             if len(add_target_merge_index)==1:
@@ -1329,7 +1341,7 @@ def generate_final_csv(csv_from_db=True, threshold=2000, min_count=10, verbose=T
                                     target_merge_index=add_target_merge_index[idx])
                 
             if len(add_list)!=len(add_target_merge_index):
-                print('lenght of add_list is unequal to length of add_target_merge_index')
+                raise ValueError('lenght of add_list is unequal to length of add_target_merge_index')
     
     df_final = df_final.reset_index(drop=True)
     
