@@ -1,3 +1,18 @@
+''' Contains tool to generate a new lastfm_tags.db file containing only the "clean" merged tags
+
+
+Notes
+-----
+This file can be run as a script. To do so, just type 'python clean_lastfm.py' in the terminal. The help 
+page should contain all the options you might possibly need. 
+
+The script relies on the query_lastfm module to perform queries on the original database, and on the
+lastfm_tool module to obatain a dataframe with the tags to retain and the tags to merge.
+
+The script will output a db file similar in structure to the original lastfm_tags.db. The query_lastfm
+module will work on the new db file as well.
+'''
+
 import argparse
 import ast
 import os
@@ -125,7 +140,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input db filename or path")
     parser.add_argument("output", help="output db filename or path")
-    parser.add_argument('--val-thresh', dest='val', type=float, help="discard tags with val less than threshold"
+    parser.add_argument('--val-thresh', dest='val', type=float, help="discard tags with val less than threshold")
     
     args = parser.parse_args()
     
@@ -158,7 +173,7 @@ if __name__ == "__main__":
     tag_tag = create_tag_tag_table(lastfm, df)
     print('done')
     print('Matching all tids to tags...', end=' ', flush=True)
-    tid_tag = create_tid_tag_table(lastfm, tag_tag, argv.val)
+    tid_tag = create_tid_tag_table(lastfm, tag_tag, args.val)
     print('done')
     print('Purging tids...', end=' ', flush=True)
     tids = tid_tag['tid'].drop_duplicates()
