@@ -27,9 +27,9 @@ Classes
     This class is slower to init, since the whole database is loaded into memory, but consequently queries are much faster. This class also contain some additional "advanced" methods.
 '''
 
+import os
 import sqlite3
 
-import numpy as np
 import pandas as pd
 
 default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
@@ -270,7 +270,7 @@ class LastFm2Pandas():
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, path = default, no_tags = False, no_tids = False, no_tid_tag = False):
+    def __init__(self, path=default, from_csv_path='/srv/data/urop/', file_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
         '''
         Parameters
         ----------
@@ -287,20 +287,29 @@ class LastFm2Pandas():
             If True, do not store tid_tag table.
         '''
 
-        conn = sqlite3.connect(path)
-
         # open tables as dataframes and shift index to match rowid in database
-        if not no_tags:
-            self.tags = pd.read_sql_query('SELECT *  FROM tags', conn)
-            self.tags.index += 1
-        if not no_tids:
-            self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
-            self.tids.index += 1
-        if not no_tid_tag:
-            self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
-            self.tid_tag.index += 1
-
-        conn.close()
+        if from_csv_path is not None:
+            if not no_tags:
+                self.tags = pd.read_csv(os.path.join(from_csv_path, file_split.pop(0)), index_col=0)
+                self.tags.index += 1
+            if not no_tids:
+                self.tids = pd.read_csv(os.path.join(from_csv_path, file_split.pop(0)), index_col=0)
+                self.tids.index += 1
+            if not no_tid_tag:
+                self.tid_tag = pd.read_csv(os.path.join(from_csv_path, file_split.pop(0)), index_col=0)
+                self.tid_tag.index += 1
+        else:
+            conn = sqlite3.connect(path)
+            if not no_tags:
+                self.tags = pd.read_sql_query('SELECT *  FROM tags', conn)
+                self.tags.index += 1
+            if not no_tids:
+                self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
+                self.tids.index += 1
+            if not no_tid_tag:
+                self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
+                self.tid_tag.index += 1
+            conn.close()
 
     def tid_to_tid_num(self, tid):
         ''' Returns tid_num(s) given tid(s)
