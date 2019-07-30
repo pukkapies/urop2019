@@ -271,6 +271,9 @@ class LastFm2Pandas():
 
     - genre_not_genre
         Get all tids which have some certain tag(s) but not some other(s).
+
+    - popularity
+        Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
     def __init__(self, path = default, no_tags = False, no_tids = False, no_tid_tag = False):
@@ -470,14 +473,13 @@ class LastFm2Pandas():
         ''' Gets all tracks that have one specified tag. '''
 
         tag_num = self.tag_to_tag_num(tag)
-        tids = self.tid_tag['tid'][self.tid_tag['tid'] == tag_num]
-        tids.map(self.tids['tid'])
-        return tids
+        tids = self.tid_tag['tid'][self.tid_tag['tag'] == tag_num]
+        tids = tids.map(self.tids['tid'])
+        return tids.tolist()
     
-    def genre_not_genre(self, with_tags: list, without_tags: list):
+    def genre_not_genre(self, with_tags: list, without_tags: list): # this function has not been optimized to make the most out of this class's methods
         ''' Gets all tracks that have at least one tag in with_tags but none of the tags in without_tags. '''
 
-        # convert with_tags and without_tags into lists if they are strings
         if isinstance(with_tags, str):
             with_tags = [with_tags]
         if isinstance(without_tags, str):
@@ -485,15 +487,44 @@ class LastFm2Pandas():
 
         # initialize
         tracks = set()
+        tracks_num = set()
 
-        # for each tag in with_tags...
-        for tag in with_tags:
-            tids = self.genre(tag)
-            for tid in tids:
-                tags = self.tid_to_tags(tid)
+        without_tags = [self.tags['tag'][self.tags['tag'] == tag].index[0] for tag in without_tags] # convert tags into tag_idx's
 
-                # ...add only track if none of its tags is in without_tags
-                if not any(tags.isin(without_tags)):
-                    tracks.add(tid)
-        
+        for count_1, tag in enumerate(with_tags):
+            print('Processing tag {} of {}...'.format(count_1 + 1, len(with_tags)))
+            tag_num = self.tags['tag'][self.tags['tag'] == tag].index[0] # get tag_num of tag
+            tids = self.tid_tag['tid'][self.tid_tag['tag'] == tag_num] # get all tid_num's that have tag_num
+            
+            tot = len(tids)
+            
+            for count_2, tid in enumerate(tids):
+                
+                if count_2 % 100 == 0:
+                    print('    Processing track {:6d}. Progress {:2d}%'.format(count_2, int(count_2/tot*100)))
+                    
+                tags = self.tid_tag['tag'][self.tid_tag['tid'] == tid] # get all tag_num's of tid_num
+                
+                if not any(tags.isin(without_tags)): # if all tag_num's are not in without_tags, save tid_num
+                    tracks_num.add(tid)
+            
+        for tid_num in tracks_num:
+            tid = self.tids['tid'].loc[tid_num]
+            tracks.add(tid)
+            
         return tracks
+
+    def popularity(self):
+        ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
+
+        # count number of occurence of each tag
+        df_1 = self.tid_tag['tag'].value_counts().to_frame()
+        df_2 = self.tags['tag'].to_frame()
+
+        pop = df_2.merge(df_1, left_index=True, right_index=True)
+        pop.rename(columns={pop.columns[0]:'tag', pop.columns[1]:'count'}, inplace=True)
+        pop.sort_values('count', ascending=False, inplace=True)
+        pop.reset_index(inplace=True)
+        pop.rename(columns={'index':'tag_num'}, inplace=True)
+        pop = pd.concat([pop['tag'], pop['tag_num'], pop['count']], axis=1)
+        return pop
