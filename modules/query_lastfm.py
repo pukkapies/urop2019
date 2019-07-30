@@ -479,10 +479,10 @@ class LastFm2Pandas():
         df_1 = self.tid_tag['tag'].value_counts().to_frame()
         df_2 = self.tags['tag'].to_frame()
 
-        pop = df_2.merge(df_1, left_index=True, right_index=True)
-        pop.rename(columns={pop.columns[0]:'tag', pop.columns[1]:'count'}, inplace=True)
-        pop.sort_values('count', ascending=False, inplace=True)
-        pop.reset_index(inplace=True)
-        pop.rename(columns={'index':'tag_num'}, inplace=True)
-        pop = pd.concat([pop['tag'], pop['tag_num'], pop['count']], axis=1)
-        return pop
+        self.pop = df_2.merge(df_1, left_index=True, right_index=True)
+        self.pop.rename(columns={pop.columns[0]:'tag', pop.columns[1]:'count'}, inplace=True)
+        self.pop.sort_values('count', ascending=False, inplace=True)
+        self.pop.reset_index(inplace=True)
+        self.pop.rename(columns={'index':'tag_num'}, inplace=True)
+        self.pop = pd.concat([pop['tag'], pop['tag_num'], pop['count']], axis=1)
+        return self.pop
