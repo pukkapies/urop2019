@@ -120,12 +120,12 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     '''
     
     def locate_with_except(series):
-        def inner(i):
+        def fn(i):
             try:
                 return series.loc[i]
             except KeyError:
                 return 0
-        return inner
+        return fn
 
     flat = flatten_to_tag_num(db, df)
     flat['index'] = flat.index.to_series()
@@ -136,10 +136,10 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     tag_tag.index += 1
 
     # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
-    flat['new_tag_num'].loc_except = locate_with_except(flat['new_tag_num'])
+    loc_except = locate_with_except(flat['new_tag_num'])
 
     # for each tag num, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
-    tag_tag = tag_tag.map(flat['new_tag_num'].loc_except)
+    tag_tag = tag_tag.map(loc_except)
     return tag_tag
 
 def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
