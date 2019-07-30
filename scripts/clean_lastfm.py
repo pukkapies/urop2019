@@ -198,11 +198,12 @@ if __name__ == "__main__":
        print("WARNING file " + args.output + " already exists!")
        sys.exit(0)
 
-    lastfm = db.LastFm(args.input)
+    lastfm = db.LastFm2Pandas.from_csv('~/Desktop/')
 
-    df = lf.generate_final_csv()
+    lf.set_output_path('UROP_2019/modules/Supplimentary_txt_files')
+    df = lf.generate_final_csv(lastfm)
 
-    assert all(df.columns == ['tag', 'merge_tag'])
+    assert all(df.columns == ['tag', 'merge_tags'])
 
     df.reset_index(drop=True, inplace=True)
     df.index += 1
