@@ -29,6 +29,9 @@ Classes
 
 import sqlite3
 
+import numpy as np
+import pandas as pd
+
 default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
 class LastFm:
@@ -462,3 +465,35 @@ class LastFm2Pandas():
             return tags
 
         return tags.rename(self.tid_num_to_tid)
+
+    def genre(self, tag):
+        ''' Gets all tracks that have one specified tag. '''
+
+        tag_num = self.tag_to_tag_num(tag)
+        tids = self.tid_tag['tid'][self.tid_tag['tid'] == tag_num]
+        tids.map(self.tids['tid'])
+        return tids
+    
+    def genre_not_genre(self, with_tags: list, without_tags: list):
+        ''' Gets all tracks that have at least one tag in with_tags but none of the tags in without_tags. '''
+
+        # convert with_tags and without_tags into lists if they are strings
+        if isinstance(with_tags, str):
+            with_tags = [with_tags]
+        if isinstance(without_tags, str):
+            without_tags = [without_tags]
+
+        # initialize
+        tracks = set()
+
+        # for each tag in with_tags...
+        for tag in with_tags:
+            tids = self.genre(tag)
+            for tid in tids:
+                tags = self.tid_to_tags(tid)
+
+                # ...add only track if none of its tags is in without_tags
+                if not any(tags.isin(without_tags)):
+                    tracks.add(tid)
+        
+        return tracks
