@@ -19,6 +19,16 @@ Functions
 ---------
 - set_path
     Set path to the lastfm_tags.db.
+
+Classes
+-------
+- LastFm
+    Open a connection to the db file and provide methods to perform queries on it.
+    This class is faster to init, but some queries (expecially on the tid_tag table) might take some time to perform.
+
+- LastFm2Pandas
+    Read the database into three pandas dataframes and prodive methods to retrieve information from them.
+    This class is slower to init, since the whole database is loaded into memory, but consequently queries are much faster. This class also contain some additional "advanced" methods.
 '''
 
 import sqlite3
