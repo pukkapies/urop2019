@@ -39,7 +39,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
-import query_lastfm as db
+import query_lastfm as q_fm
 import lastfm_tool as lf
 
 def flatten(df: pd.DataFrame):
@@ -188,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("input", help="input db filename or path")
     parser.add_argument("output", help="output db filename or path")
     parser.add_argument('--val-thresh', dest='val', type=float, help="discard tags with val less than threshold")
+    parser.add_argument('--supp-txt-path', default='/srv/data/urop/supplimentary_txt_files' help="Path to supplimentary txt folder")
     
     args = parser.parse_args()
     
@@ -198,10 +199,10 @@ if __name__ == "__main__":
        print("WARNING file " + args.output + " already exists!")
        sys.exit(0)
 
-    lastfm = db.LastFm2Pandas.from_csv('~/Desktop/')
+    lastfm = q_fm.LastFm2Pandas.from_csv('~/Desktop/')
 
-    lf.set_output_path('UROP_2019/modules/Supplimentary_txt_files')
-    df = lf.generate_final_csv(lastfm)
+    lf.set_output_path(args.supp_txt_path)
+    df = lf.generate_final_df(lastfm)
 
     assert all(df.columns == ['tag', 'merge_tags'])
 
