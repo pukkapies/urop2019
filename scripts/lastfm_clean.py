@@ -96,11 +96,6 @@ def flatten_to_tag_num(lf: q_fm.LastFm, df: pd.DataFrame):
     output = flatten(df)
     output['tag'] = output['tag'].map(lf.tag_to_tag_num)
     output.columns = ['tag_num', 'new_tag_num']
-
-    # append row of 0's at the top
-    nul = pd.DataFrame(data={'tag_num': [0], 'new_tag_num': [0]})
-    output.index += 1 # otherwise output.append(verify_integrity=True) returns an error
-    output = output.append(nul, verify_integrity=True).sort_index()
     return output
 
 def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
