@@ -62,7 +62,7 @@ from itertools import islice
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
-import query_lastfm as fm_q
+import query_lastfm as q_fm
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'
