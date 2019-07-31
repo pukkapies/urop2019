@@ -100,7 +100,7 @@ def flatten_to_tag_num(lf: q_fm.LastFm, df: pd.DataFrame):
 
 def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
     '''
-    Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
+    Produce a series having the old 'tag_num' as index, as the 'new_tag_num' as values. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
     
     Parameters
     ----------
@@ -120,7 +120,6 @@ def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
         return fn
 
     flat = flatten_to_tag_num(lf, df)
-    flat['index'] = flat.index.to_series()
     flat = flat.set_index('tag_num', verify_integrity=True).sort_index()
     
     # fetch the tag num's from the original database
