@@ -34,7 +34,6 @@ import os
 import sys
 
 import pandas as pd
-import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
@@ -77,12 +76,12 @@ def flatten(df: pd.DataFrame):
         tag, merge_tags = row
         tags.append(tag)
         tags += merge_tags
-        tags_nums += list(np.full(len(merge_tags)+1, num))
+        tags_nums += [num] * (len(merge_tags)+1)
 
     output = pd.DataFrame(data={'tag': tags, 'new_tag_num': tags_nums})
     return output
 
-def flatten_to_tag_num(db: q_fm.LastFm, df: pd.DataFrame):
+def flatten_to_tag_num(lf: q_fm.LastFm, df: pd.DataFrame):
     ''' Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. The tags in the tag column in flatten() are substituted by their original tag nums.
     
     Parameters
@@ -95,7 +94,7 @@ def flatten_to_tag_num(db: q_fm.LastFm, df: pd.DataFrame):
     '''
 
     output = flatten(df)
-    output['tag'] = output['tag'].map(q_fm.tag_to_tag_num)
+    output['tag'] = output['tag'].map(lf.tag_to_tag_num)
     output.columns = ['tag_num', 'new_tag_num']
 
     # append row of 0's at the top
@@ -104,7 +103,7 @@ def flatten_to_tag_num(db: q_fm.LastFm, df: pd.DataFrame):
     output = output.append(nul, verify_integrity=True).sort_index()
     return output
 
-def create_tag_tag_table(db: q_fm.LastFm, df: pd.DataFrame):
+def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
     '''
     Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
     
@@ -125,12 +124,12 @@ def create_tag_tag_table(db: q_fm.LastFm, df: pd.DataFrame):
                 return 0
         return fn
 
-    flat = flatten_to_tag_num(db, df)
+    flat = flatten_to_tag_num(lf, df)
     flat['index'] = flat.index.to_series()
     flat = flat.set_index('tag_num', verify_integrity=True).sort_index()
     
     # fetch the tag num's from the original database
-    tag_tag = pd.Series(q_fm.get_tag_nums())
+    tag_tag = pd.Series(lf.get_tag_nums())
     tag_tag.index += 1
 
     # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
@@ -140,7 +139,7 @@ def create_tag_tag_table(db: q_fm.LastFm, df: pd.DataFrame):
     tag_tag = tag_tag.map(loc_except)
     return tag_tag
 
-def create_tid_tag_table(db: q_fm.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
+def create_tid_tag_table(lf: q_fm.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
     '''
     Produce a dataframe with the following columns: 'tid', 'tag'. 
 
@@ -158,9 +157,9 @@ def create_tid_tag_table(db: q_fm.LastFm, tag_tag: pd.DataFrame, tid_tag_thresho
     
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
     if tid_tag_threshold is not None:
-        tid_tag = q_fm.fetch_all_tids_tags_threshold(tid_tag_threshold)
+        tid_tag = lf.fetch_all_tids_tags_threshold(tid_tag_threshold)
     else:
-        tid_tag = q_fm.fetch_all_tids_tags()
+        tid_tag = lf.fetch_all_tids_tags()
     
     if not isinstance(tid_tag, pd.DataFrame): # type(tid_tag) varies depending on whether q_fm.LastFm or q_fm.LastFm2Pandas is being used
         tids = [tup[0] for tup in tid_tag]
@@ -214,10 +213,6 @@ if __name__ == "__main__":
     df = lf_tool.generate_final_df(lastfm)
 
     assert all(df.columns == ['tag', 'merge_tags'])
-
-    df.reset_index(drop=True, inplace=True)
-    df.index += 1
-    df['merge_tags'] = df['merge_tags'].map(ast.literal_eval) # without this, lists are parsed are strings
 
     # generate tables which will go into output database
     tags = df['tag']
