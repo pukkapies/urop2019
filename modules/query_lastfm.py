@@ -54,6 +54,18 @@ class LastFm:
     - tag_to_tag_num
         Get tag_num given tag.
 
+    - get_tags
+        Return a list of all the tags.
+        
+    - get_tag_nums
+        Return a list of all the tag_nums.
+
+    - get_tids
+        Get tids which have at least one tag.
+        
+    - get_tid_nums
+        Get tid_num of tids which have at least one tag.
+
     - query_tags
         Get a list of tags associated to given tid.
 
@@ -263,7 +275,7 @@ class LastFm2Pandas():
     - tid_num_to_tid
         Return tid(s) given tid_num(s).
 
-    - tid_num_to_tag_nums
+    - tid_num_to_tag_num
         Return tag_num(s) given tid_num(s).
 
     - tid_num_to_tag
@@ -274,6 +286,18 @@ class LastFm2Pandas():
 
     - tag_to_tag_num
         Return tag_num(s) given tag(s).
+
+    - get_tags
+        Return a list of all the tags.
+        
+    - get_tag_nums
+        Return a list of all the tag_nums.
+
+    - get_tids
+        Get tids which have at least one tag.
+        
+    - get_tid_nums
+        Get tid_num of tids which have at least one tag.
 
     - tid_num_to_tags
         Get tags for given tid_num(s).
@@ -381,7 +405,7 @@ class LastFm2Pandas():
 
         return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
 
-    def tid_num_to_tag_nums(self, tid_num):
+    def tid_num_to_tag_num(self, tid_num):
         ''' Returns tag_nums given tid_num(s)
         
         Parameters
@@ -448,6 +472,26 @@ class LastFm2Pandas():
             return self.tags.loc[self.tags.tag == tag].index[0]
 
         return self.tags.loc[self.tags.tag.isin(tag)].index
+
+    def get_tags(self):
+        ''' Returns a list of all the tags. '''
+
+        return self.tags['tag'].tolist()
+
+    def get_tag_nums(self):
+        ''' Returns a list of all the tag_nums. '''
+
+        return self.tags.index.tolist()
+
+    def get_tids(self):
+        ''' Gets tids which have at least one tag. '''
+
+        return self.tids['tid'][-self.tids['tid'].isna()].tolist()
+
+    def get_tid_nums(self):
+        ''' Gets tid_num of tids which have at least one tag. '''
+
+        return self.tids.index[-self.tids['tid'].isna()].tolist()
 
     def tid_num_to_tags(self, tid_num):
         ''' Gets tags for given tid_num(s) 
