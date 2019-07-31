@@ -911,7 +911,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
                 output_list.append(item.group(0))
         return output_list
     
-    print('Genre progress 1/7  --dropping tags')
+    print('Genre Step 1/7  -- Dropping tags...')
     path = os.path.join(txt_path, drop_list_filename)
     drop_list = []
     with open(path, 'r', encoding='utf8') as f:
@@ -927,42 +927,41 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     
     search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     
-    print('Genre-Step 2/7  --cleaning_1')
+    print('Genre Step 2/7  -- Cleaning 1...')
     # generate empty dataframe structure
     df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
     
     df_filter = search_genre(df, df_output, search_method=clean_1, search_tags_list=None,
                              sub_threshold=sub_threshold, verbose=verbose)
     
-    print('Genre-Step 3/7  --cleaning_2')
+    print('Genre Step 3/7  --  Cleaning 2...')
     
     search_tags_list = search_matching_items(search_tags_list, r'.*&.*')
 
     df_filter = search_genre(df, df_filter, search_method=clean_2, 
                              sub_threshold=sub_threshold, search_tags_list=search_tags_list, verbose=verbose)
-    print('Genre-Step 4/7  --cleaning_3')
+    print('Genre Step 4/7  --  Cleaning 3...')
     df_filter = search_genre(df, df_filter, search_method=clean_3,
                              sub_threshold=sub_threshold, search_tags_list=search_tags_list, verbose=verbose)
     
-    print('Genre-Step 5/7  --cleaning_4')
+    print('Genre Step 5/7  --  Cleaning 4...')
     search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     search_tags_list = search_matching_items(search_tags_list, r'.* and .*')
     df_filter = search_genre(df, df_filter, search_method=clean_4,
                              sub_threshold=sub_threshold, search_tags_list=search_tags_list, verbose=verbose)
     
-    print('Genre-Step 6/7  --cleaning_5')
+    print('Genre Step 6/7  --  Cleaning 5...')
     search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     search_tags_list = search_matching_items(search_tags_list, r'\b\d0s')
     df_filter =  search_genre(df, df_filter, search_method=clean_5,
                               sub_threshold=sub_threshold, search_tags_list=search_tags_list, 
                               remove_plural=False, verbose=verbose)
     
-    print('Genre-Step 7/7  --cleaning_6')
+    print('Genre Step 7/7  --  Cleaning 6...')
     df_filter =  search_genre(df, df_filter, search_method=clean_6,
                               sub_threshold=sub_threshold, search_tags_list=search_tags_list, 
                               remove_plural=False, verbose=verbose)
-    
-    print('Genre--Done')
+    print('Done!')
     
     return df_filter
 
@@ -1000,7 +999,6 @@ def generate_vocal_df(indicator='-',
                     tags.append(item.rstrip('\n'))
         return tags
     
-    print('Vocal-Step 1/1')
     merge_tags_list=[]
     
     for filename in tag_list:
@@ -1013,8 +1011,7 @@ def generate_vocal_df(indicator='-',
         merge_tags_list.append(tags)
 
     df_filter =  pd.DataFrame({'tag':tag_list, 'merge_tags':merge_tags_list})
-    
-    print('Vocal--Done')
+
     return df_filter
 
 def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], 
@@ -1148,9 +1145,10 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
                                     target_merge_index=add_target_merge_index[idx])
                 
             if len(add_list)!=len(add_target_merge_index):
-                raise ValueError('lenght of add_list is unequal to length of add_target_merge_index')
+                raise ValueError('lenght of add_list is unequal to length of add_target_merge_index.')
     
     df_final = df_final.reset_index(drop=True)
     
-    print('Done --dataframe generated')
+    print('Done!')
+
     return df_final
