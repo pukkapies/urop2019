@@ -745,7 +745,6 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         The popularity dataframe or a dataframe with similar structure, i.e. 
         with columns 'tag', 'count'. This dataframe provides a list of tags
         as a pool where another tag can find corresponding matching tags from.
-
         Example:
         popularity = q_fm.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
