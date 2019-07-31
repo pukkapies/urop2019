@@ -1,21 +1,21 @@
-'''Contains tools for merging and cleaning the lastfm_tags.db file
+'''Contains tools for merging and cleaning the lastfm_tags.q_lf file
 
 
 Notes
 -----
 The file aims to produce a dataframe that can be used to map the 
 useful, clean, and meaningful tags onto the unprocessed tags in the tidtag 
-dataset of the lastfm.db for training a neural network in later modules.
+dataset of the lastfm.q_lf for training a neural network in later modules.
 
 
 This file can be divided into three parts:
     
-1. Convert the lastfm_tags.db into pd.DataFrame and use the generated 
+1. Convert the lastfm_tags.q_lf into pd.DataFrame and use the generated 
 dataframe to produce a popularity dataframe with columns:
     - ranking:
         The popularity ranking of the tag.
     - lastfm_ID:
-        The ID of the tag in lastfm_tags.db.
+        The ID of the tag in lastfm_tags.q_lf.
     - tags:
         The tags.
     - count:
@@ -25,7 +25,7 @@ dataframe to produce a popularity dataframe with columns:
     - tag:
         The tags that will be used in training a neural network in later modules.
     - merge_tags:
-        The tags from the lastfm_tags.db that will be merged into the 
+        The tags from the lastfm_tags.q_lf that will be merged into the 
         corresponding tag.
     Tools include adding new tags, combining existing tags, and remove tags, 
     merging similar dataframes and checking overlappings within the merge_tags 
@@ -41,7 +41,7 @@ Procedure
 The final dataset will contain two categories of tags stacked vertically. The
 categories are:
     1. Genre tags:
-        A threshold is set so that the tags from the lastfm_tags.db with 
+        A threshold is set so that the tags from the lastfm_tags.q_lf with 
         occurrences greater than or equal to the threshold will be kept. The 
         tags above the threshold can be returned by the 
         generate_genre_txt() function as a text file. A manual
@@ -171,7 +171,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 
-import query_lastfm as db
+import query_lastfm as q_lf
 
 txt_path = '/srv/data/urop'
     
@@ -244,7 +244,7 @@ def generate_genre_txt(df: pd.DataFrame, threshold: int = 20000):
         as a txt file.
         
     csv_from_db: bool
-        If True, the lastfm_tags.db will be converted to csv in order to 
+        If True, the lastfm_tags.q_lf will be converted to csv in order to 
         produce the popularity dataframe.
         
     Outputs
@@ -866,7 +866,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     Parameters
     ----------
     csv_from_db: bool
-        If True, the lastfm_tags.db will be converted to csv in order to 
+        If True, the lastfm_tags.q_lf will be converted to csv in order to 
         produce the popularity dataframe.
         
     threshold: int
@@ -962,7 +962,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
                               sub_threshold=sub_threshold, search_tags_list=search_tags_list, 
                               remove_plural=False, verbose=verbose)
     print('Done!')
-    
+
     return df_filter
 
 def generate_vocal_df(indicator='-', 
@@ -1027,7 +1027,7 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
     
     Parameters
     ----------
-    lastfm: db.LastFm, db.LastFm2Pandas
+    lastfm: q_lf.LastFm, q_lf.LastFm2Pandas
         Instance of the database class to produce the popularity dataframe.
 
     from_csv_path: str
@@ -1114,7 +1114,7 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
         df = lastfm.popularity()
     else:
         assert len(from_csv_path_split) == 3
-        lastfm = db.LastFm2Pandas.from_csv(from_csv_path, from_csv_path_split)
+        lastfm = q_lf.LastFm2Pandas.from_csv(from_csv_path, from_csv_path_split)
         df = lastfm.popularity()
     
     vocal = generate_vocal_df(indicator=vocal_indicator)
