@@ -29,8 +29,8 @@ Functions
 '''
 
 import argparse
-import ast
 import os
+import sqlite3
 import sys
 
 import pandas as pd
@@ -104,7 +104,7 @@ def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
     
     Parameters
     ----------
-    db : q_fm.LastFm, q_fm.LastFm2Pandas
+    lf : q_fm.LastFm, q_fm.LastFm2Pandas
         Any instance of the tags database.
 
     df : pd.DataFrame
@@ -139,7 +139,7 @@ def create_tid_tag_table(lf: q_fm.LastFm, tag_tag: pd.DataFrame, tid_tag_thresho
 
     Parameters
     ----------
-    db : q_fm.LastFm, q_fm.LastFm2Pandas
+    lf : q_fm.LastFm, q_fm.LastFm2Pandas
         Any instance of the tags database.
 
     tag_tag : pd.DataFrame
@@ -203,7 +203,7 @@ if __name__ == "__main__":
     assert all(df.columns == ['tag', 'merge_tags'])
 
     # generate tables which will go into output database
-    tags = df['tag'].srt.lower()
+    tags = df['tag'].str.lower()
     print('Matching all tags to the "clean" few ones...', end=' ', flush=True)
     tag_tag = create_tag_tag_table(lastfm, df)
     print('done')
