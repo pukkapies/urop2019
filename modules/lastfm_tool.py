@@ -254,15 +254,13 @@ def clean_1(tag):
     -------
     tag_sub: str
         The manipulated input tag.
-        
     '''
     
     tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
     return tag_sub
 
 def clean_2(tag):
-    '''Remove all non alphabet and number characters except '&' of the input 
-    string, then replace '&' with 'n'.
+    '''Remove all non alphabet and number characters except '&' of the input string, then replace '&' with 'n'.
     
     Parameters
     ----------
@@ -273,7 +271,6 @@ def clean_2(tag):
     -------
     tag_sub: str
         The manipulated input tag.
-        
     '''
     
     tag_sub = re.sub(r'[^A-Za-z0-9&]', '', tag)
@@ -281,8 +278,7 @@ def clean_2(tag):
     return tag_sub
 
 def clean_3(tag):
-    '''Remove all non alphabet and number characters except '&' of the input 
-    string, then replace '&' with 'and'.
+    '''Remove all non alphabet and number characters except '&' of the input string, then replace '&' with 'and'.
     
     Parameters
     ----------
@@ -292,8 +288,7 @@ def clean_3(tag):
     Returns
     -------
     tag_sub: str
-        The manipulated input tag.
-        
+        The manipulated input tag.  
     '''
     
     tag_sub = re.sub(r'[^A-Za-z0-9&]', '', tag)
@@ -301,8 +296,7 @@ def clean_3(tag):
     return tag_sub
 
 def clean_4(tag):
-    '''Replace ' and ' with 'n', then remove all non alphabet and number 
-    characters of the input string.
+    '''Replace ' and ' with 'n', then remove all non alphabet and number characters of the input string.
     
     Parameters
     ----------
@@ -313,7 +307,6 @@ def clean_4(tag):
     -------
     tag_sub: str
         The manipulated input tag.
-        
     '''
     
     tag_sub = re.sub(' and ', 'n', tag)
@@ -332,7 +325,6 @@ def clean_5(tag):
     -------
     tag_sub: str
         The manipulated input tag.
-        
     '''
     
     tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
@@ -352,7 +344,6 @@ def clean_6(tag):
     -------
     tag_sub: str
         The manipulated input tag.
-        
     '''
     
     tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
@@ -360,8 +351,7 @@ def clean_6(tag):
     return tag_sub
 
 def check_plural(x):
-    '''Remove the trailing character 's' of the input string if its trailing part
-    only contains only one 's'.
+    '''Remove the trailing character 's' of the input string if its trailing part only contains only one 's'.
     
     Parameters
     ----------
@@ -373,7 +363,6 @@ def check_plural(x):
     str
         The input string with an 's' removed if there is only one 's' at the 
         end of the string.
-    
     '''
     
     if len(x)<2:
@@ -400,8 +389,8 @@ def check_overlap(df_input):
     df: pd.DataFrame
         The manipulated input dataframe so that there are no overlappings
         between the lists in the merge_tags columns.
-    
     '''
+
     assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
     df = df_input.copy()
     
@@ -460,10 +449,11 @@ def combine_tags(df_input, list_of_tags, merge_idx=None):
         The dataframe produced after combining the tags. All the 
         tags in the 'merge_tags' and 'tag' columns altogether are unique, 
         provided that the df_input satisfies this condition.
-    
     '''
+
     assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
     assert all([True if tag in df_input.tag.tolist() else False for tag in list_of_tags])
+    
     df = df_input.copy()
     
     list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
@@ -487,8 +477,6 @@ def combine_tags(df_input, list_of_tags, merge_idx=None):
             df = df.drop(row.name)
         
     return df
-
-
 
 def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
     '''Add new tags to the chosen tag row and further combine tags if a common tag
@@ -529,9 +517,10 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
         the overlapping issues within the 'merged_tags' columns. Hence 
         all the tags in the 'merge_tags' and 'tag' columns altogether are 
         unique, provided that the df_input satisfies this condition.
-    
     '''
+
     assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
+    
     df = df_input.copy()
     
     list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
@@ -579,9 +568,6 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
     
     return df
 
-    
-    
-    
 def remove_tag(df_input, tag):
     '''Remove a given tag from the dataset.
     
@@ -597,7 +583,6 @@ def remove_tag(df_input, tag):
     Returns
     -------
         The dataframe with the tag removed.
-        
     '''
     
     assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
@@ -616,7 +601,6 @@ def remove_tag(df_input, tag):
         df.iloc[_,col]= [item for item in new_list if item != tag]
     
     return df
-
 
 def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=None, 
                  sub_threshold=10, verbose=True, remove_plural=True):
@@ -701,13 +685,15 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         All the tags in the 'merge_tags' and 'tag' columns altogether are 
         unique, provided that the df_output provided as a parameter satisfies 
         this condition.
-        
     '''
+
     assert all([True if col in df_output.columns else False for col in ['tag', 'merge_tags']])
     assert all([True if col in df_input.columns else False for col in ['tag', 'count']])
+
     df = df_input.copy()
     df['tag'] = df['tag'].astype('str')
     df['tag_sub'] = df['tag'].apply(search_method)
+
     if remove_plural:
         df['tag_sub'] = df['tag_sub'].apply(check_plural)
     
@@ -720,19 +706,17 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
     else:
         bool1 = df['count']>=0
     
-    
     for num, tag in enumerate(search_tags_list):
         
-        #remove non-word characters
+        # remove non-word characters
         tag_sub = search_method(tag)
         if remove_plural:
             tag_sub = check_plural(tag_sub)
             
-        #query
+        # query
         search = r'^'+tag_sub+r'$'
             
-        #get list of tags that will be merged (tag such that its 'pure' form 
-        # matches with tag_sub)
+        # get list of tags that will be merged (tag such that its 'pure' form matches with tag_sub)
         bool2 = df['tag_sub'].str.findall(search, re.IGNORECASE).str.len()>0
             
         merge_tags = df[(bool1 & bool2)]['tag'].tolist()
@@ -745,8 +729,6 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
                 print('processed {} out of {} tags'.format(num+1, tot))
                 
     return df_output
-    
-
 
 def merge_df(list_of_df):
     '''Merge two or more output dataframes and ensure no overlappings between the
@@ -771,8 +753,8 @@ def merge_df(list_of_df):
         the remaining dataframes.
     
     '''
-    
-    #function for combining elements in two columns for later use
+
+    # combine elements in two columns for later use
     def row_op(row):
         col1, col2 = row.index[-2], row.index[-1]
         list1, list2 = row[col1], row[col2]
@@ -790,25 +772,24 @@ def merge_df(list_of_df):
     df = list_of_df[0].copy()
     
     for df2 in list_of_df[1:]:
-        #outer merge and use row_op to combine the two list of merge_tags
+        # outer merge and use row_op to combine the two list of merge_tags
         df_merge = df.merge(df2, how='outer', on='tag')
         df_merge['merge_tags'] = df_merge.apply(row_op, axis=1)
         df_merge = df_merge[['tag','merge_tags']]
         
-        #search for tags that only exist in one of df and df2
+        # search for tags that only exist in one of df and df2
         new_tags = []
         new_tags.append(list(set(df_merge.tag).difference(set(df.tag))))
         new_tags.append(list(set(df_merge.tag).difference(set(df2.tag))))
         new_tags = [i for sublist in new_tags for i in sublist]
         
-        #make sure new standalone tags do not exist in any of the merge_tags lists
-        #(there is no need to check for old tags because we have already ensured
-        # that old common tags and all tags contained in merge_tags column is 
+        # make sure new standalone tags do not exist in any of the merge_tags lists (there is no need 
+        # to check for old tags because we have already ensured that old common tags and all tags contained in merge_tags column is 
         # mutually exclusive)
         for tag in new_tags:
             for idx, l in enumerate(df_merge.merge_tags):
                 if tag in l:
-                    #get the corresponding tag in the tag column
+                    #g et the corresponding tag in the tag column
                     tag2 = df_merge.iloc[idx, :].tag
                     df_merge = combine_tags(df_merge, [tag, tag2], merge_idx=idx)
                     
@@ -817,8 +798,6 @@ def merge_df(list_of_df):
     df_merge = check_overlap(df_merge)
     
     return df_merge
-
-
     
 def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
     '''Generate a txt file with a list of tags above the threshold that can be 
@@ -840,8 +819,6 @@ def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
         Consists of all the tags above or equal to the threshold.
         Please see the note printed after the function is run for instructions
         on how to work with the produced txt file.
-    
-    
     '''
     
     tag_list = df['tag'][df['count'] >= threshold].tolist()
@@ -859,7 +836,6 @@ E.g. If you want to deselect "rock", replace "rock" with\
 "non_genre_list_filtered.txt" and save it under the same directory as the 
 variable - txt_path
 """
-
     print(message)
 
 def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_threshold: int = 200, verbose=True, drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
@@ -907,7 +883,6 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
         This is produced based on the popularity dataframe, by applying 
         the search_genre() function using clean_1 up to clean_6. All the tags 
         in the 'merge_tags' and 'tag' columns altogether are unique.
-        
     '''
     
     def search_matching_items(l, regex):
@@ -928,14 +903,14 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
                 
     df = popularity.copy()
     
-    #drop tags
+    # drop tags
     df.tag = df.tag.astype(str)
     df = df[-df.tag.isin(drop_list)]
     
     search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     
     print('Genre-Step 2/7  --cleaning_1')
-    #generate empty dataframe structure
+    # generate empty dataframe structure
     df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
     
     df_filter = search_genre(df, df_output, search_method=clean_1, search_tags_list=None,
@@ -993,6 +968,7 @@ def percentile(df, perc=90):
         The input df that is cut based on the perc parameter.
     
     '''
+
     assert all([True if col in df.columns else False for col in ['tag', 'count']])
     tot_counts = df['count'].sum()
     threshold = perc * tot_counts /100
@@ -1026,7 +1002,6 @@ def generate_vocal_df(indicator='-',
         The output dataframe with columns: 'tag', 'merge_tags', the same format
         as the one generated by generate_genre_df() for genre. All the tags 
         in the 'merge_tags' and 'tag' columns altogether are unique.
-    
     '''
     
     def load_txt(filename):
@@ -1050,9 +1025,7 @@ def generate_vocal_df(indicator='-',
             tags.remove(filename)
             
         merge_tags_list.append(tags)
-        
-    
-        
+
     df_filter =  pd.DataFrame({'tag':tag_list, 'merge_tags':merge_tags_list})
     
     print('Vocal--Done')
@@ -1152,7 +1125,6 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
         A dataframe consisting of two smaller dataframes vertically stacked.
         The two smaller dataframes are returned by generate_vocal_df() and 
         generate_genre_df() based on the parameters provided.
-        
     '''
 
     if lastfm is not None:
