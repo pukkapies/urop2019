@@ -29,7 +29,6 @@ Classes
 
 import os
 import sqlite3
-import sys
 
 import pandas as pd
 
@@ -97,8 +96,7 @@ class LastFm:
 
     def __init__(self, path = default):
         if not os.path.isfile(path):
-            print("WARNING file " + path + " does not exist!")
-            sys.exit(0)
+            raise OSError("file " + path + " does not exist!")
 
         self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
@@ -376,8 +374,7 @@ class LastFm2Pandas():
         else:
             # read from database
             if not os.path.isfile(from_sql):
-                print("WARNING file " + from_sql + " does not exist!")
-                sys.exit(0)
+                raise OSError("file " + from_sql + " does not exist!")
             else:
                 conn = sqlite3.connect(from_sql)
                 if not no_tags:
