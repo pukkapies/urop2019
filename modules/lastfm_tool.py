@@ -186,6 +186,38 @@ def set_txt_path(new_path):
         
     global txt_path
     txt_path = os.path.normpath(new_path)
+    
+def percentile(df, perc=90):
+    '''Return a dataframe with subset of tags (descending order) of the input 
+    dataframe which accounts for a certain percentage of the total count of 
+    all the tags.
+    
+    Parameters
+    ----------
+    df: pd.DataFrame
+        A dataframe with columns: 'tag', 'count'.
+        
+    perc: float
+        The percentage of the total count of all the tags that will be 
+        considered.
+        
+    Returns
+    -------
+    df: pd.DataFrame
+        The input df that is cut based on the perc parameter.
+    
+    '''
+
+    assert all([True if col in df.columns else False for col in ['tag', 'count']])
+    tot_counts = df['count'].sum()
+    threshold = perc * tot_counts /100
+    counter = 0
+    
+    for i, row in enumerate(df['count']):
+        if counter < threshold:
+            counter += row
+        else:
+            return df.iloc[:i,]
 
 def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], percentage_list=[90, 90, 90, 80]):
     '''Generate a txt file with a list of tags for each of the vocal tag 
@@ -196,6 +228,8 @@ def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', '
     ----------
     df: pd.DataFrame
         The popularity dataframe.
+        Example:
+        popularity = q_lf.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
     tag_list: list
         The list of vocal tags that will be considered.
@@ -239,13 +273,14 @@ def generate_genre_txt(df: pd.DataFrame, threshold: int = 20000):
     
     Parameters
     ----------
+    df: pd.DataFrame
+        The popularity dataframe.
+        Example:
+        popularity = q_lf.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
+        
     threshold: int
         Tags with count greater than or equal to the threshold will be stored 
         as a txt file.
-        
-    csv_from_db: bool
-        If True, the lastfm_tags.q_lf will be converted to csv in order to 
-        produce the popularity dataframe.
         
     Outputs
     -------
@@ -696,38 +731,6 @@ def merge_df(list_of_df):
     
     return df_merge
 
-def percentile(df, perc=90):
-    '''Return a dataframe with subset of tags (descending order) of the input 
-    dataframe which accounts for a certain percentage of the total count of 
-    all the tags.
-    
-    Parameters
-    ----------
-    df: pd.DataFrame
-        A dataframe with columns: 'tag', 'count'.
-        
-    perc: float
-        The percentage of the total count of all the tags that will be 
-        considered.
-        
-    Returns
-    -------
-    df: pd.DataFrame
-        The input df that is cut based on the perc parameter.
-    
-    '''
-
-    assert all([True if col in df.columns else False for col in ['tag', 'count']])
-    tot_counts = df['count'].sum()
-    threshold = perc * tot_counts /100
-    counter = 0
-    
-    for i, row in enumerate(df['count']):
-        if counter < threshold:
-            counter += row
-        else:
-            return df.iloc[:i,]
-
 def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=None, 
                  sub_threshold=10, verbose=True, remove_plural=True):
     
@@ -742,6 +745,9 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         The popularity dataframe or a dataframe with similar structure, i.e. 
         with columns 'tag', 'count'. This dataframe provides a list of tags
         as a pool where another tag can find corresponding matching tags from.
+
+        Example:
+        popularity = q_lf.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
     df_output: pd.DataFrame
         A dataframe with columns: 'tag', 'merge_tags'. This is the dataframe 
@@ -865,9 +871,10 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     
     Parameters
     ----------
-    csv_from_db: bool
-        If True, the lastfm_tags.q_lf will be converted to csv in order to 
-        produce the popularity dataframe.
+    df: pd.DataFrame
+        The popularity dataframe.
+        Example:
+        popularity = q_lf.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
     threshold: int
         Searches will be run on tags with count above or equal to the 
@@ -1014,8 +1021,8 @@ def generate_vocal_df(indicator='-',
 
     return df_filter
 
-def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], 
-                       verbose=True, threshold=2000, sub_threshold=100,
+def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], 
+                       verbose=True, threshold=2000, sub_threshold=10,
                        pre_drop_list_filename='non_genre_list_filtered.txt',
                        combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], 
                        drop_list=['2000', '00', '90', '80', '70', '60'],
