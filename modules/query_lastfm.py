@@ -30,8 +30,9 @@ Classes
 import os
 import sqlite3
 
-import numpy as np
 import pandas as pd
+
+from numpy import ndarray
 
 default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
@@ -433,7 +434,7 @@ class LastFm2Pandas():
                 ndarray containing corresponding tids
         '''
 
-        if isinstance(tid_num, (int, np.int)):
+        if isinstance(tid_num, int):
             return self.tids.at[tid_num, 'tid']
 
         return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
@@ -456,7 +457,7 @@ class LastFm2Pandas():
                 corresponding list of tag_nums
         '''
         
-        if isinstance(tid_num, (int, np.int)):
+        if isinstance(tid_num, int):
             return self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values
 
         tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
@@ -481,7 +482,7 @@ class LastFm2Pandas():
 
         tag_nums = self.tid_num_to_tag_nums(tid_num)
 
-        if isinstance(tag_nums, (list, np.ndarray)):
+        if isinstance(tag_nums, (list, ndarray)):
             return self.tag_num_to_tag(tag_nums)
 
         return tag_nums.map(self.tag_num_to_tag)
@@ -503,7 +504,7 @@ class LastFm2Pandas():
                 ndarray containing corresponding tags
         '''
 
-        if isinstance(tag_num, (int, np.int)):
+        if isinstance(tag_num, int):
             return self.tags.at[tag_num, 'tag']
 
         return self.tags.loc[self.tags.index.isin(tag_num), 'tag'].values
@@ -569,7 +570,7 @@ class LastFm2Pandas():
 
         tags = self.tid_num_to_tags(self.tid_to_tid_num(tid))
 
-        if isinstance(tags, (list, np.ndarray)):
+        if isinstance(tags, (list, ndarray)):
             return tags
 
         return tags.rename(self.tid_num_to_tid)
