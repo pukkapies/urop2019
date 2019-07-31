@@ -94,7 +94,7 @@ class LastFm:
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, path):
+    def __init__(self, path = default):
         self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
     
