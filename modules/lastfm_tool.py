@@ -190,6 +190,58 @@ def set_txt_path(new_path):
     global txt_path
     txt_path = os.path.normpath(new_path)
 
+def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], percentage_list=[90, 90, 90, 80]):
+    '''Generate a txt file with a list of tags for each of the vocal tag 
+    filtered by percentile() that can be used to manually select merging tags
+    for each tag in tag_list.
+    
+    Parameters
+    ----------
+    df: pd.DataFrame
+        The popularity dataframe.
+        
+    tag_list: list
+        The list of vocal tags that will be considered.
+        
+    percentage_list: list
+        The percentage considered for each tag in the tag_list. The tags that
+        is within the percentage will be output in the corresponding txt file 
+        for each tag.
+        
+    Outputs
+    -------
+    A txt file for each of the tags in the tag_list. Each txt file consists of 
+    all the tags filtered based on percentage_list. Please see the note printed after 
+    the function is run for instructions on how to work with the produced txt 
+    file.
+    '''
+    
+    def generate_txt(df, tag, perc):
+        df_thr = df[df['tag'].str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
+        df_thr = percentile(df_thr, perc=perc).tag.tolist()
+        with open(os.path.join(txt_path, tag+'_list.txt'), 'w', encoding='utf8') as f:
+            for item in df_thr:
+                f.write("%s\n" % item)
+    
+    if len(tag_list) != len(percentage_list):
+        raise ValueError('length of tag_list is unequal to length of percentage_list')
+    
+    for idx in range(len(tag_list)):
+        generate_txt(df, tag_list[idx], percentage_list[idx])
+
+    message = \
+    """Please deselect tags from generated txts by putting a "-" sign at\
+the front of the term, or other symbol by adjusting the indicator\
+input variable in the generate_vocal_df() function.\n \
+E.g. If you want to deselect "female", replace "female" with\
+"-female". Finally, please rename the output files by adding a\
+suffix "_filtered" to the filename and save the files under the same\
+directory as the variable - txt_path . E.g.\
+save the filtered "female_list.txt" as "female_list_filtered.txt".
+"""
+
+    print(message)
+
 def clean_1(tag):
     '''Remove all non alphabet and number characters of the input string.
     
@@ -952,62 +1004,6 @@ def percentile(df, perc=90):
         else:
             return df.iloc[:i,]
 
-def generate_vocal_txt(popularity: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], perc_list=[90, 90, 90, 80]):
-    '''Generate a txt file with a list of tags for each of the vocal tag 
-    filtered by percentile() that can be used to manually select merging tags
-    for each tag in tag_list.
-    
-    Parameters
-    ----------
-    csv_from_db: bool
-        If True, the lastfm_tags.db will be converted to csv in order to 
-        produce the popularity dataframe.
-        
-    tag_list: list
-        A list of vocal tags that will be considered.
-        
-    perc_list: list
-        The percentage considered for each tag in the tag_list. The tags that
-        is within the percentage will be output in the corresponding txt file 
-        for each tag.
-        
-    Outputs
-    -------
-    A txt file for each of the tags in the tag_list. Each txt file consists of 
-    all the tags filtered based on perc_list. Please see the note printed after 
-    the function is run for instructions on how to work with the produced txt 
-    file.
-    
-    '''
-    
-    df = popularity.copy()
-    
-    def generate_txt(df, tag, perc):
-        df_thr = df[df['tag'].str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
-        df_thr = percentile(df_thr, perc=perc).tag.tolist()
-        with open(os.path.join(txt_path, tag+'_list.txt'), 'w', encoding='utf8') as f:
-            for item in df_thr:
-                f.write("%s\n" % item)
-    
-    if len(tag_list) != len(perc_list):
-        raise ValueError('length of tag_list is unequal to length of perc_list')
-    
-    for idx in range(len(tag_list)):
-        generate_txt(df, tag_list[idx], perc_list[idx])
-
-    message = \
-    """Please deselect tags from generated txts by putting a "-" sign at\
-the front of the term, or other symbol by adjusting the indicator\
-input variable in the generate_vocal_df() function.\n \
-E.g. If you want to deselect "female", replace "female" with\
-"-female". Finally, please rename the output files by adding a\
-suffix "_filtered" to the filename and save the files under the same\
-directory as the variable - txt_path . E.g.\
-save the filtered "female_list.txt" as "female_list_filtered.txt".
-"""
-          
-    print(message)
-
 def generate_vocal_df(indicator='-', 
                       tag_list = ['female', 'instrumental', 'male', 'rap']):
     '''Return a dataframe based on the manually-filtered txt files provided for
@@ -1100,12 +1096,11 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
         If True, print progress.
         
     pre_drop_list_filename: str
-        The filename of the txt file that stores the information of whether
-        a tag is considered as a genre tag. You may download the document
-        on Github, or produce one using generate_non_genre_droplist_txt(). 
+        The filename of the txt file that stores the information of whether a tag is considered as a genre tag. 
+        You may download the document on GitHub, or produce one using generate_non_genre_droplist_txt(). 
         For more details please refer to the function documentation of 
-        generate_non_genre_droplist_txt(). NOTE that the file should be saved
-        under the directory specified by the variable txt_path.
+        generate_non_genre_droplist_txt(). The file should be saved
+        under the directory specified by txt_path.
         
     combine_list: list of list
         Each sublist contains a set of tags that will be combined by the 
