@@ -1130,7 +1130,7 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
     if lastfm is not None:
         df = lastfm.popularity()
     else:
-        assert len(from_csv_path_split) = 3
+        assert len(from_csv_path_split) == 3
         lastfm = db.LastFm2Pandas.from_csv(from_csv_path, from_csv_path_split)
         df = lastfm.popularity()
     
