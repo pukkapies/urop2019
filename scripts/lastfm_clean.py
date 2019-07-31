@@ -199,6 +199,8 @@ if __name__ == "__main__":
         lf_tool.set_output_path(args.supp_txt_path)
     
     df = lf_tool.generate_final_df(lastfm)
+    df.reset_index(drop=True, inplace=True) # shouldn't be needed to reset_index... this only adds extra safety
+    df.index += 1
 
     assert all(df.columns == ['tag', 'merge_tags'])
 
