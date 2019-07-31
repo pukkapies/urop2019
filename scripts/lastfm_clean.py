@@ -203,7 +203,7 @@ if __name__ == "__main__":
     assert all(df.columns == ['tag', 'merge_tags'])
 
     # generate tables which will go into output database
-    tags = df['tag']
+    tags = df['tag'].srt.lower()
     print('Matching all tags to the "clean" few ones...', end=' ', flush=True)
     tag_tag = create_tag_tag_table(lastfm, df)
     print('done')
