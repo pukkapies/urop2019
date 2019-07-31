@@ -1049,9 +1049,7 @@ def percentile(df, perc=90):
     
     
 
-def generate_vocal_txt(csv_from_db=False,
-                       tag_list = ['female', 'instrumental', 'male', 'rap'],
-                       perc_list=[90, 90, 90, 80]):
+def generate_vocal_txt(popularity: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], perc_list=[90, 90, 90, 80]):
     '''Generate a txt file with a list of tags for each of the vocal tag 
     filtered by percentile() that can be used to manually select merging tags
     for each tag in tag_list.
@@ -1079,7 +1077,7 @@ def generate_vocal_txt(csv_from_db=False,
     
     '''
     
-    df = popularity(csv_from_db=csv_from_db)
+    df = popularity.copy()
     
     def generate_txt(df, tag, perc):
         df_thr = df[df['tag'].str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
