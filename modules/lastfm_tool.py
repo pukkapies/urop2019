@@ -83,6 +83,17 @@ Functions
 - set_txt_path
     Set the output path to any csv files that will be saved, and the path of
     all the supplementary txt files.
+    
+- generate_non_genre_droplist_txt
+    Generate a txt file with a list of tags above the threshold that can be used
+    to manually filter out non-genre tags. You may use this function to 
+    generate a txt file for genre tagsif you do not want to use the 
+    corresponding txt file on Github.
+    
+- generate_vocal_txt
+    Generate a txt file with a list of tags for each of the vocal tag filtered
+    by percentile(). You may use this function to generate txt files for 
+    vocal tags if you do not want to use the corresponding txt files on Github.
 
 - clean_1
     Remove all non alphabet and number characters of the input string.
@@ -134,12 +145,6 @@ Functions
     Merge two or more output dataframes and ensure no overlappings between the
     tag column and the merge_tag column.
 
-- generate_non_genre_droplist_txt
-    Generate a txt file with a list of tags above the threshold that can be used
-    to manually filter out non-genre tags. You may use this function to 
-    generate a txt file for genre tagsif you do not want to use the 
-    corresponding txt file on Github.
-
 - generate_genre_df
     Combine all genre related tools and various cleaning methods to generate a 
     clean dataframe of genre with no overlappings between tag and merge_tags 
@@ -149,11 +154,6 @@ Functions
     Return a dataframe with subset of tags (descending order) of the input 
     dataframe which accounts for a certain percentage of the total count of 
     all the tags.
-    
-- generate_vocal_txt
-    Generate a txt file with a list of tags for each of the vocal tag filtered
-    by percentile(). You may use this function to generate txt files for 
-    vocal tags if you do not want to use the corresponding txt files on Github.
 
 - generate_vocal_df
     Return a dataframe based on the manually-filtered txt files provided for
@@ -557,8 +557,7 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
         unique, provided that the df_input satisfies this condition.
     '''
 
-    assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
-    
+ assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
     df = df_input.copy()
     
     list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
@@ -727,11 +726,9 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
 
     assert all([True if col in df_output.columns else False for col in ['tag', 'merge_tags']])
     assert all([True if col in df_input.columns else False for col in ['tag', 'count']])
-
     df = df_input.copy()
     df['tag'] = df['tag'].astype('str')
     df['tag_sub'] = df['tag'].apply(search_method)
-
     if remove_plural:
         df['tag_sub'] = df['tag_sub'].apply(check_plural)
     
@@ -739,27 +736,29 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         search_tags_list = df_output.tag.tolist()
     
     tot = len(search_tags_list)
-    if sub_threshold is not None:
-        bool1 = df['count']>=sub_threshold
+    if min_count is not None:
+        bool1 = df['count']>=min_count
     else:
         bool1 = df['count']>=0
     
+    
     for num, tag in enumerate(search_tags_list):
         
-        # remove non-word characters
+        #remove non-word characters
         tag_sub = search_method(tag)
         if remove_plural:
             tag_sub = check_plural(tag_sub)
             
-        # query
+        #query
         search = r'^'+tag_sub+r'$'
             
-        # get list of tags that will be merged (tag such that its 'pure' form matches with tag_sub)
+        #get list of tags that will be merged (tag such that its 'pure' form 
+        # matches with tag_sub)
         bool2 = df['tag_sub'].str.findall(search, re.IGNORECASE).str.len()>0
             
         merge_tags = df[(bool1 & bool2)]['tag'].tolist()
-        merge_tags = [item for item in merge_tags if item != tag] 
-            
+  
+        #tag will be removed from merge_tags in the add_tags function        
         df_output = add_tags(df_output, merge_tags, tag, False)
             
         if verbose:
@@ -912,7 +911,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     # generate empty dataframe structure
     df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
     
-    df_filter = search_genre(df, df_output, search_method=clean_1, search_tags_list=None,
+    df_filter = search_genre(df, df_output, search_method=clean_1,
                              sub_threshold=sub_threshold, verbose=verbose)
     
     print('Genre-Step 3/7  --cleaning_2')
@@ -1003,28 +1002,24 @@ def generate_vocal_df(indicator='-',
         in the 'merge_tags' and 'tag' columns altogether are unique.
     '''
     
-    def load_txt(filename):
-        path = os.path.join(txt_path, filename)
+    print('Vocal-Step 1/1')
+    merge_tags_list=[]
+    
+    for filename in tag_list:
+        path = os.path.join(txt_path,filename+'_list_filtered.txt')
     
         tags = []
         with open(path, 'r', encoding='utf8') as f:
             for item in f:
                 if ((item[0]!=indicator) and (not item.isspace()) and (item!='')):
                     tags.append(item.rstrip('\n'))
-        return tags
-    
-    print('Vocal-Step 1/1')
-    merge_tags_list=[]
-    
-    for filename in tag_list:
-        tags= load_txt(filename+'_list_filtered.txt')
 
         
         if filename in tags:
             tags.remove(filename)
             
         merge_tags_list.append(tags)
-
+        
     df_filter =  pd.DataFrame({'tag':tag_list, 'merge_tags':merge_tags_list})
     
     print('Vocal--Done')
