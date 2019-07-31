@@ -31,7 +31,6 @@ Functions
 import argparse
 import ast
 import os
-import sqlite3
 import sys
 
 import pandas as pd
@@ -40,7 +39,6 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
 import query_lastfm as q_fm
-import lastfm_tool as lf
 
 def flatten(df: pd.DataFrame):
     ''' Produce a dataframe with the following columns: 'tag', 'new_tag_num'.
@@ -84,12 +82,12 @@ def flatten(df: pd.DataFrame):
     output = pd.DataFrame(data={'tag': tags, 'new_tag_num': tags_nums})
     return output
 
-def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
+def flatten_to_tag_num(db: q_fm.LastFm, df: pd.DataFrame):
     ''' Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. The tags in the tag column in flatten() are substituted by their original tag nums.
     
     Parameters
     ----------
-    db : db.LastFm, db.LastFm2Pandas
+    db : q_fm.LastFm, q_fm.LastFm2Pandas
         Any instance of the tags database.
 
     df : pd.DataFrame
@@ -97,7 +95,7 @@ def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
     '''
 
     output = flatten(df)
-    output['tag'] = output['tag'].map(db.tag_to_tag_num)
+    output['tag'] = output['tag'].map(q_fm.tag_to_tag_num)
     output.columns = ['tag_num', 'new_tag_num']
 
     # append row of 0's at the top
@@ -106,13 +104,13 @@ def flatten_to_tag_num(db: db.LastFm, df: pd.DataFrame):
     output = output.append(nul, verify_integrity=True).sort_index()
     return output
 
-def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
+def create_tag_tag_table(db: q_fm.LastFm, df: pd.DataFrame):
     '''
     Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
     
     Parameters
     ----------
-    db : db.LastFm, db.LastFm2Pandas
+    db : q_fm.LastFm, q_fm.LastFm2Pandas
         Any instance of the tags database.
 
     df : pd.DataFrame
@@ -132,7 +130,7 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     flat = flat.set_index('tag_num', verify_integrity=True).sort_index()
     
     # fetch the tag num's from the original database
-    tag_tag = pd.Series(db.get_tag_nums())
+    tag_tag = pd.Series(q_fm.get_tag_nums())
     tag_tag.index += 1
 
     # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
@@ -142,13 +140,13 @@ def create_tag_tag_table(db: db.LastFm, df: pd.DataFrame):
     tag_tag = tag_tag.map(loc_except)
     return tag_tag
 
-def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
+def create_tid_tag_table(db: q_fm.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
     '''
     Produce a dataframe with the following columns: 'tid', 'tag'. 
 
     Parameters
     ----------
-    db : db.LastFm, db.LastFm2Pandas
+    db : q_fm.LastFm, q_fm.LastFm2Pandas
         Any instance of the tags database.
 
     tag_tag : pd.DataFrame
@@ -160,11 +158,11 @@ def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold
     
     # fetch the tids from the original database, and map the tags to their correspondent 'clean' tags
     if tid_tag_threshold is not None:
-        tid_tag = db.fetch_all_tids_tags_threshold(tid_tag_threshold)
+        tid_tag = q_fm.fetch_all_tids_tags_threshold(tid_tag_threshold)
     else:
-        tid_tag = db.fetch_all_tids_tags()
+        tid_tag = q_fm.fetch_all_tids_tags()
     
-    if not isinstance(tid_tag, pd.DataFrame): # type(tid_tag) varies depending on whether db.LastFm or db.LastFm2Pandas is being used
+    if not isinstance(tid_tag, pd.DataFrame): # type(tid_tag) varies depending on whether q_fm.LastFm or q_fm.LastFm2Pandas is being used
         tids = [tup[0] for tup in tid_tag]
         tags = [tup[1] for tup in tid_tag]
         tid_tag = pd.DataFrame(data={'tid': tids, 'tag': tags}).sort_values('tid')
@@ -182,27 +180,38 @@ def create_tid_tag_table(db: db.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold
 
 if __name__ == "__main__":
 
+    import lastfm_tool as lf_tool
+
     description = "Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track."
     epilog = "Example: python clean_lastfm.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="input db filename or path")
+    parser.add_argument("input", help="input db filename or path, or csv folder path")
     parser.add_argument("output", help="output db filename or path")
     parser.add_argument('--val-thresh', dest='val', type=float, help="discard tags with val less than threshold")
-    parser.add_argument('--supp-txt-path', default='/srv/data/urop/supplimentary_txt_files' help="Path to supplimentary txt folder")
+    parser.add_argument('--supp-txt-path', help="path to supplementary txt folder")
     
     args = parser.parse_args()
     
+    # if user provided a csv folder, load csv into LastFm2Pandas; otherwise, load db into LastFm
+    if os.path.isdir(args.input):
+        lastfm = q_fm.LastFm2Pandas.from_csv(args.input)
+    else:
+        lastfm = q_fm.LastFm(args.input)
+
+    # check if output ends with db extension
     if args.output[-3:] != '.db':
         args.output += '.db'
 
+    # check if output already exists
     if os.path.isfile(args.output):
        print("WARNING file " + args.output + " already exists!")
        sys.exit(0)
-
-    lastfm = q_fm.LastFm2Pandas.from_csv('~/Desktop/')
-
-    lf.set_output_path(args.supp_txt_path)
-    df = lf.generate_final_df(lastfm)
+    
+    # check if different txt path has been provided
+    if args.supp_txt_path:
+        lf_tool.set_output_path(args.supp_txt_path)
+    
+    df = lf_tool.generate_final_df(lastfm)
 
     assert all(df.columns == ['tag', 'merge_tags'])
 
