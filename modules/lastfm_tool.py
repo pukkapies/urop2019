@@ -852,7 +852,7 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
             
         if verbose:
             if (num+1)%10==0:
-                print('processed {} out of {} tags'.format(num+1, tot))
+                print('    Processed {} out of {} tags...'.format(num+1, tot))
                 
     return df_output
 
