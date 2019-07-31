@@ -567,7 +567,7 @@ def remove_tag(df_input, tag):
 
 
 def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=None, 
-                 min_count=10, verbose=True, remove_plural=True):
+                 sub_threshold=10, verbose=True, remove_plural=True):
     
     '''Extend a given dataframe (df_output) for list of tags supplied by a list 
     (search_tags_list) by searching through the tags in the third dataframe 
@@ -619,10 +619,10 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         that a search will be run on. None that f search_tags_list is not None, threshold 
         will have no effect.
         
-    min_count: int
-        Only the tags with count greater than or equal to min_count in the
-        df_input dataframe will be in the search pool. If min_count=None, 
-        min_count is assumed to be zero.
+    sub_threshold: int
+        Only the tags with count greater than or equal to sub_threshold in the
+        df_input dataframe will be in the search pool. If sub_threshold=None, 
+        sub_threshold is assumed to be zero.
         
     verbose: bool
         If True, print progress.
@@ -641,7 +641,7 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         parameters above. Each search works by converting all the tags based
         on the cleaning_method, and remove_plural into new set of tags. Note
         that each search ignores lower case or upper case. Each search is done 
-        by using the pool of tags provided by df_input, restricted by min_count.
+        by using the pool of tags provided by df_input, restricted by sub_threshold.
         
         2. The algorithm then use the add_tags() functions to integrate the
         search list into df_output for each tag a search is run on.
@@ -663,8 +663,8 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         search_tags_list = df_output.tag.tolist()
     
     tot = len(search_tags_list)
-    if min_count is not None:
-        bool1 = df['count']>=min_count
+    if sub_threshold is not None:
+        bool1 = df['count']>=sub_threshold
     else:
         bool1 = df['count']>=0
     
@@ -810,7 +810,7 @@ variable - txt_path
 
     print(message)
 
-def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, min_count: int = 200, verbose=True, drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
+def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_threshold: int = 200, verbose=True, drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
     
     '''Combine all genre related tools and various cleaning methods to generate a 
     clean dataframe of genre with no overlappings between tag and merge_tags 
@@ -827,9 +827,9 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, min_count
         Searches will be run on tags with count above or equal to the 
         threshold.
         
-    min_count: int
-        Only the tags with count greater than or equal to min_count in the
-        will be in the search pool. If min_count=None, min_count is assumed to 
+    sub_threshold: int
+        Only the tags with count greater than or equal to sub_threshold in the
+        will be in the search pool. If sub_threshold=None, sub_threshold is assumed to 
         be zero.
         
     verbose: bool
@@ -887,34 +887,34 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, min_count
     df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
     
     df_filter = search_genre(df, df_output, search_method=clean_1, search_tags_list=None,
-                             min_count=min_count, verbose=verbose)
+                             sub_threshold=sub_threshold, verbose=verbose)
     
     print('Genre-Step 3/7  --cleaning_2')
     
     search_tags_list = search_matching_items(search_tags_list, r'.*&.*')
 
     df_filter = search_genre(df, df_filter, search_method=clean_2, 
-                             min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
+                             sub_threshold=sub_threshold, search_tags_list=search_tags_list, verbose=verbose)
     print('Genre-Step 4/7  --cleaning_3')
     df_filter = search_genre(df, df_filter, search_method=clean_3,
-                             min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
+                             sub_threshold=sub_threshold, search_tags_list=search_tags_list, verbose=verbose)
     
     print('Genre-Step 5/7  --cleaning_4')
     search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     search_tags_list = search_matching_items(search_tags_list, r'.* and .*')
     df_filter = search_genre(df, df_filter, search_method=clean_4,
-                             min_count=min_count, search_tags_list=search_tags_list, verbose=verbose)
+                             sub_threshold=sub_threshold, search_tags_list=search_tags_list, verbose=verbose)
     
     print('Genre-Step 6/7  --cleaning_5')
     search_tags_list = df['tag'][df['count'] >= threshold].tolist()
     search_tags_list = search_matching_items(search_tags_list, r'\b\d0s')
     df_filter =  search_genre(df, df_filter, search_method=clean_5,
-                              min_count=min_count, search_tags_list=search_tags_list, 
+                              sub_threshold=sub_threshold, search_tags_list=search_tags_list, 
                               remove_plural=False, verbose=verbose)
     
     print('Genre-Step 7/7  --cleaning_6')
     df_filter =  search_genre(df, df_filter, search_method=clean_6,
-                              min_count=min_count, search_tags_list=search_tags_list, 
+                              sub_threshold=sub_threshold, search_tags_list=search_tags_list, 
                               remove_plural=False, verbose=verbose)
     
     print('Genre--Done')
@@ -1062,8 +1062,8 @@ def generate_vocal_df(indicator='-',
     print('Vocal--Done')
     return df_filter
 
-def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'],
-                       min_count=10, verbose=True, threshold=2000,
+def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], 
+                       verbose=True, threshold=2000, sub_threshold=100,
                        pre_drop_list_filename='non_genre_list_filtered.txt',
                        combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], 
                        drop_list=['2000', '00', '90', '80', '70', '60'],
@@ -1075,18 +1075,26 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
     
     Parameters
     ----------
-    csv_from_db: bool
-        If True, the lastfm_tags.db will be converted to csv in order to 
-        produce the popularity dataframe.
+    lastfm: db.LastFm, db.LastFm2Pandas
+        Instance of the database class to produce the popularity dataframe.
+
+    from_csv_path: str
+        If an instance of the database class is not available, create a new instance
+        from scratch given a set of csv files located in from_csv_path. 
+    
+    from_csv_path_split: list
+        If an instance of the database class is not available, create a new instance
+        from scratch given a set of csv files located in from_csv_path, with filename
+        contained in from_csv_path_split (expecting a list of 3 filenames).
         
     threshold: int
-        Searches will be run on tags with count above or equal to the 
-        threshold for genre tags.
+        Only the tags with count greater than or equal to threshold in the popularity df
+        will be searched through.
         
-    min_count: int
-        Only the tags with count greater than or equal to min_count in the
-        will be in the search pool for genre tag. If min_count=None, min_count 
-        is assumed to be zero.
+    sub_threshold: int
+        Only the tags with count greater than or equal to sub_threshold in the popularity df
+        will be in the search pool for genre tag. 
+        If sub_threshold=None, sub_threshold is assumed to be zero.
         
     verbose: bool
         If True, print progress.
@@ -1155,12 +1163,13 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
     if lastfm is not None:
         df = lastfm.popularity()
     else:
+        assert len(from_csv_path_split) = 3
         lastfm = db.LastFm2Pandas.from_csv(from_csv_path, from_csv_path_split)
         df = lastfm.popularity()
     
     vocal = generate_vocal_df(indicator=vocal_indicator)
     genre = generate_genre_df(popularity=df, threshold=2000,
-                              min_count=min_count, verbose=verbose,
+                              sub_threshold=sub_threshold, verbose=verbose,
                               drop_list_filename=pre_drop_list_filename,
                               indicator=genre_indicator)
     
