@@ -98,9 +98,9 @@ class LastFm:
         if not os.path.isfile(path):
             print("WARNING file " + path + " does not exist!")
             sys.exit(0)
-        else:
-            self.conn = sqlite3.connect(path)
-            self.c = self.conn.cursor()
+
+        self.conn = sqlite3.connect(path)
+        self.c = self.conn.cursor()
     
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
