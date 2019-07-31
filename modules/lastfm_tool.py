@@ -48,9 +48,9 @@ categories are:
         selection can be done by following the instruction provided printed
         after the generate_non_genre_droplist_txt() is run. Alternatively, you 
         may download the non_genre_list_filtered.txt list directly on Github 
-        and save them in the output_path directory.
+        and save them in the txt_path directory.
         After the selection, by adjusting the parameters in the 
-        generate_final_csv() and run it, a clean dataset consisting of genre
+        generate_final_df() and run it, a clean dataset consisting of genre
         and vocal tags are generated.
         If after inspecting the generated dataframe you wish to add, 
         combine, drop tags or merge datasets, you may use the 
@@ -65,9 +65,9 @@ categories are:
         tags, a manual selection can be done by following the instruction
         provided printed after the generation_vocal_txt() function is run. 
         Alternatively, you may download the four txt files on Github and save 
-        them in the output_path directory.
+        them in the txt_path directory.
         After the selection, by adjusting the parameters in the 
-        generate_final_csv() and run it, a clean dataset consisting of genre
+        generate_final_df() and run it, a clean dataset consisting of genre
         and vocal tags is generated.
         
         
@@ -80,22 +80,9 @@ convert the elements in the columns from str to list.
 
 Functions
 ---------
-- set_path
-    Set path to the lastfm_tags.db.
-    
-- set_output_path
+- set_txt_path
     Set the output path to any csv files that will be saved, and the path of
     all the supplementary txt files.
-    
-- db_to_csv
-    Convert lastfm_tags.db into three different csv files.
-
-- insert_index
-    Insert tags and TID index to dataframes generated from lastfm_tags.db.
-
-- popularity
-    Generate the popularity dataset. For more details, see function 
-    description.
 
 - clean_1
     Remove all non alphabet and number characters of the input string.
@@ -172,7 +159,7 @@ Functions
     Return a dataframe based on the manually-filtered txt files provided for
     each of the vocal tags.
 
-- generate_final_csv
+- generate_final_df
     Combine all the tools and generate the final dataframe consisting of 
     merging tags for each genre tag and vocal tag respectively.
 
@@ -189,9 +176,9 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 
 import query_lastfm as db
 
-output_path = '/srv/data/urop'
+txt_path = '/srv/data/urop'
     
-def set_output_path(new_path):
+def set_txt_path(new_path):
     '''Set new_path as default path for opening all the supplementary txt files, and the output path
     of any csvs files.
     
@@ -200,8 +187,8 @@ def set_output_path(new_path):
     new_path:
         path of the form /xxx/xx/xx .'''
         
-    global output_path
-    output_path = os.path.normpath(new_path)
+    global txt_path
+    txt_path = os.path.normpath(new_path)
 
 def clean_1(tag):
     '''Remove all non alphabet and number characters of the input string.
@@ -220,8 +207,6 @@ def clean_1(tag):
     
     tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
     return tag_sub
-
-
 
 def clean_2(tag):
     '''Remove all non alphabet and number characters except '&' of the input 
@@ -243,7 +228,6 @@ def clean_2(tag):
     tag_sub = re.sub('&', 'n', tag_sub)
     return tag_sub
 
-
 def clean_3(tag):
     '''Remove all non alphabet and number characters except '&' of the input 
     string, then replace '&' with 'and'.
@@ -264,7 +248,6 @@ def clean_3(tag):
     tag_sub = re.sub('&', 'and', tag_sub)
     return tag_sub
 
-
 def clean_4(tag):
     '''Replace ' and ' with 'n', then remove all non alphabet and number 
     characters of the input string.
@@ -284,7 +267,6 @@ def clean_4(tag):
     tag_sub = re.sub(' and ', 'n', tag)
     tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag_sub)
     return tag_sub
-
 
 def clean_5(tag):
     '''Replace any 'x0s' string with '19x0s'.
@@ -324,8 +306,6 @@ def clean_6(tag):
     tag_sub = re.sub(r'[^A-Za-z0-9]', '', tag)
     tag_sub = re.sub(r'\b\d0s', lambda x:'20'+x.group(), tag_sub)
     return tag_sub
-    
-
 
 def check_plural(x):
     '''Remove the trailing character 's' of the input string if its trailing part
@@ -352,9 +332,7 @@ def check_plural(x):
     
     else:
         return x
-    
-    
-    
+
 def check_overlap(df_input):
     '''Check if there are any repeated tags in the merge_tags column of a dataframe.
     
@@ -404,7 +382,6 @@ def check_overlap(df_input):
         df = df.drop(overlapped_idx_list)
         
     return df
-                
 
 def combine_tags(df_input, list_of_tags, merge_idx=None):
     '''Combine given tags which exist in the tag column.
@@ -622,7 +599,7 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
             
             For example:
         
-            search_tags_list = df_input[df_input.count>=threshold]
+            search_tags_list = df_input[df_input['count']>=threshold]
         
             df_output = pd.DataFrame({'tag':search_tags_list['tag'].tolist(), 'merge_tags':[[]]*len(search_tags_list)})
         
@@ -817,7 +794,7 @@ def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
     
     tag_list = df['tag'][df['count'] >= threshold].tolist()
 
-    with open(os.path.join(output_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
+    with open(os.path.join(txt_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
         for tag in tag_list:
             f.write("%s\n" % tag)
             
@@ -828,7 +805,7 @@ input variable in the generate_genre_df() function.\n \
 E.g. If you want to deselect "rock", replace "rock" with\
 "-rock". Finally, please rename the output files as 
 "non_genre_list_filtered.txt" and save it under the same directory as the 
-variable - output_path
+variable - txt_path
 """
 
     print(message)
@@ -864,7 +841,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, min_count
         on Github, or produce one using generate_non_genre_droplist_txt(). 
         For more details please refer to the function documentation of 
         generate_non_genre_droplist_txt(). NOTE that the file should be saved
-        under the directory specified by the variable output_path.
+        under the directory specified by the variable txt_path.
         
     indicator: str (one character)
         A special symbol used at the front of some tags in 
@@ -890,7 +867,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, min_count
         return output_list
     
     print('Genre progress 1/7  --dropping tags')
-    txt_path = os.path.join(output_path, drop_list_filename)
+    txt_path = os.path.join(txt_path, drop_list_filename)
     drop_list = []
     with open(txt_path, 'r', encoding='utf8') as f:
         for item in f:
@@ -1008,7 +985,7 @@ def generate_vocal_txt(popularity: pd.DataFrame, tag_list = ['female', 'instrume
     def generate_txt(df, tag, perc):
         df_thr = df[df['tag'].str.findall(r'\b'+tag, re.IGNORECASE).str.len()>0]
         df_thr = percentile(df_thr, perc=perc).tag.tolist()
-        with open(os.path.join(output_path, tag+'_list.txt'), 'w', encoding='utf8') as f:
+        with open(os.path.join(txt_path, tag+'_list.txt'), 'w', encoding='utf8') as f:
             for item in df_thr:
                 f.write("%s\n" % item)
     
@@ -1025,7 +1002,7 @@ input variable in the generate_vocal_df() function.\n \
 E.g. If you want to deselect "female", replace "female" with\
 "-female". Finally, please rename the output files by adding a\
 suffix "_filtered" to the filename and save the files under the same\
-directory as the variable - output_path . E.g.\
+directory as the variable - txt_path . E.g.\
 save the filtered "female_list.txt" as "female_list_filtered.txt".
 """
           
@@ -1057,7 +1034,7 @@ def generate_vocal_df(indicator='-',
     '''
     
     def load_txt(filename):
-        txt_path = os.path.join(output_path, filename)
+        txt_path = os.path.join(txt_path, filename)
     
         tags = []
         with open(txt_path, 'r', encoding='utf8') as f:
@@ -1085,7 +1062,7 @@ def generate_vocal_df(indicator='-',
     print('Vocal--Done')
     return df_filter
 
-def generate_final_csv(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'],
+def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'],
                        min_count=10, verbose=True, threshold=2000,
                        pre_drop_list_filename='non_genre_list_filtered.txt',
                        combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], 
@@ -1120,7 +1097,7 @@ def generate_final_csv(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pa
         on Github, or produce one using generate_non_genre_droplist_txt(). 
         For more details please refer to the function documentation of 
         generate_non_genre_droplist_txt(). NOTE that the file should be saved
-        under the directory specified by the variable output_path.
+        under the directory specified by the variable txt_path.
         
     combine_list: list of list
         Each sublist contains a set of tags that will be combined by the 
@@ -1143,7 +1120,7 @@ def generate_final_csv(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pa
         drop. Default '-'. For more details see documentaton on
         generate_vocal_txt() and generate_vocal_df(). Note that the txt files
         for the tags in tag_list should be saved under the same directory
-        as the variable 'output_path'.
+        as the variable 'txt_path'.
         
     add_list: list of list
         Each sublist contains the tags that will be added to the output 
