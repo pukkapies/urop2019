@@ -83,6 +83,11 @@ Functions
 - set_txt_path
     Set the output path to any csv files that will be saved, and the path of
     all the supplementary txt files.
+    
+- percentile
+    Return a dataframe with subset of tags (descending order) of the input 
+    dataframe which accounts for a certain percentage of the total count of 
+    all the tags.
 
 - generate_vocal_txt
     Generate a txt file with a list of tags for each of the vocal tags (filtered by percentile). 
@@ -143,11 +148,6 @@ Functions
     (search_tags_list) by searching through the tags in the third dataframe 
     (df_input) using the given cleaning method. For more details, see function 
     description.
-
-- percentile
-    Return a dataframe with subset of tags (descending order) of the input 
-    dataframe which accounts for a certain percentage of the total count of 
-    all the tags.
 
 - generate_vocal_df
     Return a dataframe based on the manually-filtered txt files provided for
@@ -851,8 +851,8 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         bool2 = df['tag_sub'].str.findall(search, re.IGNORECASE).str.len()>0
             
         merge_tags = df[(bool1 & bool2)]['tag'].tolist()
-        merge_tags = [item for item in merge_tags if item != tag] 
-            
+
+        # tag will be removed from merge_tags when add_tags() is run
         df_output = add_tags(df_output, merge_tags, tag, False)
             
         if verbose:
@@ -869,7 +869,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     
     Parameters
     ----------
-    df: pd.DataFrame
+    popularity: pd.DataFrame
         The popularity dataframe.
         Example:
         popularity = q_fm.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
