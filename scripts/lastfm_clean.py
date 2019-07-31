@@ -194,7 +194,7 @@ if __name__ == "__main__":
     
     # check if different txt path has been provided
     if args.supp_txt_path:
-        lf_tool.set_output_path(args.supp_txt_path)
+        lf_tool.set_txt_path(args.supp_txt_path)
     
     df = lf_tool.generate_final_df(lastfm)
     df.reset_index(drop=True, inplace=True) # shouldn't be needed to reset_index... this only adds extra safety
