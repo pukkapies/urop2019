@@ -86,7 +86,7 @@ def flatten_to_tag_num(lf: q_fm.LastFm, df: pd.DataFrame):
     
     Parameters
     ----------
-    db : q_fm.LastFm, q_fm.LastFm2Pandas
+    lf : q_fm.LastFm, q_fm.LastFm2Pandas
         Any instance of the tags database.
 
     df : pd.DataFrame
