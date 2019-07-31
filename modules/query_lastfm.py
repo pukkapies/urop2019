@@ -95,8 +95,12 @@ class LastFm:
     '''
 
     def __init__(self, path = default):
-        self.conn = sqlite3.connect(path)
-        self.c = self.conn.cursor()
+        if not os.path.isfile(path):
+            print("WARNING file " + path + " does not exist!")
+            sys.exit(0)
+        else:
+            self.conn = sqlite3.connect(path)
+            self.c = self.conn.cursor()
     
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
@@ -370,17 +374,21 @@ class LastFm2Pandas():
                 self.tid_tag.index += 1
         else:
             # read from database
-            conn = sqlite3.connect(from_sql)
-            if not no_tags:
-                self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
-                self.tags.index += 1
-            if not no_tids:
-                self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
-                self.tids.index += 1
-            if not no_tid_tag:
-                self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
-                self.tid_tag.index += 1
-            conn.close()
+            if not os.path.isfile(from_sql):
+                print("WARNING file " + from_sql + " does not exist!")
+                sys.exit(0)
+            else:
+                conn = sqlite3.connect(from_sql)
+                if not no_tags:
+                    self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
+                    self.tags.index += 1
+                if not no_tids:
+                    self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
+                    self.tids.index += 1
+                if not no_tid_tag:
+                    self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
+                    self.tid_tag.index += 1
+                conn.close()
 
     @classmethod
     def from_sql(cls, path=default, no_tags=False, no_tids=False, no_tid_tag=False):
