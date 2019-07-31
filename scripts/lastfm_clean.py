@@ -161,12 +161,6 @@ def create_tid_tag_table(lf: q_fm.LastFm, tag_tag: pd.DataFrame, tid_tag_thresho
     else:
         tid_tag = lf.fetch_all_tids_tags()
     
-    if not isinstance(tid_tag, pd.DataFrame): # type(tid_tag) varies depending on whether q_fm.LastFm or q_fm.LastFm2Pandas is being used
-        tids = [tup[0] for tup in tid_tag]
-        tags = [tup[1] for tup in tid_tag]
-        tid_tag = pd.DataFrame(data={'tid': tids, 'tag': tags}).sort_values('tid')
-        tid_tag.reset_index(drop=True, inplace=True)
-    
     col_1 = tid_tag['tid']
     col_2 = tid_tag['tag'].map(tag_tag)
 

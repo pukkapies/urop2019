@@ -72,6 +72,12 @@ class LastFm:
     - query_tags_dict
         Get a dict with tids as keys and a list of its tags as value.
 
+    - fetch_all_tids_tags
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table).
+        
+    - fetch_all_tids_tags_threshold
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold.
+
     - tid_tag_count
         Get a dict with tids as keys and its number of tags as value.
 
@@ -80,6 +86,9 @@ class LastFm:
 
     - tag_count
         Get a dict with the tags associated to tids as keys and their count number as values.
+    
+    - popularity
+        Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
     def __init__(self, path):
@@ -160,14 +169,14 @@ class LastFm:
 
         q = "SELECT tid, tag FROM tid_tag"
         self.query(q)
-        return self.c.fetchall()
+        return pd.DataFrame(data=self.c.fetchall(), columns=['tid', 'tag'])
 
     def fetch_all_tids_tags_threshold(self, threshold = 0):
         ''' Returns a list of tuples containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold. '''
 
         q = "SELECT tid, tag FROM tid_tag WHERE val > ?"
         self.query(q, threshold)
-        return self.c.fetchall()
+        return pd.DataFrame(data=self.c.fetchall(), columns=['tid', 'tag'])
 
     def query_tags(self, tid):
         ''' Gets tags for a given tid. '''
@@ -305,6 +314,12 @@ class LastFm2Pandas():
     - tid_to_tags
         Get tags for given tid(s).
 
+    - fetch_all_tids_tags
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table).
+        
+    - fetch_all_tids_tags_threshold
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold.
+
     - popularity
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
@@ -400,7 +415,7 @@ class LastFm2Pandas():
                 ndarray containing corresponding tids
         '''
 
-        if isinstance(tid_num, (int, np.integer)):
+        if isinstance(tid_num, int):
             return self.tids.at[tid_num, 'tid']
 
         return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
@@ -423,7 +438,7 @@ class LastFm2Pandas():
                 corresponding list of tag_nums
         '''
         
-        if isinstance(tid_num, (int, np.integer)):
+        if isinstance(tid_num, int):
             return self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values
 
         tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
@@ -446,7 +461,7 @@ class LastFm2Pandas():
                 ndarray containing corresponding tags
         '''
 
-        if isinstance(tag_num, (int, np.integer)):
+        if isinstance(tag_num, int):
             return self.tags.at[tag_num, 'tag']
 
         return self.tags.loc[self.tags.index.isin(tag_num), 'tag'].values
@@ -512,7 +527,7 @@ class LastFm2Pandas():
 
         tag_nums = self.tid_num_to_tag_nums(tid_num)
 
-        if isinstance(tag_nums, (list, np.ndarray)):
+        if isinstance(tag_nums, (list, pd.core.series.Series)):
             return self.tag_num_to_tag(tag_nums)
 
         return tag_nums.map(self.tag_num_to_tag)
@@ -537,10 +552,20 @@ class LastFm2Pandas():
         tid_num = self.tid_to_tid_num(tid)
         tags = self.tid_num_to_tags(tid_num)
 
-        if isinstance(tags, (list, np.ndarray)):
+        if isinstance(tags, (list, pd.core.series.Series)):
             return tags
 
         return tags.rename(self.tid_num_to_tid)
+
+    def fetch_all_tids_tags(self):
+        ''' Returns a list of tuples containing tids and tags (as they appear in the tid_tag table). '''
+
+        return self.tid_tag[['tid', 'tag']]
+
+    def fetch_all_tids_tags_threshold(self, threshold = 0):
+        ''' Returns a list of tuples containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold. '''
+
+        return self.tid_tag[['tid', 'tag']][self.tid_tag['val'] > threshold]
 
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
