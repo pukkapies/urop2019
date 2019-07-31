@@ -246,8 +246,7 @@ if __name__ == "__main__":
         output = args.output
 
     if os.path.isfile(output):
-       print("WARNING file " + output + " already exists!")
-       sys.exit(0)
+       raise OSError("file " + output + " already exists!")
 
     if args.path_h5:
         path_h5 = os.path.expanduser(args.path_h5)
@@ -261,9 +260,13 @@ if __name__ == "__main__":
     assert 'file_size' in df and 'clip_length' in df
 
     if args.path_db:
+        if not os.path.isfile(args.path_db):
+            raise OSError("file " + args.path_db + " does not exist!")
         lastfm = q_fm.LastFm(args.path_db)
     else:
-        lastfm = q_fm.LastFm()
+        if not os.path.isfile(q_fm.default):
+            raise OSError("file " + q_fm.default + " does not exist!")
+        lastfm = q_fm.LastFm(q_fm.default)
 
     df = ultimate_output(df, lastfm, args.discard_no_tag, args.discard_dupl)
     

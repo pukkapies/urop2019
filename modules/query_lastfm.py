@@ -94,7 +94,7 @@ class LastFm:
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, path = default):
+    def __init__(self, path):
         if not os.path.isfile(path):
             raise OSError("file " + path + " does not exist!")
 
