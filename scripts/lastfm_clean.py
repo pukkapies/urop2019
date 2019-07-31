@@ -16,7 +16,7 @@ module will work on the new db file as well.
 Functions
 ---------
 - flatten
-    Take the tag dataframe and flatten the tags of the merge-tags column into separate rows.
+    Take the tag dataframe and flatten the tags of the merge_tags column into separate rows.
 
 - flatten_to_tag_num
     Take the tag dataframe and flatten, then replace tag with tag nums from the original database, then add one row of 0's at the top of the output dataframe.
@@ -51,7 +51,7 @@ def flatten(df: pd.DataFrame):
     --------
     If the original df looks like...
 
-        |    tags        |  merge-tags
+        |    tags        |  merge_tags
     ---------------------------------------------
     1   |    rock        |  ['ROCK']
     2   |    pop         |  []
