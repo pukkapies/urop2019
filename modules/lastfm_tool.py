@@ -44,9 +44,9 @@ categories are:
         A threshold is set so that the tags from the lastfm_tags.db with 
         occurrences greater than or equal to the threshold will be kept. The 
         tags above the threshold can be returned by the 
-        generate_non_genre_droplist_txt() function as a text file. A manual
+        generate_genre_txt() function as a text file. A manual
         selection can be done by following the instruction provided printed
-        after the generate_non_genre_droplist_txt() is run. Alternatively, you 
+        after the generate_genre_txt() is run. Alternatively, you 
         may download the non_genre_list_filtered.txt list directly on Github 
         and save them in the txt_path directory.
         After the selection, by adjusting the parameters in the 
@@ -54,7 +54,7 @@ categories are:
         and vocal tags are generated.
         If after inspecting the generated dataframe you wish to add, 
         combine, drop tags or merge datasets, you may use the 
-        add_tags(), combine_tags(), remove_tag(), and merge_df() to manipulate
+        add_tags(), combine_tags(), remove(), and merge_df() to manipulate
         the final dataset.
         
     2. Vocal tags:
@@ -83,17 +83,17 @@ Functions
 - set_txt_path
     Set the output path to any csv files that will be saved, and the path of
     all the supplementary txt files.
-    
-- generate_non_genre_droplist_txt
-    Generate a txt file with a list of tags above the threshold that can be used
-    to manually filter out non-genre tags. You may use this function to 
-    generate a txt file for genre tagsif you do not want to use the 
-    corresponding txt file on Github.
-    
+
 - generate_vocal_txt
     Generate a txt file with a list of tags for each of the vocal tag filtered
     by percentile(). You may use this function to generate txt files for 
     vocal tags if you do not want to use the corresponding txt files on Github.
+
+- generate_genre_txt
+    Generate a txt file with a list of tags above the threshold that can be used
+    to manually filter out non-genre tags. You may use this function to 
+    generate a txt file for genre tagsif you do not want to use the 
+    corresponding txt file on Github.
 
 - clean_1
     Remove all non alphabet and number characters of the input string.
@@ -132,23 +132,18 @@ Functions
     appears simultaneously in two or more rows followed by combining the 
     overlapping tags in the merge_tags column.
 
-- remove_tag
+- remove
     Remove a given tag from the dataset.
+
+- merge_df
+    Merge two or more output dataframes and ensure no overlappings between the
+    tag column and the merge_tag column.
 
 - search_genre
     Extend a given dataframe (df_output) for list of tags supplied by a list 
     (search_tags_list) by searching through the tags in the third dataframe 
     (df_input) using the given cleaning method. For more details, see function 
     description.
-    
-- merge_df
-    Merge two or more output dataframes and ensure no overlappings between the
-    tag column and the merge_tag column.
-
-- generate_genre_df
-    Combine all genre related tools and various cleaning methods to generate a 
-    clean dataframe of genre with no overlappings between tag and merge_tags 
-    column and within the merge_tags column.
 
 - percentile
     Return a dataframe with subset of tags (descending order) of the input 
@@ -159,12 +154,16 @@ Functions
     Return a dataframe based on the manually-filtered txt files provided for
     each of the vocal tags.
 
+- generate_genre_df
+    Combine all the genre related tools and various cleaning methods to generate a 
+    clean dataframe of genre with no overlappings between tag and merge_tags 
+    column and within the merge_tags column.
+
 - generate_final_df
     Combine all the tools and generate the final dataframe consisting of 
     merging tags for each genre tag and vocal tag respectively.
-
-
 '''
+
 import numpy as np
 import os
 import pandas as pd
@@ -189,41 +188,6 @@ def set_txt_path(new_path):
         
     global txt_path
     txt_path = os.path.normpath(new_path)
-
-def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
-    '''Generate a txt file with a list of tags above the threshold that can be 
-    used to manually filter out non-genre tags.
-    
-    Parameters
-    ----------
-    threshold: int
-        Tags with count greater than or equal to the threshold will be stored 
-        as a txt file.
-        
-    csv_from_db: bool
-        If True, the lastfm_tags.db will be converted to csv in order to 
-        produce the popularity dataframe.
-        
-    Outputs
-    -------
-    txt file:
-        Consists of all the tags above or equal to the threshold.
-        Please see the note printed after the function is run for instructions
-        on how to work with the produced txt file.
-    '''
-    
-    tag_list = df['tag'][df['count'] >= threshold].tolist()
-
-    with open(os.path.join(txt_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
-        for tag in tag_list:
-            f.write("%s\n" % tag)
-            
-    message = """Please deselect tags from generated txts by putting a "-" sign at\
-                    the front of the term, or other symbol by adjusting the indicator\
-                    input variable in the generate_genre_df() function.\n \
-                    e.g. If you want to deselect "rock", replace "rock" with "-rock".\n \
-                    Please rename the output files as "non_genre_list_filtered.txt" and save in txt_path."""
-    print(message)
 
 def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], percentage_list=[90, 90, 90, 80]):
     '''Generate a txt file with a list of tags for each of the vocal tag 
@@ -269,6 +233,41 @@ def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', '
                     input variable in the generate_vocal_df() function.\n \
                     e.g. If you want to deselect "female", replace "female" with "-female".\n \
                     Please rename the output files by adding a suffix "_filtered" to the filename and save in txt_path."""
+    print(message)
+
+def generate_genre_txt(df: pd.DataFrame, threshold: int = 20000):
+    '''Generate a txt file with a list of tags above the threshold that can be 
+    used to manually filter out non-genre tags.
+    
+    Parameters
+    ----------
+    threshold: int
+        Tags with count greater than or equal to the threshold will be stored 
+        as a txt file.
+        
+    csv_from_db: bool
+        If True, the lastfm_tags.db will be converted to csv in order to 
+        produce the popularity dataframe.
+        
+    Outputs
+    -------
+    txt file:
+        Consists of all the tags above or equal to the threshold.
+        Please see the note printed after the function is run for instructions
+        on how to work with the produced txt file.
+    '''
+    
+    tag_list = df['tag'][df['count'] >= threshold].tolist()
+
+    with open(os.path.join(txt_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
+        for tag in tag_list:
+            f.write("%s\n" % tag)
+            
+    message = """Please deselect tags from generated txts by putting a "-" sign at\
+                    the front of the term, or other symbol by adjusting the indicator\
+                    input variable in the generate_genre_df() function.\n \
+                    e.g. If you want to deselect "rock", replace "rock" with "-rock".\n \
+                    Please rename the output files as "non_genre_list_filtered.txt" and save in txt_path."""
     print(message)
 
 def clean_1(tag):
@@ -547,7 +546,8 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
         unique, provided that the df_input satisfies this condition.
     '''
 
- assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
+    assert all([True if col in df_input.columns else False for col in ['tag', 'merge_tags']])
+    
     df = df_input.copy()
     
     list_of_tags = [item  if type(item)==str else str(item) for item in list_of_tags]
@@ -595,7 +595,7 @@ def add_tags(df_input, list_of_tags, target_tag, target_merge_index=True):
     
     return df
 
-def remove_tag(df_input, tag):
+def remove(df_input, tag):
     '''Remove a given tag from the dataset.
     
     Parameters
@@ -628,6 +628,107 @@ def remove_tag(df_input, tag):
         df.iloc[_,col]= [item for item in new_list if item != tag]
     
     return df
+
+def merge_df(list_of_df):
+    '''Merge two or more output dataframes and ensure no overlappings between the
+    tag column and the merge_tag column.
+    
+    Parameters
+    ----------
+    list_of_df: list of pd.DataFrame
+        The dataframes that will be merged with columns: tag', 'merge_tags'. 
+        All the tags in the 'merge_tags' and 'tag' columns altogether in each 
+        dataframe should be unique respectively.
+        
+    Returns
+    -------
+    df_merge: pd.DataFrame
+        The resulting dataframe. All the tags in the 'merge_tags' and 'tag' 
+        columns altogether are unique, provided that all the dataframes
+        provided in the list satisfy this condition. The resulting dataframe
+        is produced by pandas outer merge followed by combine_tags() function 
+        for tags that only exist in the 'tag' column of some of the dataframes, 
+        but in the mean time exist in the 'merge_tags' column of one or more of 
+        the remaining dataframes.
+    
+    '''
+
+    # combine elements in two columns for later use
+    def row_op(row):
+        col1, col2 = row.index[-2], row.index[-1]
+        list1, list2 = row[col1], row[col2]
+        if type(list1) != list:
+            list1 = []
+
+        if type(list2) != list:
+            list2 = []
+
+        return list(set(list1+list2))
+    
+    for df in list_of_df:
+        assert all([True if col in df.columns else False for col in ['tag', 'merge_tags']])
+    
+    df = list_of_df[0].copy()
+    
+    for df2 in list_of_df[1:]:
+        # outer merge and use row_op to combine the two list of merge_tags
+        df_merge = df.merge(df2, how='outer', on='tag')
+        df_merge['merge_tags'] = df_merge.apply(row_op, axis=1)
+        df_merge = df_merge[['tag','merge_tags']]
+        
+        # search for tags that only exist in one of df and df2
+        new_tags = []
+        new_tags.append(list(set(df_merge.tag).difference(set(df.tag))))
+        new_tags.append(list(set(df_merge.tag).difference(set(df2.tag))))
+        new_tags = [i for sublist in new_tags for i in sublist]
+        
+        # make sure new standalone tags do not exist in any of the merge_tags lists (there is no need 
+        # to check for old tags because we have already ensured that old common tags and all tags contained in merge_tags column is 
+        # mutually exclusive)
+        for tag in new_tags:
+            for idx, l in enumerate(df_merge.merge_tags):
+                if tag in l:
+                    #g et the corresponding tag in the tag column
+                    tag2 = df_merge.iloc[idx, :].tag
+                    df_merge = combine_tags(df_merge, [tag, tag2], merge_idx=idx)
+                    
+                    break
+
+    df_merge = check_overlap(df_merge)
+    
+    return df_merge
+
+def percentile(df, perc=90):
+    '''Return a dataframe with subset of tags (descending order) of the input 
+    dataframe which accounts for a certain percentage of the total count of 
+    all the tags.
+    
+    Parameters
+    ----------
+    df: pd.DataFrame
+        A dataframe with columns: 'tag', 'count'.
+        
+    perc: float
+        The percentage of the total count of all the tags that will be 
+        considered.
+        
+    Returns
+    -------
+    df: pd.DataFrame
+        The input df that is cut based on the perc parameter.
+    
+    '''
+
+    assert all([True if col in df.columns else False for col in ['tag', 'count']])
+    tot_counts = df['count'].sum()
+    threshold = perc * tot_counts /100
+    counter = 0
+    
+    for i, row in enumerate(df['count']):
+        if counter < threshold:
+            counter += row
+        else:
+            return df.iloc[:i,]
 
 def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=None, 
                  sub_threshold=10, verbose=True, remove_plural=True):
@@ -716,9 +817,11 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
 
     assert all([True if col in df_output.columns else False for col in ['tag', 'merge_tags']])
     assert all([True if col in df_input.columns else False for col in ['tag', 'count']])
+
     df = df_input.copy()
     df['tag'] = df['tag'].astype('str')
     df['tag_sub'] = df['tag'].apply(search_method)
+
     if remove_plural:
         df['tag_sub'] = df['tag_sub'].apply(check_plural)
     
@@ -726,29 +829,27 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         search_tags_list = df_output.tag.tolist()
     
     tot = len(search_tags_list)
-    if min_count is not None:
-        bool1 = df['count']>=min_count
+    if sub_threshold is not None:
+        bool1 = df['count']>=sub_threshold
     else:
         bool1 = df['count']>=0
     
-    
     for num, tag in enumerate(search_tags_list):
         
-        #remove non-word characters
+        # remove non-word characters
         tag_sub = search_method(tag)
         if remove_plural:
             tag_sub = check_plural(tag_sub)
             
-        #query
+        # query
         search = r'^'+tag_sub+r'$'
             
-        #get list of tags that will be merged (tag such that its 'pure' form 
-        # matches with tag_sub)
+        # get list of tags that will be merged (tag such that its 'pure' form matches with tag_sub)
         bool2 = df['tag_sub'].str.findall(search, re.IGNORECASE).str.len()>0
             
         merge_tags = df[(bool1 & bool2)]['tag'].tolist()
-  
-        #tag will be removed from merge_tags in the add_tags function        
+        merge_tags = [item for item in merge_tags if item != tag] 
+            
         df_output = add_tags(df_output, merge_tags, tag, False)
             
         if verbose:
@@ -756,75 +857,6 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
                 print('processed {} out of {} tags'.format(num+1, tot))
                 
     return df_output
-
-def merge_df(list_of_df):
-    '''Merge two or more output dataframes and ensure no overlappings between the
-    tag column and the merge_tag column.
-    
-    Parameters
-    ----------
-    list_of_df: list of pd.DataFrame
-        The dataframes that will be merged with columns: tag', 'merge_tags'. 
-        All the tags in the 'merge_tags' and 'tag' columns altogether in each 
-        dataframe should be unique respectively.
-        
-    Returns
-    -------
-    df_merge: pd.DataFrame
-        The resulting dataframe. All the tags in the 'merge_tags' and 'tag' 
-        columns altogether are unique, provided that all the dataframes
-        provided in the list satisfy this condition. The resulting dataframe
-        is produced by pandas outer merge followed by combine_tags() function 
-        for tags that only exist in the 'tag' column of some of the dataframes, 
-        but in the mean time exist in the 'merge_tags' column of one or more of 
-        the remaining dataframes.
-    
-    '''
-
-    # combine elements in two columns for later use
-    def row_op(row):
-        col1, col2 = row.index[-2], row.index[-1]
-        list1, list2 = row[col1], row[col2]
-        if type(list1) != list:
-            list1 = []
-
-        if type(list2) != list:
-            list2 = []
-
-        return list(set(list1+list2))
-    
-    for df in list_of_df:
-        assert all([True if col in df.columns else False for col in ['tag', 'merge_tags']])
-    
-    df = list_of_df[0].copy()
-    
-    for df2 in list_of_df[1:]:
-        # outer merge and use row_op to combine the two list of merge_tags
-        df_merge = df.merge(df2, how='outer', on='tag')
-        df_merge['merge_tags'] = df_merge.apply(row_op, axis=1)
-        df_merge = df_merge[['tag','merge_tags']]
-        
-        # search for tags that only exist in one of df and df2
-        new_tags = []
-        new_tags.append(list(set(df_merge.tag).difference(set(df.tag))))
-        new_tags.append(list(set(df_merge.tag).difference(set(df2.tag))))
-        new_tags = [i for sublist in new_tags for i in sublist]
-        
-        # make sure new standalone tags do not exist in any of the merge_tags lists (there is no need 
-        # to check for old tags because we have already ensured that old common tags and all tags contained in merge_tags column is 
-        # mutually exclusive)
-        for tag in new_tags:
-            for idx, l in enumerate(df_merge.merge_tags):
-                if tag in l:
-                    #g et the corresponding tag in the tag column
-                    tag2 = df_merge.iloc[idx, :].tag
-                    df_merge = combine_tags(df_merge, [tag, tag2], merge_idx=idx)
-                    
-                    break
-
-    df_merge = check_overlap(df_merge)
-    
-    return df_merge
 
 def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_threshold: int = 200, verbose=True, drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
     
@@ -854,9 +886,9 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     drop_list_filename: str
         The filename of the txt file that stores the information of whether
         a tag is considered as a genre tag. You may download the document
-        on Github, or produce one using generate_non_genre_droplist_txt(). 
+        on Github, or produce one using generate_genre_txt(). 
         For more details please refer to the function documentation of 
-        generate_non_genre_droplist_txt(). NOTE that the file should be saved
+        generate_genre_txt(). NOTE that the file should be saved
         under the directory specified by the variable txt_path.
         
     indicator: str (one character)
@@ -901,7 +933,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     # generate empty dataframe structure
     df_output = pd.DataFrame({'tag':search_tags_list, 'merge_tags':[[]]*len(search_tags_list)})
     
-    df_filter = search_genre(df, df_output, search_method=clean_1,
+    df_filter = search_genre(df, df_output, search_method=clean_1, search_tags_list=None,
                              sub_threshold=sub_threshold, verbose=verbose)
     
     print('Genre-Step 3/7  --cleaning_2')
@@ -935,38 +967,6 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     print('Genre--Done')
     
     return df_filter
-    
-def percentile(df, perc=90):
-    '''Return a dataframe with subset of tags (descending order) of the input 
-    dataframe which accounts for a certain percentage of the total count of 
-    all the tags.
-    
-    Parameters
-    ----------
-    df: pd.DataFrame
-        A dataframe with columns: 'tag', 'count'.
-        
-    perc: float
-        The percentage of the total count of all the tags that will be 
-        considered.
-        
-    Returns
-    -------
-    df: pd.DataFrame
-        The input df that is cut based on the perc parameter.
-    
-    '''
-
-    assert all([True if col in df.columns else False for col in ['tag', 'count']])
-    tot_counts = df['count'].sum()
-    threshold = perc * tot_counts /100
-    counter = 0
-    
-    for i, row in enumerate(df['count']):
-        if counter < threshold:
-            counter += row
-        else:
-            return df.iloc[:i,]
 
 def generate_vocal_df(indicator='-', 
                       tag_list = ['female', 'instrumental', 'male', 'rap']):
@@ -992,24 +992,28 @@ def generate_vocal_df(indicator='-',
         in the 'merge_tags' and 'tag' columns altogether are unique.
     '''
     
-    print('Vocal-Step 1/1')
-    merge_tags_list=[]
-    
-    for filename in tag_list:
-        path = os.path.join(txt_path,filename+'_list_filtered.txt')
+    def load_txt(filename):
+        path = os.path.join(txt_path, filename)
     
         tags = []
         with open(path, 'r', encoding='utf8') as f:
             for item in f:
                 if ((item[0]!=indicator) and (not item.isspace()) and (item!='')):
                     tags.append(item.rstrip('\n'))
+        return tags
+    
+    print('Vocal-Step 1/1')
+    merge_tags_list=[]
+    
+    for filename in tag_list:
+        tags= load_txt(filename+'_list_filtered.txt')
 
         
         if filename in tags:
             tags.remove(filename)
             
         merge_tags_list.append(tags)
-        
+
     df_filter =  pd.DataFrame({'tag':tag_list, 'merge_tags':merge_tags_list})
     
     print('Vocal--Done')
@@ -1054,9 +1058,9 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
         
     pre_drop_list_filename: str
         The filename of the txt file that stores the information of whether a tag is considered as a genre tag. 
-        You may download the document on GitHub, or produce one using generate_non_genre_droplist_txt(). 
+        You may download the document on GitHub, or produce one using generate_genre_txt(). 
         For more details please refer to the function documentation of 
-        generate_non_genre_droplist_txt(). The file should be saved
+        generate_genre_txt(). The file should be saved
         under the directory specified by txt_path.
         
     combine_list: list of list
@@ -1066,12 +1070,12 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
         
     drop_list: list
         A list of tags that will be dropped from the output dataframe. See
-        documentation on remove_tag() for more details.
+        documentation on remove() for more details.
         
     genre_indicator: str (One character)
         A special symbol used at the front of some tags in 
         non_genre_list_filtered.txt to denote non-genre tags. Default '-'. For
-        more details see documentation on generate_non_genre_droplist_txt() and
+        more details see documentation on generate_genre_txt() and
         generate_genre_df().
         
     vocal_indicator: str (One character)
@@ -1130,7 +1134,7 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_pat
         df_final = combine_tags(df_final, item)
         
     for item in drop_list:
-        df_final = remove_tag(df_final, item)
+        df_final = remove(df_final, item)
     
     if add_list is not None:
         if len(add_list)!=len(add_target):
