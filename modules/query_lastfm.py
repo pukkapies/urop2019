@@ -249,6 +249,7 @@ class LastFm:
         
         # create df
         pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
+        pop.index += 1
         return pop
 
 class LastFm2Pandas():
@@ -301,9 +302,10 @@ class LastFm2Pandas():
             If True, do not store tid_tag table.
         '''
 
-        # open tables as dataframes and shift index to match rowid in database
+        # open tables as dataframes and shift index to match rowid in the original database
         if from_csv is not None:
-            assert from_csv_split is not None
+            # read from three csv files
+            assert len(from_csv_split) == 3
             if not no_tags:
                 self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split[0]), index_col=0)
                 self.tags.index += 1
@@ -314,6 +316,7 @@ class LastFm2Pandas():
                 self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split[2]), index_col=0)
                 self.tid_tag.index += 1
         else:
+            # read from database
             conn = sqlite3.connect(from_sql)
             if not no_tags:
                 self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
@@ -508,4 +511,5 @@ class LastFm2Pandas():
         self.pop.reset_index(inplace=True)
         self.pop.rename(columns={'index':'tag_num'}, inplace=True)
         self.pop = pd.concat([self.pop['tag'], self.pop['tag_num'], self.pop['count']], axis=1)
+        self.pop.index += 1
         return self.pop
