@@ -190,6 +190,45 @@ def set_txt_path(new_path):
     global txt_path
     txt_path = os.path.normpath(new_path)
 
+def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
+    '''Generate a txt file with a list of tags above the threshold that can be 
+    used to manually filter out non-genre tags.
+    
+    Parameters
+    ----------
+    threshold: int
+        Tags with count greater than or equal to the threshold will be stored 
+        as a txt file.
+        
+    csv_from_db: bool
+        If True, the lastfm_tags.db will be converted to csv in order to 
+        produce the popularity dataframe.
+        
+    Outputs
+    -------
+    txt file:
+        Consists of all the tags above or equal to the threshold.
+        Please see the note printed after the function is run for instructions
+        on how to work with the produced txt file.
+    '''
+    
+    tag_list = df['tag'][df['count'] >= threshold].tolist()
+
+    with open(os.path.join(txt_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
+        for tag in tag_list:
+            f.write("%s\n" % tag)
+            
+    message = \
+    """Please deselect tags from generated txts by putting a "-" sign at\
+the front of the term, or other symbol by adjusting the indicator\
+input variable in the generate_genre_df() function.\n \
+E.g. If you want to deselect "rock", replace "rock" with\
+"-rock". Finally, please rename the output files as 
+"non_genre_list_filtered.txt" and save it under the same directory as the 
+variable - txt_path
+"""
+    print(message)
+
 def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], percentage_list=[90, 90, 90, 80]):
     '''Generate a txt file with a list of tags for each of the vocal tag 
     filtered by percentile() that can be used to manually select merging tags
@@ -798,45 +837,6 @@ def merge_df(list_of_df):
     df_merge = check_overlap(df_merge)
     
     return df_merge
-    
-def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
-    '''Generate a txt file with a list of tags above the threshold that can be 
-    used to manually filter out non-genre tags.
-    
-    Parameters
-    ----------
-    threshold: int
-        Tags with count greater than or equal to the threshold will be stored 
-        as a txt file.
-        
-    csv_from_db: bool
-        If True, the lastfm_tags.db will be converted to csv in order to 
-        produce the popularity dataframe.
-        
-    Outputs
-    -------
-    txt file:
-        Consists of all the tags above or equal to the threshold.
-        Please see the note printed after the function is run for instructions
-        on how to work with the produced txt file.
-    '''
-    
-    tag_list = df['tag'][df['count'] >= threshold].tolist()
-
-    with open(os.path.join(txt_path, 'non_genre_list.txt'), 'w', encoding='utf8') as f:
-        for tag in tag_list:
-            f.write("%s\n" % tag)
-            
-    message = \
-    """Please deselect tags from generated txts by putting a "-" sign at\
-the front of the term, or other symbol by adjusting the indicator\
-input variable in the generate_genre_df() function.\n \
-E.g. If you want to deselect "rock", replace "rock" with\
-"-rock". Finally, please rename the output files as 
-"non_genre_list_filtered.txt" and save it under the same directory as the 
-variable - txt_path
-"""
-    print(message)
 
 def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_threshold: int = 200, verbose=True, drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
     
