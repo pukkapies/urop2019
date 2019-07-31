@@ -189,28 +189,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
 
 import query_lastfm as db
 
-path = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db' # default path
-#path = 'C://Users/hcw10/UROP2019/lastfm_tags.db'
-filename = os.path.basename(path)[:-3]
-
 output_path = '/srv/data/urop'
-#output_path = 'C://Users/hcw10/UROP2019'
-
-default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
-
-def set_path(new_path):
-    ''' Set new_path as default path for the lastfm_tags.db database. 
-    
-    Parameters
-    ----------
-    new_path:
-        path of the form /xx/xx/x/xxxx.db .'''
-    global path
-    global filename
-    path = new_path
-    filename = os.path.basename(path)[:-3]
-  
-    
     
 def set_output_path(new_path):
     '''Set new_path as default path for opening all the supplementary txt files, and the output path
@@ -223,55 +202,6 @@ def set_output_path(new_path):
         
     global output_path
     output_path = os.path.normpath(new_path)
-
-
-
-def db_to_csv():
-    ''' Convert lastfm_tags.db into three different csv files.
-    
-    Outputs
-    -------
-    csv files:
-        The converted csv files from the three datasets within the database.
-    
-    '''
-    #get all table names
-    cnx = sqlite3.connect(path)
-    cursor = cnx.cursor().execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-    tables = [_[0] for _ in tables]
-        
-    #save everything for each table as individual csv
-    for table in tables:
-        
-        csv_dir = os.path.join(output_path, filename +'_'+table+'.csv')
-        print('saving '+ filename +'_'+table+'.csv')
-        df = pd.read_sql_query("SELECT * FROM "+table, cnx)
-        
-        df.to_csv(csv_dir, index_label=False)
-    print('Done')
-    
-    
-        
-def insert_index(df):
-    '''Insert tags and TID index to dataframes generated from lastfm_tags.db.
-    
-    Parameters
-    ----------
-    df: pd.DataFrame
-        Input dataframe from the tid dataset or tag dataset.
-    
-    Returns
-    -------
-    df: pd.DataFrame
-        The input dataframe with index inserted.
-    '''
-    
-    
-    
-    df['lastfm_ID']=np.arange(1, len(df)+1)
-    df = df.set_index('lastfm_ID')
-    return df
 
 def clean_1(tag):
     '''Remove all non alphabet and number characters of the input string.
@@ -1014,8 +944,6 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, min_count
     
     return df_filter
     
-
-
 def percentile(df, perc=90):
     '''Return a dataframe with subset of tags (descending order) of the input 
     dataframe which accounts for a certain percentage of the total count of 
@@ -1046,8 +974,6 @@ def percentile(df, perc=90):
             counter += row
         else:
             return df.iloc[:i,]
-    
-    
 
 def generate_vocal_txt(popularity: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], perc_list=[90, 90, 90, 80]):
     '''Generate a txt file with a list of tags for each of the vocal tag 
@@ -1104,7 +1030,6 @@ save the filtered "female_list.txt" as "female_list_filtered.txt".
 """
           
     print(message)
-    
 
 def generate_vocal_df(indicator='-', 
                       tag_list = ['female', 'instrumental', 'male', 'rap']):
@@ -1160,8 +1085,7 @@ def generate_vocal_df(indicator='-',
     print('Vocal--Done')
     return df_filter
 
-
-def generate_final_csv(lastfm=None, from_db_path=None, from_csv_path=default, file_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'],
+def generate_final_csv(lastfm=None, from_csv_path='/srv/data/urop/', from_csv_path_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'],
                        min_count=10, verbose=True, threshold=2000,
                        pre_drop_list_filename='non_genre_list_filtered.txt',
                        combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], 
@@ -1253,14 +1177,9 @@ def generate_final_csv(lastfm=None, from_db_path=None, from_csv_path=default, fi
 
     if lastfm is not None:
         df = lastfm.popularity()
-    elif from_csv_path is not None:
-        lastfm = db.LastFm2Pandas(from_csv_path=from_csv_path, file_split=file_split)
-        df = lastfm.popularity()
-    elif from_sql_path is not None:
-        lastfm = db.LastFm2Pandas(from_sql_path)
-        df = lastfm.popularity()
     else:
-        raise AttributeError('please provide at least one of the following: lastfm, from_csv_path, from_sql_path.')
+        lastfm = db.LastFm2Pandas.from_csv(from_csv_path, from_csv_path_split)
+        df = lastfm.popularity()
     
     vocal = generate_vocal_df(indicator=vocal_indicator)
     genre = generate_genre_df(popularity=df, threshold=2000,
