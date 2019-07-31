@@ -85,15 +85,14 @@ Functions
     all the supplementary txt files.
 
 - generate_vocal_txt
-    Generate a txt file with a list of tags for each of the vocal tag filtered
-    by percentile(). You may use this function to generate txt files for 
-    vocal tags if you do not want to use the corresponding txt files on Github.
+    Generate a txt file with a list of tags for each of the vocal tags (filtered by percentile). 
+    You may use this function to generate txt files for 
+    vocal tags if you do not want to use the corresponding ones available on GitHub.
 
 - generate_genre_txt
-    Generate a txt file with a list of tags above the threshold that can be used
-    to manually filter out non-genre tags. You may use this function to 
-    generate a txt file for genre tagsif you do not want to use the 
-    corresponding txt file on Github.
+    Generate a txt file with a list of tags above the threshold, used to manually filter out non-genre tags.
+    You may use this function to generate txt files for 
+    genre tags if you do not want to use the corresponding ones available on GitHub.
 
 - clean_1
     Remove all non alphabet and number characters of the input string.
@@ -168,7 +167,6 @@ import numpy as np
 import os
 import pandas as pd
 import re
-import sqlite3
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
