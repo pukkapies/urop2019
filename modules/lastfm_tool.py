@@ -218,15 +218,11 @@ def generate_non_genre_droplist_txt(df: pd.DataFrame, threshold: int = 20000):
         for tag in tag_list:
             f.write("%s\n" % tag)
             
-    message = \
-    """Please deselect tags from generated txts by putting a "-" sign at\
-the front of the term, or other symbol by adjusting the indicator\
-input variable in the generate_genre_df() function.\n \
-E.g. If you want to deselect "rock", replace "rock" with\
-"-rock". Finally, please rename the output files as 
-"non_genre_list_filtered.txt" and save it under the same directory as the 
-variable - txt_path
-"""
+    message = """Please deselect tags from generated txts by putting a "-" sign at\
+                    the front of the term, or other symbol by adjusting the indicator\
+                    input variable in the generate_genre_df() function.\n \
+                    e.g. If you want to deselect "rock", replace "rock" with "-rock".\n \
+                    Please rename the output files as "non_genre_list_filtered.txt" and save in txt_path."""
     print(message)
 
 def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], percentage_list=[90, 90, 90, 80]):
@@ -249,10 +245,10 @@ def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', '
         
     Outputs
     -------
-    A txt file for each of the tags in the tag_list. Each txt file consists of 
-    all the tags filtered based on percentage_list. Please see the note printed after 
-    the function is run for instructions on how to work with the produced txt 
-    file.
+        Consists of a txt file for each of the tags in the tag_list. Each file consists of 
+        all the tags filtered based on percentage_list.
+        Please see the note printed after the function is run for instructions
+        on how to work with the produced txt file.
     '''
     
     def generate_txt(df, tag, perc):
@@ -268,17 +264,11 @@ def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', '
     for idx in range(len(tag_list)):
         generate_txt(df, tag_list[idx], percentage_list[idx])
 
-    message = \
-    """Please deselect tags from generated txts by putting a "-" sign at\
-the front of the term, or other symbol by adjusting the indicator\
-input variable in the generate_vocal_df() function.\n \
-E.g. If you want to deselect "female", replace "female" with\
-"-female". Finally, please rename the output files by adding a\
-suffix "_filtered" to the filename and save the files under the same\
-directory as the variable - txt_path . E.g.\
-save the filtered "female_list.txt" as "female_list_filtered.txt".
-"""
-
+    message = """Please deselect tags from generated txts by putting a "-" sign at\
+                    the front of the term, or other symbol by adjusting the indicator\
+                    input variable in the generate_vocal_df() function.\n \
+                    e.g. If you want to deselect "female", replace "female" with "-female".\n \
+                    Please rename the output files by adding a suffix "_filtered" to the filename and save in txt_path."""
     print(message)
 
 def clean_1(tag):
