@@ -236,6 +236,20 @@ class LastFm:
         tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
         return tids_filtered
 
+    def popularity(self):
+        ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
+        
+        q = "SELECT tag, count(tag) FROM tid_tag GROUP BY tag ORDER BY count(tag) DESC"
+        self.query(q)
+        l = self.c.fetchall() # return list of tuples of the form (tag_num, count)
+        
+        # add tag to list of tuples
+        for i, entry in enumerate(l):
+            l[i] = (self.tag_num_to_tag(entry[0]), ) + entry
+        
+        # create df
+        pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
+        return pop
 
 class LastFm2Pandas():
     ''' Reads the last.fm database into pandas dataframes. Provides methods to perform advanced queries on it.
@@ -289,14 +303,15 @@ class LastFm2Pandas():
 
         # open tables as dataframes and shift index to match rowid in database
         if from_csv is not None:
+            assert from_csv_split is not None
             if not no_tags:
-                self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split[0]), index_col=0)
                 self.tags.index += 1
             if not no_tids:
-                self.tids = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tids = pd.read_csv(os.path.join(from_csv, from_csv_split[1]), index_col=0)
                 self.tids.index += 1
             if not no_tid_tag:
-                self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split[2]), index_col=0)
                 self.tid_tag.index += 1
         else:
             conn = sqlite3.connect(from_sql)
