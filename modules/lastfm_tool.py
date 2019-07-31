@@ -169,6 +169,7 @@ import numpy as np
 import os
 import pandas as pd
 import re
+import sqlite3
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
@@ -683,8 +684,8 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         bool2 = df['tag_sub'].str.findall(search, re.IGNORECASE).str.len()>0
             
         merge_tags = df[(bool1 & bool2)]['tag'].tolist()
-  
-        #tag will be removed from merge_tags in the add_tags function        
+        merge_tags = [item for item in merge_tags if item != tag] 
+            
         df_output = add_tags(df_output, merge_tags, tag, False)
             
         if verbose:
@@ -1032,24 +1033,29 @@ def generate_vocal_df(indicator='-',
     
     '''
     
+    def load_txt(filename):
+        txt_path = os.path.join(txt_path, filename)
+    
+        tags = []
+        with open(txt_path, 'r', encoding='utf8') as f:
+            for item in f:
+                if ((item[0]!=indicator) and (not item.isspace()) and (item!='')):
+                    tags.append(item.rstrip('\n'))
+        return tags
     
     print('Vocal-Step 1/1')
     merge_tags_list=[]
     
     for filename in tag_list:
-        path = os.path.join(txt_path,filename+'_list_filtered.txt')
-    
-        tags = []
-        with open(path, 'r', encoding='utf8') as f:
-            for item in f:
-                if ((item[0]!=indicator) and (not item.isspace()) and (item!='')):
-                    tags.append(item.rstrip('\n'))
+        tags= load_txt(filename+'_list_filtered.txt')
 
         
         if filename in tags:
             tags.remove(filename)
             
         merge_tags_list.append(tags)
+        
+    
         
     df_filter =  pd.DataFrame({'tag':tag_list, 'merge_tags':merge_tags_list})
     
