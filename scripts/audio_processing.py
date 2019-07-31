@@ -54,7 +54,7 @@ def process_array(array, sr, audio_format):
         unprocessed array, directly from the .npz file
     sr : int
         sample rate
-    audio_format : {"log-mel-spectrogram", "MFCC", "waveform"}
+    audio_format : {"log-mel-spectrogram", "waveform"}
         desired audio format, if none of the above it defaults to "waveform"
 
 
@@ -77,9 +77,6 @@ def process_array(array, sr, audio_format):
     # how we choose to incorporate sysarg
     if audio_format == "log-mel-spectrogram":
         array = np.log(librosa.feature.melspectrogram(array, 16000))
-    elif audio_format == "MFCC":
-        # TODO: Maybe some MFCCs??
-        array = "???"
     
     return array
 
