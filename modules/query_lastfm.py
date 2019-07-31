@@ -70,7 +70,7 @@ class LastFm:
         Get a dict with the tags associated to tids as keys and their count number as values.
     '''
 
-    def __init__(self, path = default):
+    def __init__(self, path):
         self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
     
@@ -270,7 +270,7 @@ class LastFm2Pandas():
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, path=default, from_csv_path='/srv/data/urop/', file_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
+    def __init__(self, from_sql=None, from_csv=None, from_csv_split=None, no_tags=False, no_tids=False, no_tid_tag=False):
         '''
         Parameters
         ----------
@@ -288,20 +288,20 @@ class LastFm2Pandas():
         '''
 
         # open tables as dataframes and shift index to match rowid in database
-        if from_csv_path is not None:
+        if from_csv is not None:
             if not no_tags:
-                self.tags = pd.read_csv(os.path.join(from_csv_path, file_split.pop(0)), index_col=0)
+                self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
                 self.tags.index += 1
             if not no_tids:
-                self.tids = pd.read_csv(os.path.join(from_csv_path, file_split.pop(0)), index_col=0)
+                self.tids = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
                 self.tids.index += 1
             if not no_tid_tag:
-                self.tid_tag = pd.read_csv(os.path.join(from_csv_path, file_split.pop(0)), index_col=0)
+                self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
                 self.tid_tag.index += 1
         else:
-            conn = sqlite3.connect(path)
+            conn = sqlite3.connect(from_sql)
             if not no_tags:
-                self.tags = pd.read_sql_query('SELECT *  FROM tags', conn)
+                self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
                 self.tags.index += 1
             if not no_tids:
                 self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
@@ -310,6 +310,14 @@ class LastFm2Pandas():
                 self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
                 self.tid_tag.index += 1
             conn.close()
+
+    @classmethod
+    def from_sql(cls, path=default, no_tags=False, no_tids=False, no_tid_tag=False):
+        return cls(from_sql=path, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
+
+    @classmethod
+    def from_csv(cls, path='/srv/data/urop/', split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
+        return cls(from_csv=path, from_csv_split=split, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
 
     def tid_to_tid_num(self, tid):
         ''' Returns tid_num(s) given tid(s)
