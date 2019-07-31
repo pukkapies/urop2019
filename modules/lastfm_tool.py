@@ -914,9 +914,9 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
         return output_list
     
     print('Genre progress 1/7  --dropping tags')
-    txt_path = os.path.join(txt_path, drop_list_filename)
+    path = os.path.join(txt_path, drop_list_filename)
     drop_list = []
-    with open(txt_path, 'r', encoding='utf8') as f:
+    with open(path, 'r', encoding='utf8') as f:
         for item in f:
             if ((item[0]==indicator) and (not item.isspace()) and (item!='')):
                 drop_list.append(item.rstrip('\n').lstrip(indicator))
