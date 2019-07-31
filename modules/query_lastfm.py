@@ -45,7 +45,7 @@ class LastFm:
     - tid_num_to_tid
         Get tid given tid_num.
 
-    - tid_num_to_tag_num
+    - tid_num_to_tag_nums
         Get tag_num given tid_num.
 
     - tag_num_to_tag
@@ -67,7 +67,7 @@ class LastFm:
         Get tid_num of tids which have at least one tag.
 
     - query_tags
-        Get a list of tags associated to given tid.
+        Get tags for given tid.
 
     - query_tags_dict
         Get a dict with tids as keys and a list of its tags as value.
@@ -121,7 +121,7 @@ class LastFm:
         self.query(q, tid_num)
         return self.c.fetchone()[0]
 
-    def tid_num_to_tag_num(self, tid_num):
+    def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
 
         q = "SELECT tag FROM tid_tag WHERE tid = ?"
@@ -301,10 +301,10 @@ class LastFm2Pandas():
     - tid_num_to_tid
         Return tid(s) given tid_num(s).
 
-    - tid_num_to_tag_num
+    - tid_num_to_tag_nums
         Return tag_num(s) given tid_num(s).
 
-    - tid_num_to_tag
+    - tid_num_to_tags
         Return tag(s) given tid_num(s).
 
     - tag_num_to_tag
@@ -325,10 +325,7 @@ class LastFm2Pandas():
     - get_tid_nums
         Get tid_num of tids which have at least one tag.
 
-    - tid_num_to_tags
-        Get tags for given tid_num(s).
-
-    - tid_to_tags
+    - query_tags
         Get tags for given tid(s).
 
     - fetch_all_tids_tags
@@ -440,7 +437,7 @@ class LastFm2Pandas():
 
         return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
 
-    def tid_num_to_tag_num(self, tid_num):
+    def tid_num_to_tag_nums(self, tid_num):
         ''' Returns tag_nums given tid_num(s)
         
         Parameters
@@ -463,6 +460,30 @@ class LastFm2Pandas():
 
         tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
         return pd.Series(tag_nums, index=tid_num)
+
+    def tid_num_to_tags(self, tid_num):
+        ''' Gets tags for given tid_num(s) 
+        
+        Parameters
+        ----------
+        tid_num : int, array-like
+            A single tid_num or an array-like structure containing tid_nums
+
+        Returns
+        -------
+        tags : ndarray, pd.Series 
+            if tid_num is an int:
+                ndarray containing corresponding tags     
+            if array-like:
+                pd.Series having tid_nums as indices and list of tags as values
+        '''
+
+        tag_nums = self.tid_num_to_tag_nums(tid_num)
+
+        if isinstance(tag_nums, (list, pd.core.series.Series)):
+            return self.tag_num_to_tag(tag_nums)
+
+        return tag_nums.map(self.tag_num_to_tag)
 
     def tag_num_to_tag(self, tag_num):
         ''' Returns tag(s) given tag_num(s) 
@@ -528,31 +549,7 @@ class LastFm2Pandas():
 
         return self.tids.index[-self.tids['tid'].isna()].tolist()
 
-    def tid_num_to_tags(self, tid_num):
-        ''' Gets tags for given tid_num(s) 
-        
-        Parameters
-        ----------
-        tid_num : int, array-like
-            A single tid_num or an array-like structure containing tid_nums
-
-        Returns
-        -------
-        tags : ndarray, pd.Series 
-            if tid_num is an int:
-                ndarray containing corresponding tags     
-            if array-like:
-                pd.Series having tid_nums as indices and list of tags as values
-        '''
-
-        tag_nums = self.tid_num_to_tag_nums(tid_num)
-
-        if isinstance(tag_nums, (list, pd.core.series.Series)):
-            return self.tag_num_to_tag(tag_nums)
-
-        return tag_nums.map(self.tag_num_to_tag)
-
-    def tid_to_tags(self, tid):
+    def query_tags(self, tid):
         ''' Gets tags for given tid(s) 
         
         Parameters
@@ -569,8 +566,7 @@ class LastFm2Pandas():
                 pd.Series having tids as indices and list of tags as values
         '''
 
-        tid_num = self.tid_to_tid_num(tid)
-        tags = self.tid_num_to_tags(tid_num)
+        tags = self.tid_num_to_tags(self.tid_to_tid_num(tid))
 
         if isinstance(tags, (list, pd.core.series.Series)):
             return tags
