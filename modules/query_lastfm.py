@@ -86,7 +86,10 @@ class LastFm:
 
     - tag_count
         Get a dict with the tags associated to tids as keys and their count number as values.
-    
+        
+    - db_to_csv
+        Convert the tags database into three different csv files.
+
     - popularity
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
@@ -256,6 +259,17 @@ class LastFm:
         count_dict = self.tid_tag_count(tids)
         tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
         return tids_filtered
+
+    def db_to_csv(self, output_dir):
+        ''' Converts the tags database into three different csv files. '''
+
+        q = "SELECT name FROM sqlite_master WHERE type='table'"
+        self.query(q)
+        tables = [i[0] for i in self.c.fetchall()]
+        for table in tables:
+            path = os.path.join(output_dir, 'lastfm' + '_' + table +'.csv')
+            df = pd.read_sql_query("SELECT * FROM " + table, self.conn)
+            df.to_csv(path, index_label=False)
 
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
