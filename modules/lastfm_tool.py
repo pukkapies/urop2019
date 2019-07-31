@@ -59,7 +59,7 @@ categories are:
         
     2. Vocal tags:
         In this script, the default tags in this category are 
-        ['female', 'instrumental', 'male', 'rap'].
+        ['rap', 'instrumental', 'male', 'female'].
         Firstly, generate_vocal_txt() will find a list of tags that are closely
         related to each tag and ouput as txt. After this, similar to the genre
         tags, a manual selection can be done by following the instruction
@@ -219,7 +219,7 @@ def percentile(df, perc=90):
         else:
             return df.iloc[:i,]
 
-def generate_vocal_txt(df: pd.DataFrame, tag_list = ['female', 'instrumental', 'male', 'rap'], percentage_list=[90, 90, 90, 80]):
+def generate_vocal_txt(df: pd.DataFrame, tag_list = ['rap', 'instrumental', 'male', 'female'], percentage_list=[90, 90, 90, 80]):
     '''Generate a txt file with a list of tags for each of the vocal tag 
     filtered by percentile() that can be used to manually select merging tags
     for each tag in tag_list.
@@ -863,7 +863,6 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
     return df_output
 
 def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_threshold: int = 200, verbose=True, drop_list_filename='non_genre_list_filtered.txt', indicator='-'):
-    
     '''Combine all genre related tools and various cleaning methods to generate a 
     clean dataframe of genre with no overlappings between tag and merge_tags 
     column and within the merge_tags column. For more details, see
@@ -972,10 +971,8 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
 
     return df_filter
 
-def generate_vocal_df(indicator='-', 
-                      tag_list = ['female', 'instrumental', 'male', 'rap']):
-    '''Return a dataframe based on the manually-filtered txt files provided for
-    each of the vocal tags.
+def generate_vocal_df(indicator='-', tag_list = ['rap', 'instrumental', 'male', 'female']):
+    '''Return a dataframe based on the manually-filtered txt files provided for each of the vocal tags.
     
     Parameters
     ----------
@@ -1027,7 +1024,7 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop', from_csv_path
                        combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], 
                        drop_list=['2000', '00', '90', '80', '70', '60'],
                        genre_indicator='-', vocal_indicator='-',
-                       vocal_tag_list=['female', 'instrumental', 'male', 'rap'],
+                       vocal_tag_list=['rap', 'instrumental', 'male', 'female'],
                        add_list=None, add_target=None, add_target_merge_index=True):
     '''Combine all the tools and generate the final dataframe consisting of 
     merging tags for each genre tag and vocal tag respectively.
