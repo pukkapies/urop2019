@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
     df.reset_index(drop=True, inplace=True)
     df.index += 1
-    df['merge_tag'] = df['merge_tag'].map(ast.literal_eval) # without this, lists are parsed are strings
+    df['merge_tags'] = df['merge_tags'].map(ast.literal_eval) # without this, lists are parsed are strings
 
     # generate tables which will go into output database
     tags = df['tag']
