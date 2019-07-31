@@ -122,14 +122,12 @@ def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
     flat = flatten_to_tag_num(lf, df)
     flat = flat.set_index('tag_num', verify_integrity=True).sort_index()
     
-    # fetch the tag num's from the original database
-    tag_tag = pd.Series(lf.get_tag_nums())
-    tag_tag.index += 1
-
     # define a new 'loc_except' function that locates an entry if it exists, and returns 0 otherwise
     loc_except = locate_with_except(flat['new_tag_num'])
 
     # for each tag num, get the corresponding 'clean' tag num from the flattened dataframe (returns tag num = 0 if tag falls below the pop threshold)
+    tag_tag = pd.Series(lf.get_tag_nums())
+    tag_tag.index = tag_tag.values
     tag_tag = tag_tag.map(loc_except)
     return tag_tag
 
@@ -215,7 +213,7 @@ if __name__ == "__main__":
     print('Purging tids...', end=' ', flush=True)
     tids = tid_tag['tid'].drop_duplicates()
     tids.index = tids.values
-    tids = tids.map(lastfm.tid_num_to_tid).reindex(pd.RangeIndex(1, 505217))
+    tids = tids.map(lastfm.tid_num_to_tid).reindex(pd.RangeIndex(1, len(lastfm.get_tid_nums())+1))
     print('done')
 
     # generate output
