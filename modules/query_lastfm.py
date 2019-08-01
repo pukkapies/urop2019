@@ -340,7 +340,7 @@ class LastFm2Pandas():
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, from_sql=None, from_csv=None, from_csv_split=None, no_tags=False, no_tids=False, no_tid_tag=False):
+    def __init__(self, from_sql=None, from_csv=None, from_csv_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
         '''
         Parameters
         ----------
