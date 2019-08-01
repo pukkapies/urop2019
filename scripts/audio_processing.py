@@ -178,7 +178,7 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
     parser.add_argument("-s", "--split", default='0.7/0.2/0.1' help"train/val/test split, supply as TRAIN/VAL/TEST. Defaults to 0.7/0.2/0.1")
     parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
-    parser.add_argument("--tag-path", help="Set absolute path to .db file containing the 'clean' tags.")
+    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db'help="Set absolute path to .db file containing the 'clean' tags.")
     
     args = parser.parse_args()
     
