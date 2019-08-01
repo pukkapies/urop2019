@@ -31,6 +31,9 @@ import os
 import sqlite3
 
 import pandas as pd
+import numpy as np
+
+from numpy import ndarray
 
 default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
@@ -45,7 +48,7 @@ class LastFm:
     - tid_num_to_tid
         Get tid given tid_num.
 
-    - tid_num_to_tag_num
+    - tid_num_to_tag_nums
         Get tag_num given tid_num.
 
     - tag_num_to_tag
@@ -54,11 +57,29 @@ class LastFm:
     - tag_to_tag_num
         Get tag_num given tag.
 
+    - get_tags
+        Return a list of all the tags.
+        
+    - get_tag_nums
+        Return a list of all the tag_nums.
+
+    - get_tids
+        Get tids which have at least one tag.
+        
+    - get_tid_nums
+        Get tid_num of tids which have at least one tag.
+
     - query_tags
-        Get a list of tags associated to given tid.
+        Get tags for given tid.
 
     - query_tags_dict
         Get a dict with tids as keys and a list of its tags as value.
+
+    - fetch_all_tids_tags
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table).
+        
+    - fetch_all_tids_tags_threshold
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold.
 
     - tid_tag_count
         Get a dict with tids as keys and its number of tags as value.
@@ -68,11 +89,21 @@ class LastFm:
 
     - tag_count
         Get a dict with the tags associated to tids as keys and their count number as values.
+        
+    - db_to_csv
+        Convert the tags database into three different csv files.
+
+    - popularity
+        Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
     def __init__(self, path):
+        if not os.path.isfile(path):
+            raise OSError("file " + path + " does not exist!")
+
         self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
+        self.path = path
     
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
@@ -94,7 +125,7 @@ class LastFm:
         self.query(q, tid_num)
         return self.c.fetchone()[0]
 
-    def tid_num_to_tag_num(self, tid_num):
+    def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
 
         q = "SELECT tag FROM tid_tag WHERE tid = ?"
@@ -148,14 +179,14 @@ class LastFm:
 
         q = "SELECT tid, tag FROM tid_tag"
         self.query(q)
-        return self.c.fetchall()
+        return pd.DataFrame(data=self.c.fetchall(), columns=['tid', 'tag'])
 
     def fetch_all_tids_tags_threshold(self, threshold = 0):
         ''' Returns a list of tuples containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold. '''
 
         q = "SELECT tid, tag FROM tid_tag WHERE val > ?"
         self.query(q, threshold)
-        return self.c.fetchall()
+        return pd.DataFrame(data=self.c.fetchall(), columns=['tid', 'tag'])
 
     def query_tags(self, tid):
         ''' Gets tags for a given tid. '''
@@ -236,6 +267,44 @@ class LastFm:
         tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
         return tids_filtered
 
+    def db_to_csv(self, output_dir=None):
+        ''' Converts the tags database into three different csv files. 
+        
+        Parameters
+        ----------
+        output_dir: str
+            Output directory of the csv files. If None, the files will be saved
+            under the same directory as lastfm_tags.db
+        '''
+        
+        if output_dir is None:
+            output_dir = os.path.dirname(self.path)
+
+        q = "SELECT name FROM sqlite_master WHERE type='table'"
+        self.query(q)
+        tables = [i[0] for i in self.c.fetchall()]
+        for table in tables:
+            print('saving '+ 'lastfm' + '_' + table +'.csv')
+            path = os.path.join(output_dir, 'lastfm' + '_' + table +'.csv')
+            df = pd.read_sql_query("SELECT * FROM " + table, self.conn)
+            df.to_csv(path, index_label=False)
+        print('Done')
+        
+    def popularity(self):
+        ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
+        
+        q = "SELECT tag, count(tag) FROM tid_tag GROUP BY tag ORDER BY count(tag) DESC"
+        self.query(q)
+        l = self.c.fetchall() # return list of tuples of the form (tag_num, count)
+        
+        # add tag to list of tuples
+        for i, entry in enumerate(l):
+            l[i] = (self.tag_num_to_tag(entry[0]), ) + entry
+        
+        # create df
+        pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
+        pop.index += 1
+        return pop
 
 class LastFm2Pandas():
     ''' Reads the last.fm database into pandas dataframes. Provides methods to perform advanced queries on it.
@@ -251,7 +320,7 @@ class LastFm2Pandas():
     - tid_num_to_tag_nums
         Return tag_num(s) given tid_num(s).
 
-    - tid_num_to_tag
+    - tid_num_to_tags
         Return tag(s) given tid_num(s).
 
     - tag_num_to_tag
@@ -260,17 +329,32 @@ class LastFm2Pandas():
     - tag_to_tag_num
         Return tag_num(s) given tag(s).
 
-    - tid_num_to_tags
-        Get tags for given tid_num(s).
+    - get_tags
+        Return a list of all the tags.
+        
+    - get_tag_nums
+        Return a list of all the tag_nums.
 
-    - tid_to_tags
+    - get_tids
+        Get tids which have at least one tag.
+        
+    - get_tid_nums
+        Get tid_num of tids which have at least one tag.
+
+    - query_tags
         Get tags for given tid(s).
+
+    - fetch_all_tids_tags
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table).
+        
+    - fetch_all_tids_tags_threshold
+        Return a dataframe containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold.
 
     - popularity
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, from_sql=None, from_csv=None, from_csv_split=None, no_tags=False, no_tids=False, no_tid_tag=False):
+    def __init__(self, from_sql=None, from_csv=None, from_csv_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
         '''
         Parameters
         ----------
@@ -287,29 +371,35 @@ class LastFm2Pandas():
             If True, do not store tid_tag table.
         '''
 
-        # open tables as dataframes and shift index to match rowid in database
+        # open tables as dataframes and shift index to match rowid in the original database
         if from_csv is not None:
+            # read from three csv files
+            assert len(from_csv_split) == 3
             if not no_tags:
-                self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split[0]), index_col=0)
                 self.tags.index += 1
             if not no_tids:
-                self.tids = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tids = pd.read_csv(os.path.join(from_csv, from_csv_split[1]), index_col=0)
                 self.tids.index += 1
             if not no_tid_tag:
-                self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split[2]), index_col=0)
                 self.tid_tag.index += 1
         else:
-            conn = sqlite3.connect(from_sql)
-            if not no_tags:
-                self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
-                self.tags.index += 1
-            if not no_tids:
-                self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
-                self.tids.index += 1
-            if not no_tid_tag:
-                self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
-                self.tid_tag.index += 1
-            conn.close()
+            # read from database
+            if not os.path.isfile(from_sql):
+                raise OSError("file " + from_sql + " does not exist!")
+            else:
+                conn = sqlite3.connect(from_sql)
+                if not no_tags:
+                    self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
+                    self.tags.index += 1
+                if not no_tids:
+                    self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
+                    self.tids.index += 1
+                if not no_tid_tag:
+                    self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
+                    self.tid_tag.index += 1
+                conn.close()
 
     @classmethod
     def from_sql(cls, path=default, no_tags=False, no_tids=False, no_tid_tag=False):
@@ -319,13 +409,17 @@ class LastFm2Pandas():
     def from_csv(cls, path='/srv/data/urop/', split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
         return cls(from_csv=path, from_csv_split=split, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
 
-    def tid_to_tid_num(self, tid):
+    def tid_to_tid_num(self, tid, order=False):
         ''' Returns tid_num(s) given tid(s)
         
         Parameters
         ----------
         tid : str, array-like
             A single tid or an array-like structure containing tids
+            
+        order: bool
+            If True, order of output matches order of input when input is array-like
+
 
         Returns
         -------
@@ -337,17 +431,23 @@ class LastFm2Pandas():
         '''
 
         if isinstance(tid, str):
-            return self.tids.loc[self.tids.tid == tid].index[0]
+            return int(self.tids.loc[self.tids.tid == tid].index[0])
+        
+        if order:
+            return [self.tids.loc[self.tids.tid==t].index[0] for t in tid]
 
         return self.tids.loc[self.tids.tid.isin(tid)].index.tolist()
 
-    def tid_num_to_tid(self, tid_num):
+    def tid_num_to_tid(self, tid_num, order=False):
         ''' Returns tid(s) given tid_num(s)
         
         Parameters
         ----------
         tid_num : int, array-like
             A single tid_num or an array-like structure containing tid_nums.
+        
+        order: bool
+            If True, order of output matches order of input when input is array-like
 
         Returns
         -------
@@ -358,9 +458,12 @@ class LastFm2Pandas():
                 ndarray containing corresponding tids
         '''
 
-        if isinstance(tid_num, (int, np.integer)):
+        if isinstance(tid_num, int):
             return self.tids.at[tid_num, 'tid']
-
+        
+        if order:
+            return np.array([self.tids.loc[self.tids.index==num, 'tid'].tolist()[0] for num in tid_num], dtype=object)
+        
         return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
 
     def tid_num_to_tag_nums(self, tid_num):
@@ -381,55 +484,11 @@ class LastFm2Pandas():
                 corresponding list of tag_nums
         '''
         
-        if isinstance(tid_num, (int, np.integer)):
+        if isinstance(tid_num, int):
             return self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values
 
         tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
         return pd.Series(tag_nums, index=tid_num)
-
-    def tag_num_to_tag(self, tag_num):
-        ''' Returns tag(s) given tag_num(s) 
-
-        Parameters
-        ----------
-        tag_num : int, array-like
-            A single tag_num or an array-like structure containing tag_nums
-
-        Returns
-        -------
-        tag : str, ndarray
-            if tid_num is an int:
-                corresponding tag (str)
-            if array-like:
-                ndarray containing corresponding tags
-        '''
-
-        if isinstance(tag_num, (int, np.integer)):
-            return self.tags.at[tag_num, 'tag']
-
-        return self.tags.loc[self.tags.index.isin(tag_num), 'tag'].values
-
-    def tag_to_tag_num(self, tag):
-        ''' Returns tag_num(s) given tag(s)
-
-        Parameters
-        ----------
-        tag : str, array-like
-            A single tag or an array-like structure containing tags
-
-        Returns
-        -------
-        tag_num : int, pd.Index
-            if tag is a str:
-                Corresponding tag_num (int)
-            if array-like:
-                pd.Index containing corresponding tag_nums
-        '''
-
-        if isinstance(tag, str):
-            return self.tags.loc[self.tags.tag == tag].index[0]
-
-        return self.tags.loc[self.tags.tag.isin(tag)].index
 
     def tid_num_to_tags(self, tid_num):
         ''' Gets tags for given tid_num(s) 
@@ -450,12 +509,90 @@ class LastFm2Pandas():
 
         tag_nums = self.tid_num_to_tag_nums(tid_num)
 
-        if isinstance(tag_nums, (list, np.ndarray)):
+        if isinstance(tag_nums, (list, ndarray)):
             return self.tag_num_to_tag(tag_nums)
 
         return tag_nums.map(self.tag_num_to_tag)
 
-    def tid_to_tags(self, tid):
+    def tag_num_to_tag(self, tag_num, order=False):
+        ''' Returns tag(s) given tag_num(s) 
+
+        Parameters
+        ----------
+        tag_num : int, array-like
+            A single tag_num or an array-like structure containing tag_nums
+            
+        order: bool
+            If True, order of output matches order of input when input is array-like
+
+
+        Returns
+        -------
+        tag : str, ndarray
+            if tid_num is an int:
+                corresponding tag (str)
+            if array-like:
+                ndarray containing corresponding tags
+        '''
+
+        if isinstance(tag_num, int):
+            return self.tags.at[tag_num, 'tag']
+        
+        if order:
+            return np.array([self.tags.loc[self.tags.index==num, 'tag'].tolist()[0] for num in tag_num], dtype=object)
+        
+        return self.tags.loc[self.tags.index.isin(tag_num), 'tag'].values
+
+    def tag_to_tag_num(self, tag, order=False):
+        ''' Returns tag_num(s) given tag(s)
+
+        Parameters
+        ----------
+        tag : str, array-like
+            A single tag or an array-like structure containing tags
+            
+        order: bool
+            If True, order of output matches order of input when input is array-like
+
+
+        Returns
+        -------
+        tag_num : int, pd.Index
+            if tag is a str:
+                Corresponding tag_num (int)
+            if array-like:
+                pd.Index containing corresponding tag_nums
+        '''
+
+        if isinstance(tag, str):
+            return int(self.tags.loc[self.tags.tag == tag].index[0])
+        
+        if order:
+            return np.array([self.tags.loc[self.tags.tag==t].index[0] for t in tag])
+        
+        return self.tags.loc[self.tags.tag.isin(tag)].index.values
+
+    def get_tags(self):
+        ''' Returns a list of all the tags. '''
+
+        return self.tags['tag'].tolist()
+
+    def get_tag_nums(self):
+        ''' Returns a list of all the tag_nums. '''
+
+        return self.tags.index.tolist()
+
+    def get_tids(self):
+        ''' Gets tids which have at least one tag. '''
+
+        return self.tids['tid'][-self.tids['tid'].isna()].tolist()
+
+    def get_tid_nums(self):
+        ''' Gets tid_num of tids which have at least one tag. '''
+
+        return self.tids.index[-self.tids['tid'].isna()].tolist()
+
+    def query_tags(self, tid):
         ''' Gets tags for given tid(s) 
         
         Parameters
@@ -472,13 +609,22 @@ class LastFm2Pandas():
                 pd.Series having tids as indices and list of tags as values
         '''
 
-        tid_num = self.tid_to_tid_num(tid)
-        tags = self.tid_num_to_tags(tid_num)
+        tags = self.tid_num_to_tags(self.tid_to_tid_num(tid))
 
-        if isinstance(tags, (list, np.ndarray)):
+        if isinstance(tags, (list, ndarray)):
             return tags
 
         return tags.rename(self.tid_num_to_tid)
+
+    def fetch_all_tids_tags(self):
+        ''' Returns a list of tuples containing tids and tags (as they appear in the tid_tag table). '''
+
+        return self.tid_tag[['tid', 'tag']]
+
+    def fetch_all_tids_tags_threshold(self, threshold = 0):
+        ''' Returns a list of tuples containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold. '''
+
+        return self.tid_tag[['tid', 'tag']][self.tid_tag['val'] > threshold]
 
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
@@ -493,4 +639,5 @@ class LastFm2Pandas():
         self.pop.reset_index(inplace=True)
         self.pop.rename(columns={'index':'tag_num'}, inplace=True)
         self.pop = pd.concat([self.pop['tag'], self.pop['tag_num'], self.pop['count']], axis=1)
+        self.pop.index += 1
         return self.pop
