@@ -196,7 +196,7 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST.")
     parser.add_argument("--num-files", default='10', help="Number of files to split the data into")
-    parser.add_argument("--root-dir", dfault='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
+    parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
     parser.add_argument("--csv-path", default='/srv/data/urop/ultimate_csv.csv', help="Set absolute path to ultimate csv file")
     
