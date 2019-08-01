@@ -199,12 +199,13 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST.")
     parser.add_argument("--num-files", default='10', help="Number of files to split the data into")
     parser.add_argument("--root-dir", dfault='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
-    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db'help="Set absolute path to .db file containing the 'clean' tags.")
+    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
+    parser.add_argument("--csv-path", default='/srv/data/urop/ultimate_csv.csv', help="Set absolute path to ultimate csv file")
     
     args = parser.parse_args()
 
     # Gets usefule columns from ultimate_csv.csv and shuffles the data.
-    df = pd.read_csv(PATH, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
+    df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
 
     if args.split: 
         save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose)
