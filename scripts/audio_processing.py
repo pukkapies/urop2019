@@ -198,7 +198,7 @@ if __name__ == '__main__':
     parser.add_argument("--num-files", default='10', help="Number of files to split the data into")
     parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
-    parser.add_argument("--csv-path", default='/srv/data/urop/ultimate_csv.csv', help="Set absolute path to ultimate csv file")
+    parser.add_argument("--csv-path", default='/srv/data/urop/final_ultimate.csv', help="Set absolute path to ultimate csv file")
     
     args = parser.parse_args()
 
@@ -208,9 +208,9 @@ if __name__ == '__main__':
     if args.split: 
         save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose)
     else:
-        for i in range(num_files-1):
+        for i in range(args.num_files-1):
             df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
             save_examples_to_tffile(df_slice, args.audio_format + "_" + str(i+1), args.audio_format, args.root_dir, args.tag_path, args.verbose)
-        df_slice = df[(num_files-1)*len(df)//args.num_files:]
+        df_slice = df[(args.num_files-1)*len(df)//args.num_files:]
         save_examples_to_tffile(df_slice, args.audio_format + "_" + str(i+1), args.audio_format, args.root_dir, args.tag_path, args.verbose)
 
