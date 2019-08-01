@@ -460,7 +460,7 @@ class LastFm2Pandas():
         if isinstance(tid_num, int):
             return self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values
 
-        tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
+        tag_nums = [self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values for num in tid_num]
         return pd.Series(tag_nums, index=tid_num)
 
     def tid_num_to_tags(self, tid_num):
