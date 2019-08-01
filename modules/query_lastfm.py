@@ -103,6 +103,7 @@ class LastFm:
 
         self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
+        self.path = path
     
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
@@ -266,17 +267,29 @@ class LastFm:
         tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
         return tids_filtered
 
-    def db_to_csv(self, output_dir):
-        ''' Converts the tags database into three different csv files. '''
+    def db_to_csv(self, output_dir=None):
+        ''' Converts the tags database into three different csv files. 
+        
+        Parameters
+        ----------
+        output_dir: str
+            Output directory of the csv files. If None, the files will be saved
+            under the same directory as lastfm_tags.db
+        '''
+        
+        if output_dir is None:
+            output_dir = os.path.dirname(self.path)
 
         q = "SELECT name FROM sqlite_master WHERE type='table'"
         self.query(q)
         tables = [i[0] for i in self.c.fetchall()]
         for table in tables:
+            print('saving '+ 'lastfm' + '_' + table +'.csv')
             path = os.path.join(output_dir, 'lastfm' + '_' + table +'.csv')
             df = pd.read_sql_query("SELECT * FROM " + table, self.conn)
             df.to_csv(path, index_label=False)
-
+        print('Done')
+        
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
         
