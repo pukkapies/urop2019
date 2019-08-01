@@ -31,6 +31,7 @@ import os
 import sqlite3
 
 import pandas as pd
+import numpy as np
 
 from numpy import ndarray
 
@@ -395,13 +396,17 @@ class LastFm2Pandas():
     def from_csv(cls, path='/srv/data/urop/', split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
         return cls(from_csv=path, from_csv_split=split, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
 
-    def tid_to_tid_num(self, tid):
+    def tid_to_tid_num(self, tid, order=False):
         ''' Returns tid_num(s) given tid(s)
         
         Parameters
         ----------
         tid : str, array-like
             A single tid or an array-like structure containing tids
+            
+        order: bool
+            If True, order of output matches order of input when input is array-like
+
 
         Returns
         -------
@@ -414,16 +419,22 @@ class LastFm2Pandas():
 
         if isinstance(tid, str):
             return int(self.tids.loc[self.tids.tid == tid].index[0])
+        
+        if order:
+            return [self.tids.loc[self.tids.tid==t].index[0] for t in tid]
 
         return self.tids.loc[self.tids.tid.isin(tid)].index.tolist()
 
-    def tid_num_to_tid(self, tid_num):
+    def tid_num_to_tid(self, tid_num, order=False):
         ''' Returns tid(s) given tid_num(s)
         
         Parameters
         ----------
         tid_num : int, array-like
             A single tid_num or an array-like structure containing tid_nums.
+        
+        order: bool
+            If True, order of output matches order of input when input is array-like
 
         Returns
         -------
@@ -436,7 +447,10 @@ class LastFm2Pandas():
 
         if isinstance(tid_num, int):
             return self.tids.at[tid_num, 'tid']
-
+        
+        if order:
+            return np.array([self.tids.loc[self.tids.index==num, 'tid'].tolist()[0] for num in tid_num], dtype=object)
+        
         return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
 
     def tid_num_to_tag_nums(self, tid_num):
@@ -460,7 +474,7 @@ class LastFm2Pandas():
         if isinstance(tid_num, int):
             return self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values
 
-        tag_nums = [self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values for num in tid_num]
+        tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
         return pd.Series(tag_nums, index=tid_num)
 
     def tid_num_to_tags(self, tid_num):
@@ -487,13 +501,17 @@ class LastFm2Pandas():
 
         return tag_nums.map(self.tag_num_to_tag)
 
-    def tag_num_to_tag(self, tag_num):
+    def tag_num_to_tag(self, tag_num, order=False):
         ''' Returns tag(s) given tag_num(s) 
 
         Parameters
         ----------
         tag_num : int, array-like
             A single tag_num or an array-like structure containing tag_nums
+            
+        order: bool
+            If True, order of output matches order of input when input is array-like
+
 
         Returns
         -------
@@ -506,16 +524,23 @@ class LastFm2Pandas():
 
         if isinstance(tag_num, int):
             return self.tags.at[tag_num, 'tag']
-
+        
+        if order:
+            return np.array([self.tags.loc[self.tags.index==num, 'tag'].tolist()[0] for num in tag_num], dtype=object)
+        
         return self.tags.loc[self.tags.index.isin(tag_num), 'tag'].values
 
-    def tag_to_tag_num(self, tag):
+    def tag_to_tag_num(self, tag, order=False):
         ''' Returns tag_num(s) given tag(s)
 
         Parameters
         ----------
         tag : str, array-like
             A single tag or an array-like structure containing tags
+            
+        order: bool
+            If True, order of output matches order of input when input is array-like
+
 
         Returns
         -------
@@ -528,8 +553,11 @@ class LastFm2Pandas():
 
         if isinstance(tag, str):
             return int(self.tags.loc[self.tags.tag == tag].index[0])
-
-        return self.tags.loc[self.tags.tag.isin(tag)].index
+        
+        if order:
+            return np.array([self.tags.loc[self.tags.tag==t].index[0] for t in tag])
+        
+        return self.tags.loc[self.tags.tag.isin(tag)].index.values
 
     def get_tags(self):
         ''' Returns a list of all the tags. '''
