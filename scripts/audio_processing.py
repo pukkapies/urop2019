@@ -169,26 +169,14 @@ def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, tag_path, v
                 print("{}/{} tracks saved. Last 500 tracks took {} s".format(i, len(df), end-start))
                 start = time.time()
 
-
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
-    parser.add_argument("-s", "--split", default='0.7/0.2/0.1' help"train/val/test split, supply as TRAIN/VAL/TEST. Defaults to 0.7/0.2/0.1")
-    parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
-    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db'help="Set absolute path to .db file containing the 'clean' tags.")
+def save_split(df, split, audio_format, root_dir, tag_path, verbose):
+    ''' '''
     
-    args = parser.parse_args()
-    
-    # Setting up train, val, test from args.split and ensuring their sum is 1.
-    values = [float(_) for _ in args.split.split("/") ]
+    # Setting up train, val, test from split and ensuring their sum is 1.
+    values = [float(_) for _ in split.split("/") ]
     tot = sum(values)
     train, val, test = [val/tot for val in values]
     
-    # Gets usefule columns from ultimate_csv.csv and shuffles the data.
-    df = pd.read_csv(PATH, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
     
     # Splits the DataFrame according to train/val/test.
     size = len(df)
@@ -196,7 +184,34 @@ if __name__ == '__main__':
     test_df = df[size*train:size*(train+val)]
     val_df = df[size*(train+val):]
     
-    base_name = args.format + "_" + args.split 
-    save_examples_to_tffile(train_df, "train_"+base_name, args.format, args.root_dir, args.tag_path, args.verbose)
-    save_examples_to_tffile(test_df, "test_"+base_name, args.format, args.root_dir, args.tag_path, args.verbose)
-    save_examples_to_tffile(val_df, "val_"+base_name, args.format, args.root_dir, args.tag_path, args.verbose)
+    base_name = audio_format + "_" + split 
+    save_examples_to_tffile(train_df, "train_"+base_name, audio_format, root_dir, tag_path, verbose)
+    save_examples_to_tffile(test_df, "test_"+base_name, audio_format, root_dir, tag_path, verbose)
+    save_examples_to_tffile(val_df, "val_"+base_name, audio_format, root_dir, tag_path, verbose)
+
+def save_files(df, num_files, audio_format, root_dir, tag_path, verbose):
+     
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
+    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST.")
+    parser.add_argument("--num-files", default='10', help="Number of files to split the data into")
+    parser.add_argument("--root-dir", dfault='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
+    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db'help="Set absolute path to .db file containing the 'clean' tags.")
+    
+    args = parser.parse_args()
+
+    # Gets usefule columns from ultimate_csv.csv and shuffles the data.
+    df = pd.read_csv(PATH, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
+
+    if args.split: 
+        save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose)
+    else:
+        for i in range(num_files-1):
+            df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
+            save_examples_to_tffile(df_slice, args.audio_format + "_" + str(i+1), args.audio_format, args.root_dir, args.tag_path, args.verbose)
+        df_slice = df[(num_files-1)*len(df)//args.num_files:]
+        save_examples_to_tffile(df_slice, args.audio_format + "_" + str(i+1), args.audio_format, args.root_dir, args.tag_path, args.verbose)
+
