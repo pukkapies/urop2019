@@ -3,7 +3,7 @@
 
 Notes
 -----
-The lastfm database contains 3 tables: tids, tags, tid_tag.
+The database contains 3 tables: tids, tags, tid_tag.
 - tids, 1-column table containing the track ids.
 - tid_tags, contains 3 columns:
     - tid: rowid of the track id in the tids table.
@@ -27,20 +27,25 @@ Classes
     This class is slower to init, since the whole database is loaded into memory, but consequently queries are much faster. This class also contain some additional "advanced" methods.
 '''
 
+import os
 import sqlite3
+
+import pandas as pd
+
+default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
 class LastFm:
     ''' Opens a SQLite connection to the last.fm database. Provides methods to perform advanced queries on it.
 
     Methods
     -------
-    - tid_to_tid_nums
+    - tid_to_tid_num
         Get tid_num given tid.
 
     - tid_num_to_tid
         Get tid given tid_num.
 
-    - tid_num_to_tag_nums
+    - tid_num_to_tag_num
         Get tag_num given tid_num.
 
     - tag_num_to_tag
@@ -89,7 +94,7 @@ class LastFm:
         self.query(q, tid_num)
         return self.c.fetchone()[0]
 
-    def tid_num_to_tag_nums(self, tid_num):
+    def tid_num_to_tag_num(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
 
         q = "SELECT tag FROM tid_tag WHERE tid = ?"
@@ -230,3 +235,262 @@ class LastFm:
         count_dict = self.tid_tag_count(tids)
         tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
         return tids_filtered
+
+
+class LastFm2Pandas():
+    ''' Reads the last.fm database into pandas dataframes. Provides methods to perform advanced queries on it.
+
+    Methods
+    -------
+    - tid_to_tid_num
+        Return tid_num(s) given tid(s).
+
+    - tid_num_to_tid
+        Return tid(s) given tid_num(s).
+
+    - tid_num_to_tag_nums
+        Return tag_num(s) given tid_num(s).
+
+    - tid_num_to_tag
+        Return tag(s) given tid_num(s).
+
+    - tag_num_to_tag
+        Return tag(s) given tag_num(s).
+
+    - tag_to_tag_num
+        Return tag_num(s) given tag(s).
+
+    - tid_num_to_tags
+        Get tags for given tid_num(s).
+
+    - tid_to_tags
+        Get tags for given tid(s).
+
+    - popularity
+        Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
+    '''
+
+    def __init__(self, from_sql=None, from_csv=None, from_csv_split=None, no_tags=False, no_tids=False, no_tid_tag=False):
+        '''
+        Parameters
+        ----------
+        path : str
+            Path to tags database. Defaults to path on Boden.
+
+        no_tags : bool
+            If True, do not store tags table.
+
+        no_tids : bool
+            If True, do not store tids table.
+
+        no_tid_tag : bool
+            If True, do not store tid_tag table.
+        '''
+
+        # open tables as dataframes and shift index to match rowid in database
+        if from_csv is not None:
+            if not no_tags:
+                self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tags.index += 1
+            if not no_tids:
+                self.tids = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tids.index += 1
+            if not no_tid_tag:
+                self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split.pop(0)), index_col=0)
+                self.tid_tag.index += 1
+        else:
+            conn = sqlite3.connect(from_sql)
+            if not no_tags:
+                self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
+                self.tags.index += 1
+            if not no_tids:
+                self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
+                self.tids.index += 1
+            if not no_tid_tag:
+                self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
+                self.tid_tag.index += 1
+            conn.close()
+
+    @classmethod
+    def from_sql(cls, path=default, no_tags=False, no_tids=False, no_tid_tag=False):
+        return cls(from_sql=path, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
+
+    @classmethod
+    def from_csv(cls, path='/srv/data/urop/', split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
+        return cls(from_csv=path, from_csv_split=split, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
+
+    def tid_to_tid_num(self, tid):
+        ''' Returns tid_num(s) given tid(s)
+        
+        Parameters
+        ----------
+        tid : str, array-like
+            A single tid or an array-like structure containing tids
+
+        Returns
+        -------
+        tid_num : str, pandas.Index
+            if tid is a string: 
+                corresponding tid_num (int)
+            if array_like: 
+                pd.Index object containing tid_nums
+        '''
+
+        if isinstance(tid, str):
+            return self.tids.loc[self.tids.tid == tid].index[0]
+
+        return self.tids.loc[self.tids.tid.isin(tid)].index.tolist()
+
+    def tid_num_to_tid(self, tid_num):
+        ''' Returns tid(s) given tid_num(s)
+        
+        Parameters
+        ----------
+        tid_num : int, array-like
+            A single tid_num or an array-like structure containing tid_nums.
+
+        Returns
+        -------
+        tid : str, ndarray
+            if tid_num is an int: 
+                corresponding tid (str)
+            if array-like: 
+                ndarray containing corresponding tids
+        '''
+
+        if isinstance(tid_num, (int, np.integer)):
+            return self.tids.at[tid_num, 'tid']
+
+        return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
+
+    def tid_num_to_tag_nums(self, tid_num):
+        ''' Returns tag_nums given tid_num(s)
+        
+        Parameters
+        ----------
+        tid_num : int, array-like
+            A single tid_num or an array-like structure containing tid_nums
+
+        Returns
+        -------
+        tag_nums : ndarray, series.
+            if tid_num is an int:
+                ndarray of corresponding tag_nums (int)
+            if array-like:
+                pd.Series where indices are tid_nums and values are
+                corresponding list of tag_nums
+        '''
+        
+        if isinstance(tid_num, (int, np.integer)):
+            return self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values
+
+        tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
+        return pd.Series(tag_nums, index=tid_num)
+
+    def tag_num_to_tag(self, tag_num):
+        ''' Returns tag(s) given tag_num(s) 
+
+        Parameters
+        ----------
+        tag_num : int, array-like
+            A single tag_num or an array-like structure containing tag_nums
+
+        Returns
+        -------
+        tag : str, ndarray
+            if tid_num is an int:
+                corresponding tag (str)
+            if array-like:
+                ndarray containing corresponding tags
+        '''
+
+        if isinstance(tag_num, (int, np.integer)):
+            return self.tags.at[tag_num, 'tag']
+
+        return self.tags.loc[self.tags.index.isin(tag_num), 'tag'].values
+
+    def tag_to_tag_num(self, tag):
+        ''' Returns tag_num(s) given tag(s)
+
+        Parameters
+        ----------
+        tag : str, array-like
+            A single tag or an array-like structure containing tags
+
+        Returns
+        -------
+        tag_num : int, pd.Index
+            if tag is a str:
+                Corresponding tag_num (int)
+            if array-like:
+                pd.Index containing corresponding tag_nums
+        '''
+
+        if isinstance(tag, str):
+            return self.tags.loc[self.tags.tag == tag].index[0]
+
+        return self.tags.loc[self.tags.tag.isin(tag)].index
+
+    def tid_num_to_tags(self, tid_num):
+        ''' Gets tags for given tid_num(s) 
+        
+        Parameters
+        ----------
+        tid_num : int, array-like
+            A single tid_num or an array-like structure containing tid_nums
+
+        Returns
+        -------
+        tags : ndarray, pd.Series 
+            if tid_num is an int:
+                ndarray containing corresponding tags     
+            if array-like:
+                pd.Series having tid_nums as indices and list of tags as values
+        '''
+
+        tag_nums = self.tid_num_to_tag_nums(tid_num)
+
+        if isinstance(tag_nums, (list, np.ndarray)):
+            return self.tag_num_to_tag(tag_nums)
+
+        return tag_nums.map(self.tag_num_to_tag)
+
+    def tid_to_tags(self, tid):
+        ''' Gets tags for given tid(s) 
+        
+        Parameters
+        ----------
+        tid : str, array-like
+            A single tid or an array-like structure containing tids
+
+        Returns
+        -------
+        tags : ndarray, pd.Series
+            if tag is a str:
+                ndarray containing corresponding tags
+            if array-like:
+                pd.Series having tids as indices and list of tags as values
+        '''
+
+        tid_num = self.tid_to_tid_num(tid)
+        tags = self.tid_num_to_tags(tid_num)
+
+        if isinstance(tags, (list, np.ndarray)):
+            return tags
+
+        return tags.rename(self.tid_num_to_tid)
+
+    def popularity(self):
+        ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
+
+        # count number of occurence of each tag
+        df_1 = self.tid_tag['tag'].value_counts().to_frame()
+        df_2 = self.tags['tag'].to_frame()
+
+        self.pop = df_2.merge(df_1, left_index=True, right_index=True)
+        self.pop.rename(columns={self.pop.columns[0]:'tag', self.pop.columns[1]:'count'}, inplace=True)
+        self.pop.sort_values('count', ascending=False, inplace=True)
+        self.pop.reset_index(inplace=True)
+        self.pop.rename(columns={'index':'tag_num'}, inplace=True)
+        self.pop = pd.concat([self.pop['tag'], self.pop['tag_num'], self.pop['count']], axis=1)
+        return self.pop
