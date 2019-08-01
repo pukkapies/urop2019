@@ -189,8 +189,6 @@ def save_split(df, split, audio_format, root_dir, tag_path, verbose):
     save_examples_to_tffile(test_df, "test_"+base_name, audio_format, root_dir, tag_path, verbose)
     save_examples_to_tffile(val_df, "val_"+base_name, audio_format, root_dir, tag_path, verbose)
 
-def save_files(df, num_files, audio_format, root_dir, tag_path, verbose):
-     
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
