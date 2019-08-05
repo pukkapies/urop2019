@@ -218,11 +218,13 @@ if __name__ == '__main__':
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
     parser.add_argument("--csv-path", default='/srv/data/urop/final_ultimate.csv', help="Set absolute path to ultimate csv file")
     parser.add_argument("--output-dir", default='/srv/data/urop/', help="Set absolute path to output directory")
-    
+    parser.add_argument("-i", "--interval", help="Sets which interval of files to process. Supply as START/STOP. Use in combination with --num-files")
+
     args = parser.parse_args()
 
     # Gets usefule columns from ultimate_csv.csv and shuffles the data.
     df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
+    print(len(df))
 
     if args.format:
         base_name = os.path.join(args.output_dir, args.format + "_")
@@ -230,11 +232,20 @@ if __name__ == '__main__':
     if args.split: 
         save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose, base_name, args.output_dir)
     else:
-        for i in range(args.num_files-1):
-            df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
-            save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
-        df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
-        save_examples_to_tffile(df_slice, base_name + str(args.num_files), args.format, args.root_dir, args.tag_path, args.verbose)
-
-    print("DONE")
-
+        if args.interval:
+            start, stop = [int(_) for _ in args.interval.split("/")]
+            for i in range(start, stop+1):
+                name = base_name + str(i+1)
+                print("Now writing to: " + name)
+                df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
+                save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
+        else:
+            for i in range(args.num_files-1):
+                name = base_name + str(i+1)
+                print("Now writing to: " + name)
+                df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
+                save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
+            name = base_name + str(args.num_files)
+            print("Now writing to: " + name)
+            df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
+            save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
