@@ -55,7 +55,7 @@ def process_array(array, sr, audio_format):
         unprocessed array, directly from the .npz file
     sr : int
         sample rate
-    audio_format : {"log-mel-spectrogram", "waveform"}
+    audio_format : {"log-mel-spectrogram", "waveform", None}
         desired audio format, if none of the above it defaults to "waveform"
 
 
@@ -68,14 +68,10 @@ def process_array(array, sr, audio_format):
     # Converting to mono
     if array.shape[0] == 2:
         array = librosa.core.to_mono(array)
-    else:
-        array = unprocessed_array
    
     # Resampling the file to 16kHz 
     array = librosa.resample(array, sr, 16000)
     
-    # Something along these lines?? Very likely to be changed given
-    # how we choose to incorporate sysarg
     if audio_format == "log-mel-spectrogram":
         array = np.log(librosa.feature.melspectrogram(array, 16000))
     
@@ -161,6 +157,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
                 end = time.time()
                 print("{}/{} tracks saved. Last 1000 tracks took {} s".format(i, len(df), end-start))
                 start = time.time()
+
             # unpack columns
             tid, file_path = cols
             path = os.path.join(root_dir, file_path[:-9] + '.npz')
@@ -175,17 +172,8 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
 
-            print("HELLO")
-
-
-            # TODO: Refine get_example() 
             example = get_example(processed_array, tid, encoded_tags)
             writer.write(example.SerializeToString())
-
-            if verbose and i % 500 == 0:
-                end = time.time()
-                print("{}/{} tracks saved. Last 500 tracks took {} s".format(i, len(df), end-start))
-                start = time.time()
 
 def save_split(df, split, audio_format, root_dir, tag_path, verbose, base_name, output_dir):
     ''' '''
@@ -223,8 +211,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Gets usefule columns from ultimate_csv.csv and shuffles the data.
+    if args.interval:
+        np.random.seed(1)
     df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
-    print(len(df))
 
     if args.format:
         base_name = os.path.join(args.output_dir, args.format + "_")
