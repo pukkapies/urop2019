@@ -85,7 +85,7 @@ def get_encoded_tags(tid, tag_path):
     ''' Given a tid gets the tags and encodes them with a one-hot encoding '''
     
     lastfm = q_fm.LastFm(tag_path)
-    tag_nums = lastfm.tid_num_to_tag_num(lastfm.tid_to_tid_num(tid)).sort()
+    tag_nums = lastfm.tid_num_to_tag_nums(lastfm.tid_to_tid_num(tid)).sort()
 
     encoded_tags = ""
     for num in tag_nums:
