@@ -170,7 +170,7 @@ def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, tag_path, v
                 print("{}/{} tracks saved. Last 500 tracks took {} s".format(i, len(df), end-start))
                 start = time.time()
 
-def save_split(df, split, audio_format, root_dir, tag_path, verbose):
+def save_split(df, split, audio_format, root_dir, tag_path, verbose, base_name):
     ''' '''
     
     # Setting up train, val, test from split and ensuring their sum is 1.
@@ -185,10 +185,10 @@ def save_split(df, split, audio_format, root_dir, tag_path, verbose):
     test_df = df[size*train:size*(train+val)]
     val_df = df[size*(train+val):]
     
-    base_name = audio_format + "_" + split 
-    save_examples_to_tffile(train_df, "train_"+base_name, audio_format, root_dir, tag_path, verbose)
-    save_examples_to_tffile(test_df, "test_"+base_name, audio_format, root_dir, tag_path, verbose)
-    save_examples_to_tffile(val_df, "val_"+base_name, audio_format, root_dir, tag_path, verbose)
+    name = base_name + split 
+    save_examples_to_tffile(train_df, "train_"+name, audio_format, root_dir, tag_path, verbose)
+    save_examples_to_tffile(test_df, "test_"+name, audio_format, root_dir, tag_path, verbose)
+    save_examples_to_tffile(val_df, "val_"+name, audio_format, root_dir, tag_path, verbose)
 
 if __name__ == '__main__':
 
@@ -206,12 +206,15 @@ if __name__ == '__main__':
     # Gets usefule columns from ultimate_csv.csv and shuffles the data.
     df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
 
+    if args.format:
+        base_name = args.format + "_"
+
     if args.split: 
-        save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose)
+        save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose, base_name)
     else:
         for i in range(args.num_files-1):
             df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
-            save_examples_to_tffile(df_slice, args.format + "_" + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
+            save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
         df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
-        save_examples_to_tffile(df_slice, args.format + "_" + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
+        save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
 
