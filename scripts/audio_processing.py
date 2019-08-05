@@ -81,12 +81,13 @@ def process_array(array, sr, audio_format):
     
     return array
 
-def get_encoded_tags(tid, tag_path):
+def get_encoded_tags(tid, fm):
     ''' Given a tid gets the tags and encodes them with a one-hot encoding '''
     
-    lastfm = q_fm.LastFm(tag_path)
-    tag_nums = lastfm.tid_num_to_tag_nums(lastfm.tid_to_tid_num(tid)).sort()
-
+    tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
+    if not tag_nums:
+        return
+    tag_nums.sort()
     encoded_tags = ""
     for num in tag_nums:
         encoded_tags += ((num-1)-len(encoded_tags))*"0" + "1"
@@ -118,13 +119,13 @@ def get_example(array, tid, encoded_tags):
     A tf.train.Example object
     '''
     # TODO: Refine following outline of the saving to TFRecords procedure
-    array_str = tf.io.serialize_tensor(tf.convert_to_tensor(array))
+    array_str = array.tostring()
     example = tf.train.Example(
             features=tf.train.Features(
                 feature={
                     'spectrogram' : _bytes_feature(array_str),
-                    'tid' :         _bytes_feature(bytes(tid)),
-                    'tags' :        _bytes_feature(bytes(encoded_tags))
+                    'tid' :         _bytes_feature(bytes(tid, 'utf8')),
+                    'tags' :        _bytes_feature(bytes(encoded_tags, 'utf8'))
             }))
     return example
 
@@ -147,19 +148,31 @@ def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, tag_path, v
         desired audio format, if none of the above it defaults to "waveform"
     """
 
-    with tf.python_io.TFRecordWriter(tf_filename) as writer:
+    with tf.io.TFRecordWriter(tf_filename) as writer:
         start = time.time()
+        fm = q_fm.LastFm(tag_path)
         for i, cols in df.iterrows():
+
+            if verbose and i % 1000 == 0:
+                end = time.time()
+                print("{}/{} tracks saved. Last 1000 tracks took {} s".format(i, len(df), end-start))
+                start = time.time()
             # unpack columns
             tid, file_path = cols
             path = os.path.join(root_dir, file_path[:-9] + '.npz')
 
+            encoded_tags = get_encoded_tags(tid, fm) 
+
+            
+            if not encoded_tags:
+                continue
             # Loading the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
 
-            encoded_tags = get_encoded_tags(tid, tag_path) 
+            print("HELLO")
+
 
             # TODO: Refine get_example() 
             example = get_example(processed_array, tid, encoded_tags)
@@ -214,7 +227,9 @@ if __name__ == '__main__':
     else:
         for i in range(args.num_files-1):
             df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
-            save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
+           save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
         df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
-        save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
+        save_examples_to_tffile(df_slice, base_name + str(args.num_files), args.format, args.root_dir, args.tag_path, args.verbose)
+
+    print("DONE")
 
