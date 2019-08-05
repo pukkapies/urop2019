@@ -100,6 +100,11 @@ def _bytes_feature(value):
 
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
+def _float_feature(value):
+    ''' Creates a Float '''
+
+    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
 def get_example(array, tid, encoded_tags):
     ''' Gets a tf.train.Example object
     
@@ -118,12 +123,11 @@ def get_example(array, tid, encoded_tags):
     -------
     A tf.train.Example object
     '''
-    # TODO: Refine following outline of the saving to TFRecords procedure
-    array_str = array.tostring()
+
     example = tf.train.Example(
             features=tf.train.Features(
                 feature={
-                    'spectrogram' : _bytes_feature(array_str),
+                    'spectrogram' : _float_feature(array.flatten()),
                     'tid' :         _bytes_feature(bytes(tid, 'utf8')),
                     'tags' :        _bytes_feature(bytes(encoded_tags, 'utf8'))
             }))
@@ -133,7 +137,7 @@ def get_example(array, tid, encoded_tags):
 
 
 
-def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, tag_path, verbose):
+def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, verbose):
     """ Given paths to .npz files, this function processes them and then creates and saves them to a tf_record file 
 
     TODO: More documentation here
@@ -148,7 +152,7 @@ def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, tag_path, v
         desired audio format, if none of the above it defaults to "waveform"
     """
 
-    with tf.io.TFRecordWriter(tf_filename) as writer:
+    with tf.io.TFRecordWriter(output_path) as writer:
         start = time.time()
         fm = q_fm.LastFm(tag_path)
         for i, cols in df.iterrows():
@@ -183,7 +187,7 @@ def save_examples_to_tffile(df, tf_filename, audio_format, root_dir, tag_path, v
                 print("{}/{} tracks saved. Last 500 tracks took {} s".format(i, len(df), end-start))
                 start = time.time()
 
-def save_split(df, split, audio_format, root_dir, tag_path, verbose, base_name):
+def save_split(df, split, audio_format, root_dir, tag_path, verbose, base_name, output_dir):
     ''' '''
     
     # Setting up train, val, test from split and ensuring their sum is 1.
@@ -199,9 +203,9 @@ def save_split(df, split, audio_format, root_dir, tag_path, verbose, base_name):
     val_df = df[size*(train+val):]
     
     name = base_name + split 
-    save_examples_to_tffile(train_df, "train_"+name, audio_format, root_dir, tag_path, verbose)
-    save_examples_to_tffile(test_df, "test_"+name, audio_format, root_dir, tag_path, verbose)
-    save_examples_to_tffile(val_df, "val_"+name, audio_format, root_dir, tag_path, verbose)
+    save_examples_to_tffile(train_df, os.path.join(output_dir,"train_"+name), audio_format, root_dir, tag_path, verbose)
+    save_examples_to_tffile(test_df, os.path.join(output_dir, "test_"+name), audio_format, root_dir, tag_path, verbose)
+    save_examples_to_tffile(val_df, os.path.join(output_dir, "val_"+name), audio_format, root_dir, tag_path, verbose)
 
 if __name__ == '__main__':
 
@@ -213,6 +217,7 @@ if __name__ == '__main__':
     parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
     parser.add_argument("--csv-path", default='/srv/data/urop/final_ultimate.csv', help="Set absolute path to ultimate csv file")
+    parser.add_argument("--output-dir", default='/srv/data/urop/', help="Set absolute path to output directory")
     
     args = parser.parse_args()
 
@@ -220,14 +225,14 @@ if __name__ == '__main__':
     df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
 
     if args.format:
-        base_name = args.format + "_"
+        base_name = os.path.join(args.output_dir, args.format + "_")
 
     if args.split: 
-        save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose, base_name)
+        save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose, base_name, args.output_dir)
     else:
         for i in range(args.num_files-1):
             df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
-           save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
+            save_examples_to_tffile(df_slice, base_name + str(i+1), args.format, args.root_dir, args.tag_path, args.verbose)
         df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
         save_examples_to_tffile(df_slice, base_name + str(args.num_files), args.format, args.root_dir, args.tag_path, args.verbose)
 
