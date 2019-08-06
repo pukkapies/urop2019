@@ -295,7 +295,7 @@ if __name__ == '__main__':
     parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
     parser.add_argument("--csv-path", default='/srv/data/urop/final_ultimate.csv', help="Set absolute path to ultimate csv file")
-    parser.add_argument("--output-dir", default='/srv/data/urop/', help="Set absolute path to output directory")
+    parser.add_argument("--output-dir", default='/srv/data/urop/tf/', help="Set absolute path to output directory")
     parser.add_argument("-i", "--interval", help="Sets which interval of files to process. Supply as START/STOP. Use in combination with --num-files")
 
     args = parser.parse_args()
