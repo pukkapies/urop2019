@@ -106,9 +106,9 @@ def get_encoded_tags(tid, fm, n_tags):
         return
     
     # Encodes the tags
-    encoded_tags = np.zeros(n_tags)
+    encoded_tags = np.zeros(n_tags, dtype=np.int8)
     for num in tag_nums:
-        encoded_tags[num] = 1
+        encoded_tags[num-1] = 1
 
     return encoded_tags
 
@@ -207,8 +207,9 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
             encoded_tags = get_encoded_tags(tid, fm, n_tags)
 
             # Skip tracks which dont have any "clean" tags    
-            if not encoded_tags:
-                continue
+            if encoded_tags.size == 0:
+                if verbose:
+                    print("{} as no tags. Skipping...".format(tid))
             
             # Loading the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
@@ -304,7 +305,7 @@ if __name__ == '__main__':
             # Getting start and end of interval
             start, stop = [int(_) for _ in args.interval.split("/")]
             # Create and save the files.
-            for i in range(start, stop+1):
+            for i in range(start-1, stop):
                 name = base_name + str(i+1)
                 print("Now writing to: " + name)
                 df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
