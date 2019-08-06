@@ -41,9 +41,7 @@ def _tid_filter(data, tids):
 def _window(data, s):
     pass
 
-def genrate_dataset(mode = 'train', root_dir = tfrecord_root_dir, shuffle = True, batch_size = 32, buffer_size = 1024, window_size = 15, reshape = None, with_tags = None, with_tids = None, num_epochs = None):
-    assert mode in ('train', 'valid')
-
+def genrate_dataset(root_dir = tfrecord_root_dir, shuffle = True, batch_size = 32, buffer_size = 1024, window_size = 15, reshape = None, with_tags = None, with_tids = None, num_epochs = None):
     if root_dir:
         set_tfrecords_root_dir(os.path.abspath(os.path.expanduser(root_dir)))
 
