@@ -280,7 +280,7 @@ def save_split(df, split, audio_format, root_dir, tag_path, verbose, base_name, 
     val_df = df[size*(train+val):]
     
     # Creating + saving the 3 TFRecord files
-    name = base_name + split 
+    name = base_name + split + ".tfrecords"
     save_examples_to_tffile(train_df, os.path.join(output_dir,"train_"+name), audio_format, root_dir, tag_path, verbose)
     save_examples_to_tffile(test_df, os.path.join(output_dir, "test_"+name), audio_format, root_dir, tag_path, verbose)
     save_examples_to_tffile(val_df, os.path.join(output_dir, "val_"+name), audio_format, root_dir, tag_path, verbose)
@@ -325,25 +325,25 @@ if __name__ == '__main__':
             # The rounding errors, i.e. it will have a size thats slightly bigger than the others.
             if stop >= args.num_files:
                 stop = args.num_files-1
-                name = base_name + str(args.num_files)
+                name = base_name + str(args.num_files) + ".tfrecords"
                 print("Now writing to: " + name)
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
 
             # Create and save the files.
             for i in range(start-1, stop):
-                name = base_name + str(i+1)
+                name = base_name + str(i+1) + ".tfrecords"
                 print("Now writing to: " + name)
                 df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
         else:
             # Create and save the num_files files
             for i in range(args.num_files-1):
-                name = base_name + str(i+1)
+                name = base_name + str(i+1) + ".tfrecords"
                 print("Now writing to: " + name)
                 df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
             name = base_name + str(args.num_files)
-            print("Now writing to: " + name)
+            print("Now writing to: " + name) + ".tfrecords"
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
