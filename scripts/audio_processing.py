@@ -13,13 +13,29 @@ and 2 are the first and second digits of the 7digital id
 
 Functions
 ---------
-- process_array             Process array and apply desired audio format.
-- get_tid_from_path         Gets tid associated to file, given path.
-- filter_tags               TODO
-- encode_tags               TODO
-- _bytes_feature            Creates a BytesList feature.
-- get_example               Gets a tf.train.Example object given array, tid and encoded_tags.
+- process_array             
+        Processesing array and applying desired audio format
 
+- get_encoded_tags
+        Gets tags for a tid and encodes them with a one-hot vector        
+
+- _bytes_feature
+        Creates a BytesList feature
+
+- _float_feature
+        Creates a FloatList feature
+
+- _int64_feature
+        Creates a Int64List feature
+
+- get_example
+        Gets a tf.train.Example object with features containing the array, tid and the encoded tags
+
+-save_examples_to_tffile
+        Creates and saves a TFRecord file
+
+-save_split
+        Creates and saves 3 TFRecord files for train, validation and test data.
 '''
 
 import os
@@ -160,7 +176,7 @@ def get_example(array, tid, encoded_tags):
 
 
 def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, verbose):
-    """ Given paths to .npz files, this function processes them and then creates and saves them to a tf_record file 
+    """ Creates and saves a TFRecord file.
 
     TODO: More documentation here
 
