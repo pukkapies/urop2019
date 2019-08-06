@@ -62,7 +62,7 @@ from itertools import islice
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
-import query_lastfm as db
+import query_lastfm as q_fm
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'
@@ -131,15 +131,10 @@ def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
     df = merged_df[-merged_df['clip_length'].isna()]
     return df
 
-def df_purge_no_tag(merged_df: pd.DataFrame, path_db: str = None):
+def df_purge_no_tag(merged_df: pd.DataFrame, lf: q_fm.LastFm):
     ''' Remove tracks which are not matched to any tag. '''
 
-    if path_db:
-        db.set_path(path_db)
-
-    lastfm = db.LastFm(db.path)
-
-    tids_with_tag = lastfm.get_tids()
+    tids_with_tag = lf.get_tids()
     tids_with_tag_df = pd.DataFrame(data={'track_id': tids_with_tag})
     
     return pd.merge(merged_df, tids_with_tag_df, on='track_id', how='inner')
@@ -177,13 +172,16 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def ultimate_output(df: pd.DataFrame, discard_no_tag: bool = False, discard_dupl: bool = False):
-    ''' Produces a dataframe with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'.
+def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag: bool = False, discard_dupl: bool = False):
+    ''' Produce a dataframe with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'.
     
     Parameters
     ----------
     df : pd.DataFrame
         The dataframe to purge.
+
+    lf: q_fm.LastFm
+        An instance of the tags database.
     
     discard_no_tag : bool
         If True, discards tracks which are not matched to any tag.
@@ -198,29 +196,29 @@ def ultimate_output(df: pd.DataFrame, discard_no_tag: bool = False, discard_dupl
         The entries are the ones specified by the given parameters.
     '''
 
-    print("Fetching mp3 files from input dataframe...", end=" ")
+    print("Fetching mp3 files from input dataframe...", end=" ", flush=True)
     merged_df = df_merge(extract_ids_from_summary(), df)
     print("done")
 
-    print("Purging mismatches...", end=" ")
+    print("Purging mismatches...", end=" ", flush=True)
     merged_df = df_purge_mismatches(merged_df)
     print("done")
 
     print("Purging faulty mp3 files...")
-    print("    Checking mp3 files which have size 0...", end=" ")
+    print("    Checking mp3 files which have size 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_1(merged_df)
     print("done")
-    print("    Checking mp3 files which can't be opened and have length 0...", end=" ")
+    print("    Checking mp3 files which can't be opened and have length 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
     if discard_no_tag:
-        print("Purging tracks with no tags...", end=" ")
-        merged_df = df_purge_no_tag(merged_df)
+        print("Purging tracks with no tags...", end=" ", flush=True)
+        merged_df = df_purge_no_tag(merged_df, lf)
         print("done")
     
     if discard_dupl:
-        print("Purging duplicate tracks...", end=" ")
+        print("Purging duplicate tracks...", end=" ", flush=True)
         merged_df = df_purge_duplicates(merged_df)
         print("done")
     
@@ -234,6 +232,7 @@ if __name__ == "__main__":
     parser.add_argument("input", help="input csv filename or path")
     parser.add_argument("output", help="output csv filename or path")
     parser.add_argument("--path-h5", help="set path to msd_summary_file.h5")
+    parser.add_argument("--path-db", help="set path to tags database")
     parser.add_argument("--path-txt-dupl", help="set path to duplicates info file")
     parser.add_argument("--path-txt-mism", help="set path to mismatches info file")
     parser.add_argument("--discard-no-tag", action="store_true", help="choose to discard tracks with no tags")
@@ -247,8 +246,7 @@ if __name__ == "__main__":
         output = args.output
 
     if os.path.isfile(output):
-       print("WARNING file " + output + " already exists!")
-       sys.exit(0)
+       raise OSError("file " + output + " already exists!")
 
     if args.path_h5:
         path_h5 = os.path.expanduser(args.path_h5)
@@ -261,7 +259,16 @@ if __name__ == "__main__":
 
     assert 'file_size' in df and 'clip_length' in df
 
-    df = ultimate_output(df, args.discard_no_tag, args.discard_dupl)
+    if args.path_db:
+        if not os.path.isfile(args.path_db):
+            raise OSError("file " + args.path_db + " does not exist!")
+        lastfm = q_fm.LastFm(args.path_db)
+    else:
+        if not os.path.isfile(q_fm.default):
+            raise OSError("file " + q_fm.default + " does not exist!")
+        lastfm = q_fm.LastFm(q_fm.default)
+
+    df = ultimate_output(df, lastfm, args.discard_no_tag, args.discard_dupl)
     
     # create output csv file
     with open(output, 'a') as f:
