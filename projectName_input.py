@@ -41,6 +41,16 @@ def _tid_filter(data, tids):
 def _window(data, s):
     pass
 
+def _batch_normalization(data, epsilon=.0001): # not sure if we need this... there's already a batch normalization layer in the model. not even sure if it works
+    tensor = tf.unstack(data['audio'])
+    mean,variance = tf.nn.moments(tensor, axes=[0])
+    tensor_normalized = (tensor-mean)/(variance+epsilon)
+    
+    return {
+        'audio': tensor_normalized,
+        'tid': data['tid'],
+        'tag': data['tag']}
+
 def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buffer_size=10000, window_size=15, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     if root_dir:
         set_tfrecords_root_dir(os.path.abspath(os.path.expanduser(root_dir)))
@@ -62,4 +72,4 @@ def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buf
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
     
-    return dataset.map(lambda x: _window(x, window_size)).batch(batch_size).repeat(num_epochs)
+    return dataset.map(lambda x: _window(x, window_size)).batch(batch_size).map(_batch_normalization).repeat(num_epochs)
