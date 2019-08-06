@@ -304,13 +304,22 @@ if __name__ == '__main__':
         if args.interval:
             # Getting start and end of interval
             start, stop = [int(_) for _ in args.interval.split("/")]
+            
+            # If stop is contains the last file this will need to be dealt with separately, as last file will contain
+            # The rounding errors, i.e. it will have a size thats slightly bigger than the others.
+            if stop >= args.num_files:
+                stop = args.num_files-1
+                name = base_name + str(args.num_files)
+                print("Now writing to: " + name)
+                df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
+                save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
+
             # Create and save the files.
             for i in range(start-1, stop):
                 name = base_name + str(i+1)
                 print("Now writing to: " + name)
                 df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
-            # TODO: Fix bug if interval contains the last file.
         else:
             # Create and save the num_files files
             for i in range(args.num_files-1):
