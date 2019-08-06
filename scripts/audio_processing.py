@@ -77,16 +77,18 @@ def process_array(array, sr, audio_format):
     
     return array
 
-def get_encoded_tags(tid, fm):
+def get_encoded_tags(tid, fm, n_tags):
     ''' Given a tid gets the tags and encodes them with a one-hot encoding '''
     
     tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
+    # Returns None if empty, so that it is easy to check for empty tags
     if not tag_nums:
         return
-    tag_nums.sort()
-    encoded_tags = ""
+
+    encoded_tags = np.zeros(n_tags)
+
     for num in tag_nums:
-        encoded_tags += ((num-1)-len(encoded_tags))*"0" + "1"
+        encoded_tags[num] = 1
 
     return encoded_tags
 
@@ -97,9 +99,14 @@ def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 def _float_feature(value):
-    ''' Creates a Float '''
+    ''' Creates a FloatList Feature '''
 
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
+def _int64_feature(value):
+    ''' Creases a IntList Feature '''
+
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
 def get_example(array, tid, encoded_tags):
     ''' Gets a tf.train.Example object
@@ -125,7 +132,7 @@ def get_example(array, tid, encoded_tags):
                 feature={
                     'spectrogram' : _float_feature(array.flatten()),
                     'tid' :         _bytes_feature(bytes(tid, 'utf8')),
-                    'tags' :        _bytes_feature(bytes(encoded_tags, 'utf8'))
+                    'tags' :        _int64_feature(encoded_tags)
             }))
     return example
 
@@ -164,14 +171,15 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
 
             encoded_tags = get_encoded_tags(tid, fm) 
 
-            
+            # Skip tracks which dont have any "clean" tags    
             if not encoded_tags:
                 continue
+            
             # Loading the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
-
+            
             example = get_example(processed_array, tid, encoded_tags)
             writer.write(example.SerializeToString())
 
