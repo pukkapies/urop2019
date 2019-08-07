@@ -1,4 +1,4 @@
-''' Script for processing .npz files and saving as a TFRecords file
+''' Script for processing .npz files and saving as a tfrecords file
 
 Notes
 -----
@@ -82,11 +82,11 @@ def process_array(array, sr, audio_format):
         processed array
     '''
     
-    # Converting to mono
+    # converting to mono
     if array.shape[0] == 2:
         array = librosa.core.to_mono(array)
    
-    # Resampling the file to 16kHz 
+    # resampling the file to 16kHz 
     array = librosa.resample(array, sr, 16000)
     
     if audio_format == "log-mel-spectrogram":
@@ -117,11 +117,11 @@ def get_encoded_tags(tid, fm, n_tags):
     
     tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
 
-    # Returns None if empty, so that it is easy to check for empty tags
+    # returns None if empty, so that it is easy to check for empty tags
     if not tag_nums:
         return
     
-    # Encodes the tags
+    # encodes the tags
     encoded_tags = np.zeros(n_tags, dtype=np.int8)
     for num in tag_nums:
         encoded_tags[num-1] = 1
@@ -206,7 +206,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
 
         start = time.time()
         fm = q_fm.LastFm(tag_path)
-        # This is used to encode the tags, calculated outside the loop for efficiency
+        # this is used to encode the tags, calculated outside the loop for efficiency
         n_tags = len(fm.get_tag_nums())
 
         for i, cols in df.iterrows():
@@ -222,12 +222,12 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
 
             encoded_tags = get_encoded_tags(tid, fm, n_tags)
 
-            # Skip tracks which dont have any "clean" tags    
+            # skip tracks which dont have any "clean" tags    
             if encoded_tags.size == 0:
                 if verbose:
                     print("{} as no tags. Skipping...".format(tid))
             
-            # Loading the unsampled file from path of npz file and process it.
+            # loading the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
@@ -250,47 +250,47 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    # Set seed in case interval is specified so that all instances will run on separate parts of the data
+    # set seed in case interval is specified so that all instances will run on separate parts of the data
     if args.interval:
         np.random.seed(1)
-    # Gets useful columns from ultimate_csv.csv and shuffles the data.
-    df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").sample(frac=1).reset_index(drop=True)
+    # gets useful columns from ultimate_csv.csv and shuffles the data.
+    df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").Sample(frac=1).reset_index(drop=True)
     
-    # Create base name, for naming the TFRecord files
+    # create base name, for naming the TFRecord files
     if args.format == "log-mel-spectrogram":
         base_name = os.path.join(args.output_dir, args.format + "_")
     else:
         base_name = os.path.join(args.output_dir, "waveform_")
     
-    # Save in a TRAIN/VAL/TEST split if specified
+    # save in a TRAIN/VAL/TEST split if specified
     if args.split: 
-        # Setting up train, val, test from split and ensuring their sum is 1.
+        # setting up train, val, test from split and ensuring their sum is 1.
         values = [float(_) for _ in args.split.split("/") ]
         tot = sum(values)
         train, val, test = [val/tot for val in values]
 
 
-        # Splits the DataFrame according to train/val/test.
+        # splits the DataFrame according to train/val/test.
         size = len(df)
         train_df = df[:size*train]
         test_df = df[size*train:size*(train+val)]
         val_df = df[size*(train+val):]
 
-        # Creating + saving the 3 TFRecord files
+        # creating + saving the 3 TFRecord files
         name = base_name + args.split + ".tfrecord"
         save_examples_to_tffile(train_df, os.path.join(args.output_dir,"train_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
         save_examples_to_tffile(test_df, os.path.join(args.output_dir, "test_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
         save_examples_to_tffile(val_df, os.path.join(args.output_dir, "val_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
 
-    # Otherwise save in args.num_files equal-sized files.
+    # otherwise save in args.num_files equal-sized files.
     else:
-        # If interval is specified only create files over the given interval.
+        # if interval is specified only create files over the given interval.
         if args.interval:
-            # Getting start and end of interval
+            # getting start and end of interval
             start, stop = [int(_) for _ in args.interval.split("/")]
             
-            # If stop is contains the last file this will need to be dealt with separately, as last file will contain
-            # The rounding errors, i.e. it will have a size thats slightly bigger than the others.
+            # if stop is contains the last file this will need to be dealt with separately, as last file will contain
+            # the rounding errors, i.e. it will have a size thats slightly bigger than the others.
             if stop >= args.num_files:
                 stop = args.num_files-1
                 name = base_name + str(args.num_files) + ".tfrecord"
@@ -298,14 +298,14 @@ if __name__ == '__main__':
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
 
-            # Create and save the files.
+            # create and save the files.
             for i in range(start-1, stop):
                 name = base_name + str(i+1) + ".tfrecord"
                 print("Now writing to: " + name)
                 df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
         else:
-            # Create and save the num_files files
+            # create and save the num_files files
             for i in range(args.num_files-1):
                 name = base_name + str(i+1) + ".tfrecord"
                 print("Now writing to: " + name)
