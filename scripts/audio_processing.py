@@ -165,7 +165,7 @@ def get_example(array, tid, encoded_tags):
     return example
 
 def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, verbose):
-    """ Creates and saves a TFRecord file.
+    ''' Creates and saves a TFRecord file.
 
     TODO: More documentation here
 
@@ -188,7 +188,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
 
     verbose : bool
         If True, print progress.
-    """
+    '''
 
     with tf.io.TFRecordWriter(output_path) as writer:
 

@@ -120,7 +120,7 @@ def check_silence(df, verbose=True):
 
     for idx, path in enumerate(df['file_path']):
         npz_path = npz.mp3_path_to_npz_path(path)
-        npz_paths.append(os.path.relpath(npz_path, npz.npz_root_dir)
+        npz_paths.append(os.path.relpath(npz_path, npz.npz_root_dir))
         
         # try to load the stored npz file
         try:
