@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-tfrecord_root_dir = '/srv/data/urop/tf'
+tfrecord_root_dir = '/srv/data/urop/7digital-tfrecords'
 
 def set_tfrecords_root_dir(new_root_dir): 
     ''' Function to set new tfrecord_root_dir. '''
@@ -12,9 +12,9 @@ def set_tfrecords_root_dir(new_root_dir):
     tfrecord_root_dir = new_root_dir
 
 audio_feature_description = {
-    'spectogram': tf.io.VarLenFeature(tf.float32),
-    'tid': tf.io.VarLenFeature(tf.string),
-    'tags': tf.io.VarLenFeature(tf.int64)
+    'audio' : tf.io.VarLenFeature(tf.float32),
+    'tid' : tf.io.FixedLenFeature((), tf.string),
+    'tags' : tf.io.FixedLenFeature((155, ), tf.int64) # 155 is the number of tags in the clean database
 }
 
 def _parse_audio(example):
@@ -29,13 +29,15 @@ def _reshape(data, new_shape):
         'tid': data['tid'],
         'tags': data['tags']}
 
-def _tag_filter(data, idxs):
-    tags = tf.unstack(data['tags'])
-    tags = tags.indices.numpy().flatten()
-    return np.any(tags == idxs)
+def _tag_filter(features, tags):
+    tags = tf.equal(tf.unstack(features['tags']), 1)
+    tags_mask = tf.SparseTensor(indices=np.array(idxs, dtype=np.int64).reshape(-1, 1), values=np.ones(len(idxs), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
+    tags_mask = tf.sparse.to_dense(tags_mask)
+    tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
+    return tf.reduce_any(tags & tags_mask)
 
-def _tid_filter(data, tids):
-    tid = tf.unstack(data['tid'])
+def _tid_filter(features, tids):
+    tid = tf.unstack(features['tid'])
     return np.any(tids == tid)
 
 def _window(data, s):
@@ -61,7 +63,7 @@ def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buf
         if file.endswith(".tfrecord"):
             tfrecords.append(os.path.abspath(os.path.join(tfrecord_root_dir, file)))
 
-    dataset = tf.data.TFRecordsDataset(tfrecords).map(_parse_audio)
+    dataset = tf.data.TFRecordDataset(tfrecords).map(_parse_audio)
     
     if with_tags:
         dataset = dataset.filter(lambda x: _tag_filter(x, with_tags))
