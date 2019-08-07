@@ -242,7 +242,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument("-f", "--format", help="set output format of audio, defaults to waveform (e.g. 'log-mel-spectrogram')")
     parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST")
+    parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST. The proportion of TRAIN, VAL, TEST dictates how many entries is in each file.")
     parser.add_argument("--num-files", default=10, type=int, help="number of equal-sized files to split the data into, defaults to 10")
     parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="set absolute path to directory containing the .npz files, defaults to path on boden")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="set absolute path to .db file containing the 'clean' tags, defaults to path on boden")
