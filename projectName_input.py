@@ -21,16 +21,35 @@ def _parse_audio(example):
     return tf.io.parse_single_example(example, audio_feature_description)
 
 def _tid_filter(features, tids):
+    ''' Reduces the tids in features['tids'] to only be ones contained in tids '''
     return tf.reduce_any(tf.equal(tids, features['tid']))
 
 def _tag_filter(features, tags):
-    tags = tf.equal(tf.unstack(features['tags']), 1)
+    ''' Reduces the one-hot vector in the tags feature to only represent certain tags. 
+    
+    Parameters
+    ----------
+    TODO: Describe features better
+    features : dict
+        features['tags'] is a one-hot encoding of the tags corresponding to features['tids']
+
+    tags : list
+        contains the tag_nums of the tags that will be represented in the one-hot vector
+    
+    Returns
+    -------
+    tf.bool tensor
+        specifies which indices to keep
+    '''
+    tag_bool = tf.equal(tf.unstack(features['tags']), 1)
     tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
-    return tf.reduce_any(tags & tags_mask)
+    return tf.reduce_any(tag_bool & tags_mask)
 
 def _tag_filter_hotenc_mask(features, tags):
+    ''' '''
+
     tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
@@ -38,6 +57,8 @@ def _tag_filter_hotenc_mask(features, tags):
     return features
 
 def _shape(features, shape = 96):
+    ''' Reshapes the sparse tensor features['tensor'] to the shape (shape, -1) '''
+
     if isinstance(shape, int):
         shape = (shape, -1)
 
@@ -45,7 +66,8 @@ def _shape(features, shape = 96):
     return features
 
 def _slice(features, audio_format, window_size=15, where='middle'):
-    
+    ''' Extracts a window of the input ''' 
+
     sr = 16000 # sample rate
     hop_length = 512 # hop length when creating mel_spectrogram
     
@@ -108,6 +130,40 @@ def _batch_normalization(features, epsilon=.0001): # not sure if we need this...
         'tags': features['tags']}
 
 def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, window_location='middle', shuffle=True, batch_size=32, buffer_size=10000, window_size=15, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
+    ''' ???
+    
+    Parameters:
+    ----------
+    root_dir : str
+        path to the directory containing the tfrecord files
+
+    audio_format : {'waveform', 'spectrogram'}
+        specifies what audioformat to generate the dataset with
+
+    window_location : {'middle', 'beginning', 'end', 'random'}
+        specifies from where to extract the window
+
+    shuffle : bool
+       
+    batch_size : int
+
+    buffer_size : int
+
+    window_size : int
+        window size in seconds
+
+    reshape : int
+        specifies to reshape the audio array to the shape (shape, -1)
+
+    with_tags : list
+        contains the subset of tags to be trained on.
+
+    with_tids : list
+        contains the tids to be trained on.
+
+    num_epochs : int
+    '''
+
     if root_dir:
         set_tfrecords_root_dir(os.path.abspath(os.path.expanduser(root_dir)))
 
