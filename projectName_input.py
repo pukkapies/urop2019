@@ -20,15 +20,6 @@ audio_feature_description = {
 def _parse_audio(example):
     return tf.io.parse_single_example(example, audio_feature_description)
 
-def _reshape(data, new_shape):
-    if isinstance(new_shape, int):
-        new_shape = (new_shape, -1)
-
-    return {
-        'spectogram': tf.sparse.reshape(data['spectogram'], new_shape),
-        'tid': data['tid'],
-        'tags': data['tags']}
-
 def _tag_filter(features, tags):
     tags = tf.equal(tf.unstack(features['tags']), 1)
     tags_mask = tf.SparseTensor(indices=np.array(idxs, dtype=np.int64).reshape(-1, 1), values=np.ones(len(idxs), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
@@ -37,8 +28,16 @@ def _tag_filter(features, tags):
     return tf.reduce_any(tags & tags_mask)
 
 def _tid_filter(features, tids):
-    tid = tf.unstack(features['tid'])
-    return np.any(tids == tid)
+    return tf.reduce_any(tf.equal(tids, features['tid']))
+
+def _reshape(data, new_shape):
+    if isinstance(new_shape, int):
+        new_shape = (new_shape, -1)
+
+    return {
+        'spectogram': tf.sparse.reshape(data['spectogram'], new_shape),
+        'tid': data['tid'],
+        'tags': data['tags']}
 
 def _window(data, location='middle', window_size=15):
     
