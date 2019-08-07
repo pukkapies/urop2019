@@ -33,9 +33,6 @@ Functions
 
 -save_examples_to_tffile
         Creates and saves a TFRecord file
-
--save_split
-        Creates and saves 3 TFRecord files for train, validation and test data.
 '''
 
 import os
