@@ -35,9 +35,6 @@ Functions
 
 -save_examples_to_tffile
         Creates and saves a TFRecord file
-
--save_split
-        Creates and saves 3 TFRecord files for train, validation and test data.
 '''
 
 import argparse
@@ -237,10 +234,10 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST.")
     parser.add_argument("--num-files", default=10, type=int, help="Number of files to split the data into")
-    parser.add_argument("--root-dir", default='/srv/data/urop/7digital_numpy/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
+    parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
-    parser.add_argument("--csv-path", default='/srv/data/urop/final_ultimate.csv', help="Set absolute path to ultimate csv file")
-    parser.add_argument("--output-dir", default='/srv/data/urop/tf/', help="Set absolute path to output directory")
+    parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="Set absolute path to ultimate csv file")
+    parser.add_argument("--output-dir", default='/srv/data/urop/tfrecords/', help="Set absolute path to output directory")
     parser.add_argument("-i", "--interval", help="Sets which interval of files to process. Supply as START/STOP. Use in combination with --num-files")
 
     args = parser.parse_args()
@@ -249,7 +246,7 @@ if __name__ == '__main__':
     if args.interval:
         np.random.seed(1)
     # gets useful columns from ultimate_csv.csv and shuffles the data.
-    df = pd.read_csv(args.csv_path, usecols=["track_id", "mp3_path", "npz_path"], comment="#").Sample(frac=1).reset_index(drop=True)
+    df = pd.read_csv(args.csv_path, usecols=["track_id", "mp3_path", "npz_path"], comment="#").sample(frac=1).reset_index(drop=True)
     
     # create base name, for naming the TFRecord files
     if args.format == "log-mel-spectrogram":
@@ -266,15 +263,16 @@ if __name__ == '__main__':
 
         # splits the DataFrame according to train/val/test.
         size = len(df)
-        train_df = df[:size*train]
-        test_df = df[size*train:size*(train+val)]
-        val_df = df[size*(train+val):]
+        print(train)
+        train_df = df[:int(size*train)]
+        test_df = df[int(size*train):int(size*(train+val))]
+        val_df = df[int(size*(train+val)):]
 
         # creating + saving the 3 TFRecord files
-        name = base_name + args.split + ".tfrecord"
-        save_examples_to_tffile(train_df, os.path.join(args.output_dir,"train_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
-        save_examples_to_tffile(test_df, os.path.join(args.output_dir, "test_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
-        save_examples_to_tffile(val_df, os.path.join(args.output_dir, "val_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
+        ending = args.split.replace('/', '-') + ".tfrecord" 
+        save_examples_to_tffile(train_df, base_name+"train_"+ending, args.format, args.root_dir, args.tag_path, args.verbose)
+        save_examples_to_tffile(test_df, base_name+"test_"+ending, args.format, args.root_dir, args.tag_path, args.verbose)
+        save_examples_to_tffile(val_df, base_name+"val_"+ending, args.format, args.root_dir, args.tag_path, args.verbose)
 
     # otherwise save in args.num_files equal-sized files.
     else:
