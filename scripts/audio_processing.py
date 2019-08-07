@@ -269,7 +269,7 @@ if __name__ == '__main__':
         # setting up train, val, test from split and scaling them to have sum 1.
         values = [float(_) for _ in args.split.split("/") ]
         tot = sum(values)
-        train, val, test = [val/tot for val in values]
+        train, val, test = [v/tot for v in values]
 
         # splits the DataFrame according to train/val/test
         size = len(df)
