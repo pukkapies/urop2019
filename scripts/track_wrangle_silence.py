@@ -284,9 +284,9 @@ if __name__ == "__main__":
     # if any column already exists in the df, dont run check_silence (i.e. adding the columns) 
     if [col for col in cols if col in df.columns] != cols:
         if args.root_dir_npz:
-            npz.set_npz_root_dir(os.path.expanduser(args.root_dir_npz))
+            npz.set_npz_root_dir(os.path.abspath(os.path.expanduser(args.root_dir_npz)))
         if args.root_dir_mp3:
-            npz.set_mp3_root_dir(os.path.expanduser(args.root_dir_mp3))
+            npz.set_mp3_root_dir(os.path.abspath(os.path.expanduser(args.root_dir_mp3)))
         need_check_silence = True
     
     elif not any([args.filter_trim_length, args.filter_tot_silence, args.filter_max_silence, args.min_size]):
