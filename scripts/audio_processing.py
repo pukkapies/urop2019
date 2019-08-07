@@ -1,5 +1,6 @@
 ''' Script for processing .npz files and saving as a tfrecords file
 
+
 Notes
 -----
 This file can be run as a script, for more information on possible arguments type 
@@ -10,6 +11,7 @@ to set directory where the .npz files are stored. The directory needs to have a 
 Under the directory, all non-folders must be .npz files. The name of a file is given by the
 7digital id and it will be located under "root_dir/digit 1/digit 2/7digital id.npz", where digit 1
 and 2 are the first and second digits of the 7digital id
+
 
 Functions
 ---------
@@ -38,10 +40,10 @@ Functions
         Creates and saves 3 TFRecord files for train, validation and test data.
 '''
 
+import argparse
 import os
 import sys
 import time
-import argparse
 
 import librosa
 import numpy as np
@@ -51,7 +53,6 @@ import tensorflow as tf
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
 
 import query_lastfm as q_fm
-
 
 def process_array(array, sr, audio_format):
     ''' Processesing array and applying desired audio format 
@@ -125,7 +126,6 @@ def get_encoded_tags(tid, fm, n_tags):
 
     return encoded_tags
 
-
 def _bytes_feature(value):
     ''' Creates a BytesList Feature '''
 
@@ -163,14 +163,11 @@ def get_example(array, tid, encoded_tags):
             features=tf.train.Features(
                 feature={
                     'audio' : _float_feature(array.flatten()),
-                    'tid' :         _bytes_feature(bytes(tid, 'utf8')),
-                    'tags' :        _int64_feature(encoded_tags)
+                    'tid' : _bytes_feature(bytes(tid, 'utf8')),
+                    'tags' : _int64_feature(encoded_tags)
             }))
+
     return example
-
-
-
-
 
 def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, verbose):
     """ Creates and saves a TFRecord file.
@@ -265,7 +262,6 @@ if __name__ == '__main__':
         values = [float(_) for _ in args.split.split("/") ]
         tot = sum(values)
         train, val, test = [val/tot for val in values]
-
 
         # splits the DataFrame according to train/val/test.
         size = len(df)
