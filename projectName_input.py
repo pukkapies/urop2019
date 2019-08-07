@@ -40,8 +40,75 @@ def _tid_filter(features, tids):
     tid = tf.unstack(features['tid'])
     return np.any(tids == tid)
 
-def _window(data, s):
-    pass
+def _window(data, location='middle', window_size=15):
+    
+    sr = 16000 # sample rate is 16000 kHz
+    hop_length = 512 # hop length when creating mel_spectrogram
+    
+    # length of the final slize
+    if format == 'waveform':
+        slice_length = sr*window_size 
+
+        if location == 'middle':
+            length = len(data['audio'])
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][length-slice_length//2:length+slice_length//2])
+                'tid': data['tid']
+                'tag': data['tag']}
+        elif location == 'beginning':
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][:slice_length])
+                'tid': data['tid']
+                'tag': data['tag']}
+
+        elif location == 'end':
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][-slice_length:])
+                'tid': data['tid']
+                'tag': data['tag']}
+
+        elif location == 'random':
+            length = len(data['audio'].float_list.value)
+            s = np.random.randint(0, length-slice_length)
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][s:s+slice_length])
+                'tid': data['tid']
+                'tag': data['tag']}
+        else:
+            print("Please enter a valid location")
+            exit()
+
+    elif format == 'log-mel-spectrogram':
+        slice_length = sr*window_size//hop_length 
+
+        if location == 'middle':
+            length = len(data['audio'][1])
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][:,length-slice_length//2:length+slice_length//2])
+                'tid': data['tid']
+                'tag': data['tag']}
+        elif location == 'beginning':
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][:,:slice_length])
+                'tid': data['tid']
+                'tag': data['tag']}
+
+        elif location == 'end':
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][:,-slice_length:])
+                'tid': data['tid']
+                'tag': data['tag']}
+
+        elif location == 'random':
+            length = len(data['audio'].float_list.value)
+            s = np.random.randint(0, length-slice_length)
+            return {
+                'audio': tf.sparse.to_dense(data['audio'][:,s:s+slice_length])
+                'tid': data['tid']
+                'tag': data['tag']}
+        else:
+            print("Please enter a valid location")
+            exit()
 
 def _batch_normalization(data, epsilon=.0001): # not sure if we need this... there's already a batch normalization layer in the model. not even sure if it works
     tensor = tf.unstack(data['spectogram'])
