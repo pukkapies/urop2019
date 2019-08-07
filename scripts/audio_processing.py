@@ -227,15 +227,15 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--format", help="Set output format of audio, defaults to waveform")
+    parser.add_argument("-f", "--format", help="set output format of audio, defaults to waveform")
     parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST.")
-    parser.add_argument("--num-files", default=10, type=int, help="Number of files to split the data into")
-    parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="Set absolute path to directory containing the .npz files, defaults to path on boden")
-    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="Set absolute path to .db file containing the 'clean' tags.")
-    parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="Set absolute path to ultimate csv file")
-    parser.add_argument("--output-dir", default='/srv/data/urop/tfrecords/', help="Set absolute path to output directory")
-    parser.add_argument("-i", "--interval", help="Sets which interval of files to process. Supply as START/STOP. Use in combination with --num-files")
+    parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST")
+    parser.add_argument("--num-files", default=10, type=int, help="number of files to split the data into")
+    parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="set absolute path to directory containing the .npz files, defaults to path on boden")
+    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="set absolute path to .db file containing the 'clean' tags.")
+    parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="set absolute path to ultimate csv file")
+    parser.add_argument("--output-dir", default='/srv/data/urop/tfrecords/', help="set absolute path to output directory")
+    parser.add_argument("-i", "--interval", help="set which interval of files to process, supply as START/STOP (use in combination with --num-files)")
 
     args = parser.parse_args()
     
