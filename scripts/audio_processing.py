@@ -90,7 +90,7 @@ def process_array(array, sr, audio_format):
     array = librosa.resample(array, sr, 16000)
     
     if audio_format == "log-mel-spectrogram":
-        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, 16000))
+        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, 16000, mel_bands=96))
     
     return array
 
