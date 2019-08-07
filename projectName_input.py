@@ -20,17 +20,24 @@ audio_feature_description = {
 def _parse_audio(example):
     return tf.io.parse_single_example(example, audio_feature_description)
 
+def _tid_filter(features, tids):
+    return tf.reduce_any(tf.equal(tids, features['tid']))
+
 def _tag_filter(features, tags):
     tags = tf.equal(tf.unstack(features['tags']), 1)
-    tags_mask = tf.SparseTensor(indices=np.array(idxs, dtype=np.int64).reshape(-1, 1), values=np.ones(len(idxs), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
+    tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
     return tf.reduce_any(tags & tags_mask)
 
-def _tid_filter(features, tids):
-    return tf.reduce_any(tf.equal(tids, features['tid']))
+def _tag_filter_hotenc_mask(features, tags):
+    tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
+    tags_mask = tf.sparse.to_dense(tags_mask)
+    tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
+    features['tags'] = tf.boolean_mask(features['tags'], tags_mask)
+    return features
 
-def _reshape(data, new_shape):
+def _reshape(features, new_shape):
     if isinstance(new_shape, int):
         new_shape = (new_shape, -1)
 
