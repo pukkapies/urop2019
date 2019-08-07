@@ -16,25 +16,25 @@ and 2 are the first and second digits of the 7digital id
 Functions
 ---------
 - process_array             
-        Processesing array and applying desired audio format
+    Processesing array and applying desired audio format.
 
 - get_encoded_tags
-        Gets tags for a tid and encodes them with a one-hot vector        
+    Gets tags for a tid and encodes them with a one-hot vector.      
 
 - _bytes_feature
-        Creates a BytesList feature
+    Creates a BytesList feature.
 
 - _float_feature
-        Creates a FloatList feature
+    Creates a FloatList feature.
 
 - _int64_feature
-        Creates a Int64List feature
+    Creates a Int64List feature.
 
 - get_example
-        Gets a tf.train.Example object with features containing the array, tid and the encoded tags
+    Gets a tf.train.Example object with features containing the array, tid and the encoded tags.
 
 -save_examples_to_tffile
-        Creates and saves a TFRecord file
+    Creates and saves a TFRecord file.
 '''
 
 import argparse
@@ -62,19 +62,18 @@ def process_array(array, sr, audio_format):
     Parameters
     ----------
     array : ndarray
-        unprocessed array, directly from the .npz file
+        The unprocessed array, from the .npz file.
 
     sr : int
-        sample rate
+        The audio sample rate, from the .npz file.
 
     audio_format : str
-        If "log-mel-spectrogram" convert to a log-mel-spectrogram, else
-        keep audio as raw waveform.
+        If "log-mel-spectrogram", convert to a log-mel-spectrogram; otherwise, keep audio as raw waveform.
 
     Returns
     -------
     ndarray
-        processed array
+        The processed array.
     '''
     
     # converting to mono
@@ -95,19 +94,17 @@ def get_encoded_tags(tid, fm, n_tags):
     Parameters
     ----------
     tid : str
-        tid
 
-    fm : LastFm object
-        LastFm object used to query clean_lastfm.db 
+    fm : q_fm.LastFm, q_fm.LastFm2Pandas
+        Any instance of the tags database.
 
     n_tags : int
-        number of entries in clean_lastfm.db
+        The number of tag entries in the database.
 
     Returns
     -------
     ndarray
-        one-hot vector storing tag information of the tid.
-    
+        A one-hot encoded vector storing tag information of the tid.
     '''
     
     tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
@@ -144,16 +141,17 @@ def get_example(array, tid, encoded_tags):
     Parameters
     ----------
     array : ndarray
-        ndarray containing audio data.
+        The ndarray containing audio data.
 
     tid : str
 
     encoded_tags : ndarray
-        ndarray containing the encoded tags as a one-hot vector 
+        The ndarray containing the encoded tags as a one-hot vector.
     
     Returns
     -------
-    A tf.train.Example object containing array, tid and encoded_tags as features.
+    tf.train.Example
+        Contains array, tid and encoded_tags as features.
     '''
 
     example = tf.train.Example(
@@ -174,23 +172,22 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
     Parameters
     ----------
     df : DataFrame
-        A pandas DataFrame containing columns: "trackid" and "mp3_path"
+        A pandas DataFrame containing columns: "track_id", "mp3_path", "npz_path"
 
     output_path : str
-        Path or name to save TFRecord file as. If not a path it will save it in the current folder, 
-        with output_path as name.
+        The path or filename to save TFRecord file as. If not a path the current folder will be used, with output_path as name.
 
     audio_format : str 
-        If "log-mel-spectrogram" audio will be converted to that format, else it will default to raw waveform
+        If "log-mel-spectrogram", audio will be converted to that format; otherwise, it will default to raw waveform.
 
     root_dir : str
-        root directory to where the .npz files are stored
+        The root directory to where the .npz files are stored.
 
     tag_path : str
-       path to the lastfm_clean.db 
+       The path to the lastfm_clean.db database.
 
     verbose : bool
-        If true, output progress during runtime
+        If True, print progress.
     """
 
     with tf.io.TFRecordWriter(output_path) as writer:
