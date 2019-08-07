@@ -177,7 +177,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
     Parameters
     ----------
     df : DataFrame
-        A pandas DataFrame containing columns: "trackid" and "file_path"
+        A pandas DataFrame containing columns: "trackid" and "mp3_path"
 
     output_path : str
         Path or name to save TFRecord file as. If not a path it will save it in the current folder, 
@@ -211,9 +211,10 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
                 start = time.time()
 
             # unpack columns
-            tid, file_path = cols
-            path = os.path.join(root_dir, file_path[:-9] + '.npz')
+            tid, mp3_path, npz_path = cols
+            path = os.path.join(root_dir, npz_path)
 
+            # encode tags
             encoded_tags = get_encoded_tags(tid, fm, n_tags)
 
             # skip tracks which dont have any "clean" tags    
@@ -221,7 +222,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
                 if verbose:
                     print("{} as no tags. Skipping...".format(tid))
             
-            # loading the unsampled file from path of npz file and process it.
+            # load the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
@@ -248,7 +249,7 @@ if __name__ == '__main__':
     if args.interval:
         np.random.seed(1)
     # gets useful columns from ultimate_csv.csv and shuffles the data.
-    df = pd.read_csv(args.csv_path, usecols=["track_id", "file_path"], comment="#").Sample(frac=1).reset_index(drop=True)
+    df = pd.read_csv(args.csv_path, usecols=["track_id", "mp3_path", "npz_path"], comment="#").Sample(frac=1).reset_index(drop=True)
     
     # create base name, for naming the TFRecord files
     if args.format == "log-mel-spectrogram":

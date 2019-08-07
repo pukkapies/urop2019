@@ -110,22 +110,26 @@ def check_silence(df, verbose=True):
         start = time.time()
         tot = len(df)
 
-    # initialize
+    npz_paths = []
+
+    # initialize silence details
     audio_start = []
     audio_end = []
     mid_silence_length = []
     silence = []
-    
+
     for idx, path in enumerate(df['file_path']):
-        path_npz = npz.mp3_path_to_npz_path(path)
+        npz_path = npz.mp3_path_to_npz_path(path)
+        npz_paths.append(os.path.relpath(npz_path, npz.npz_root_dir)
+        
         # try to load the stored npz file
         try:
-            ar = np.load(path_npz)
+            ar = np.load(npz_path)
         # if file cannot be loaded, re-save the mp3 as npz and load the npz again
         except:
             print("WARNING at {:6d} out of {:6d}: {} was not savez'd correctly!".format(idx, len(df), path))
-            npz.savez(path, path_npz)
-            ar = np.load(path_npz)
+            npz.savez(path, npz_path)
+            ar = np.load(npz_path)
         
         # load info stored in the npz file
         sr = ar['sr']
@@ -162,7 +166,9 @@ def check_silence(df, verbose=True):
             if idx % 100 == 0:
                 print('Processed {:6d} in {:8.4f} s. Progress: {:2d}%'.format(idx, time.time() - start, int(idx / tot * 100)))
     
-    # append new columns 
+    # append new columns
+    df['mp3_path'] = df['file_path']
+    df['npz_path'] = pd.Series(npz_paths, index=df.index)
     df['audio_start'] = pd.Series(audio_start, index=df.index)
     df['audio_end'] = pd.Series(audio_end, index=df.index)
     df['effective_clip_length'] = df['audio_end'] - df['audio_start']
@@ -176,7 +182,10 @@ def check_silence(df, verbose=True):
     cols = df.columns.tolist()
     
     # rearrange order of columns
-    cols = cols[:-9] + ['effective_clip_length', 'audio_start', 'audio_end'] + cols[-6:-4] + ['max_silence_length'] + cols[-4:-1]
+    cols = cols[:-11] + ['effective_clip_length', 'audio_start', 'audio_end', 'mid_silence_length', 'non_silence_length', 'max_silence_length', 'silence_detail', 'silence_detail_length', 'silence_percentage']
+    cols.remove('file_path')
+    cols.insert(3,'npz_path')
+    cols.insert(3,'mp3_path')
     df = df[cols]
     
     if verbose:
