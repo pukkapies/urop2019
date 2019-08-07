@@ -165,7 +165,7 @@ def get_example(array, tid, encoded_tags):
     example = tf.train.Example(
             features=tf.train.Features(
                 feature={
-                    'spectrogram' : _float_feature(array.flatten()),
+                    'audio' : _float_feature(array.flatten()),
                     'tid' :         _bytes_feature(bytes(tid, 'utf8')),
                     'tags' :        _int64_feature(encoded_tags)
             }))
