@@ -60,7 +60,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath
 
 import query_lastfm as q_fm
 
-def process_array(array, sr, audio_format):
+def process_array(array, sr, audio_format=None):
     ''' Processesing array and applying desired audio format 
     
     The array is processed by the following steps:
@@ -173,7 +173,7 @@ def get_example(array, tid, encoded_tags):
 
     return example
 
-def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, verbose):
+def save_examples_to_tffile(df, output_path, audio_format=None, root_dir, tag_path, verbose):
     ''' Creates and saves a TFRecord file.
 
     Parameters
@@ -224,6 +224,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
             if encoded.size == 0:
                 if verbose:
                     print("{} has no tags. Skipping...".format(tid))
+                continue
             
             # load the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
