@@ -44,13 +44,13 @@ def _shape(features, shape = 96):
     features['audio'] = tf.sparse.reshape(features['audio'], shape)
     return features
 
-def _slice(features, where='middle', window_size=15):
+def _slice(features, audio_format, window_size=15, where='middle'):
     
     sr = 16000 # sample rate
     hop_length = 512 # hop length when creating mel_spectrogram
     
-    if format == 'waveform':
-        length = len(features['audio'])
+    if audio_format == 'waveform':
+        length = features['audio'].shape[0]
         slice_length = sr*window_size
 
         if where == 'middle':
@@ -70,47 +70,41 @@ def _slice(features, where='middle', window_size=15):
             print("Please enter a valid location!")
             exit()
 
-    elif format == 'log-mel-spectrogram': # THIS PART NEEDS TO BE FIXED, SPARSE TENSORS ARE NOT SUBSCRIPTABLE
+    elif audio_format == 'log-mel-spectrogram':
         slice_length = sr*window_size//hop_length 
+        length = features['audio'].shape[1]
+
         if where == 'middle':
-            length = len(features['audio'][1])
-            return {
-                'audio': tf.sparse.to_dense(features['audio'][:,length-slice_length//2:length+slice_length//2])
-                'tid': features['tid']
-                'tag': features['tag']}
+            features['audio'] = tf.sparse.to_dense(features['audio'])[:,length-slice_length//2:length+slice_length//2]
+
         elif where == 'beginning':
-            return {
-                'audio': tf.sparse.to_dense(features['audio'][:,:slice_length])
-                'tid': features['tid']
-                'tag': features['tag']}
+            features['audio'] = tf.sparse.to_dense(features['audio'])[:,:slice_length]
 
         elif where == 'end':
-            return {
-                'audio': tf.sparse.to_dense(features['audio'][:,-slice_length:])
-                'tid': features['tid']
-                'tag': features['tag']}
+                'audio': tf.sparse.to_dense(features['audio'])[:,-slice_length:]
 
         elif where == 'random':
-            length = len(features['audio'].float_list.value)
             s = np.random.randint(0, length-slice_length)
-            return {
-                'audio': tf.sparse.to_dense(features['audio'][:,s:s+slice_length])
-                'tid': features['tid']
-                'tag': features['tag']}
+            features['audio'] = tf.sparse.to_dense(features['audio'])[:,s:s+slice_length]
+
         else:
             print("Please enter a valid location!")
             exit()
+
+    else:
+        print("Please enter a valid audio format!")
+        exit()
     
     return features
 
-def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buffer_size=10000, window_size=15, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
+def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, window_location='middle', shuffle=True, batch_size=32, buffer_size=10000, window_size=15, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     if root_dir:
         set_tfrecords_root_dir(os.path.abspath(os.path.expanduser(root_dir)))
 
     tfrecords = []
 
     for file in os.listdir(tfrecord_root_dir):
-        if file.endswith(".tfrecord"):
+        if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
             tfrecords.append(os.path.abspath(os.path.join(tfrecord_root_dir, file)))
 
     dataset = tf.data.TFRecordDataset(tfrecords).map(_parse_audio)
@@ -124,4 +118,4 @@ def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buf
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
     
-    return dataset.map(lambda x: _window(x, window_size)).batch(batch_size).map(_batch_normalization).repeat(num_epochs)
+    return dataset.map(lambda x: _window(x, audio_format, window_size, window_location)).batch(batch_size).map(_batch_normalization).repeat(num_epochs)
