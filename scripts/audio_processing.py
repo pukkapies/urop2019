@@ -211,9 +211,9 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
 
         for i, cols in df.iterrows():
             
-            if verbose and i % 500 == 0:
+            if verbose and i % 10 == 0:
                 end = time.time()
-                print("{} tracks saved. Last 500 tracks took {} s".format(i, end-start))
+                print("{} tracks saved. Last 10 tracks took {} s".format(i, end-start))
                 start = time.time()
 
             # unpack columns
