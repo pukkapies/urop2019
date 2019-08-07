@@ -6,7 +6,7 @@ Notes
 This file can be run as a script, for more information on possible arguments type 
 audio_processing -h in the terminal.
 
-IMPORTANT: If using this script elsewhere than on boden then remember to use the option --root-dir
+IMPORTANT: If using this script elsewhere than on Boden then remember to use the option --root-dir
 to set directory where the .npz files are stored. The directory needs to have a given layout:
 Under the directory, all non-folders must be .npz files. The name of a file is given by the
 7digital id and it will be located under "root_dir/digit 1/digit 2/7digital id.npz", where digit 1
@@ -227,11 +227,11 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--format", help="set output format of audio, defaults to waveform")
+    parser.add_argument("-f", "--format", help="set output format of audio, defaults to waveform (e.g. 'log-mel-spectrogram')")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST")
     parser.add_argument("--num-files", default=10, type=int, help="number of files to split the data into")
-    parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="set absolute path to directory containing the .npz files, defaults to path on boden")
+    parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="set absolute path to directory containing the .npz files, defaults to path our server")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="set absolute path to .db file containing the 'clean' tags")
     parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="set absolute path to csv file")
     parser.add_argument("--output-dir", default='/srv/data/urop/7digital-tfrecords/', help="set absolute path to output directory")
