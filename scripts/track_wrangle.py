@@ -66,7 +66,7 @@ import query_lastfm as q_fm
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'
-path_txt_duplicates = '/srv/data/urop/msd_duplicates.txt'
+path_txt_duplicates = ''
 
 def set_path_h5(new_path):
     ''' Set path to the msd_summary_file.h5. '''
@@ -249,11 +249,11 @@ if __name__ == "__main__":
        raise OSError("file " + output + " already exists!")
 
     if args.path_h5:
-        path_h5 = os.path.expanduser(args.path_h5)
+        path_h5 = os.path.abspath(os.path.expanduser(args.path_h5))
     if args.path_txt_mism:
-        path_txt_mismatches = os.path.expanduser(args.path_txt_mism)
+        path_txt_mismatches = os.path.abspath(os.path.expanduser(args.path_txt_mism))
     if args.path_txt_dupl:
-        path_txt_duplicates = os.path.expanduser(args.path_txt_dupl)
+        path_txt_duplicates = os.path.abspath(os.path.expanduser(args.path_txt_dupl))
     
     df = pd.read_csv(args.input, comment='#')
 

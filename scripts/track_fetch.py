@@ -205,7 +205,7 @@ if __name__ == "__main__":
        sys.exit(0)
     
     if args.root_dir:
-        mp3_root_dir = os.path.expanduser(args.root_dir)
+        mp3_root_dir = os.path.abspath(os.path.expanduser(args.root_dir))
     
     df = find_tracks_with_7dids(args.abs_path)
 
