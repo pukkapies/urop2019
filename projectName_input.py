@@ -91,7 +91,7 @@ def _slice(features, audio_format, window_size=15, where='middle'):
         else:
             print("Please enter a valid location!")
             exit()
-
+            
     elif audio_format == 'log-mel-spectrogram':
         slice_length = sr*window_size//hop_length 
         length = features['audio'].shape[1]
@@ -103,7 +103,7 @@ def _slice(features, audio_format, window_size=15, where='middle'):
             features['audio'] = tf.sparse.to_dense(features['audio'])[:,:slice_length]
 
         elif where == 'end':
-                'audio': tf.sparse.to_dense(features['audio'])[:,-slice_length:]
+            features['audio'] = tf.sparse.to_dense(features['audio'])[:,-slice_length:]
 
         elif where == 'random':
             s = np.random.randint(0, length-slice_length)
@@ -112,22 +112,11 @@ def _slice(features, audio_format, window_size=15, where='middle'):
         else:
             print("Please enter a valid location!")
             exit()
-
     else:
         print("Please enter a valid audio format!")
         exit()
     
     return features
-
-def _batch_normalization(features, epsilon=.0001): # not sure if we need this... there's already a batch normalization layer in the model. not even sure if it works
-    tensor = tf.unstack(features['spectogram'])
-    mean,variance = tf.nn.moments(tensor, axes=[0])
-    tensor_normalized = (tensor-mean)/(variance+epsilon)
-    
-    return {
-        'spectogram': tensor_normalized,
-        'tid': features['tid'],
-        'tags': features['tags']}
 
 def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, window_location='middle', shuffle=True, batch_size=32, buffer_size=10000, window_size=15, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     ''' ???
@@ -176,7 +165,7 @@ def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, window_location='m
     dataset = tf.data.TFRecordDataset(tfrecords).map(_parse_audio)
     
     if with_tags:
-        dataset = dataset.filter(lambda x: _tag_filter(x, with_tags))
+        dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
     if with_tids:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
     if reshape:
@@ -184,4 +173,4 @@ def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, window_location='m
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
     
-    return dataset.map(lambda x: _slice(x, audio_format, window_size, window_location)).batch(batch_size).map(_batch_normalization).repeat(num_epochs)
+    return dataset.map(lambda x: _slice(x, audio_format, window_size, window_location)).batch(batch_size).repeat(num_epochs)
