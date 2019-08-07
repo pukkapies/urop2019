@@ -37,14 +37,12 @@ def _tag_filter_hotenc_mask(features, tags):
     features['tags'] = tf.boolean_mask(features['tags'], tags_mask)
     return features
 
-def _reshape(features, new_shape):
-    if isinstance(new_shape, int):
-        new_shape = (new_shape, -1)
+def _reshape(features, shape = 96):
+    if isinstance(shape, int):
+        shape = (shape, -1)
 
-    return {
-        'spectogram': tf.sparse.reshape(data['spectogram'], new_shape),
-        'tid': data['tid'],
-        'tags': data['tags']}
+    features['audio'] = tf.sparse.reshape(data['audio'], shape)
+    return features
 
 def _window(data, location='middle', window_size=15):
     
