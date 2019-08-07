@@ -90,7 +90,7 @@ def process_array(array, sr, audio_format):
     array = librosa.resample(array, sr, 16000)
     
     if audio_format == "log-mel-spectrogram":
-        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, 16000, mel_bands=96))
+        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, 16000, n_mels=96))
     
     return array
 
@@ -235,56 +235,6 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
             example = get_example(processed_array, tid, encoded_tags)
             writer.write(example.SerializeToString())
 
-def save_split(df, split, audio_format, root_dir, tag_path, verbose, base_name, output_dir):
-    ''' Creates 3 TFRecords files for train, val and test data
-    
-    Parameters
-    ----------
-    df : DataFrame
-        A pandas DataFrame containing columns: "trackid" and "file_path"
-    
-    split : str of form TRAIN/VAL/TEST
-        Specifies in what proportion to split the data between the three files.
-
-    audio_format : str 
-        If "log-mel-spectrogram" audio will be converted to that format, else it will default to raw waveform
-
-    root_dir : str
-        root directory to where the .npz files are stored
-
-    tag_path : str
-       path to the lastfm_clean.db 
-
-    verbose : bool
-        If true, output progress during runtime
-
-    base_name : str
-        Base name of the TFRecord file. Final name will be train_(base_name)_split for the train file.
-        Similar names for the val and test files will be created.
-
-    output_dir : str
-        Directory to which the TFRecord files should be saved
-    
-    '''
-    
-    # Setting up train, val, test from split and ensuring their sum is 1.
-    values = [float(_) for _ in split.split("/") ]
-    tot = sum(values)
-    train, val, test = [val/tot for val in values]
-    
-    
-    # Splits the DataFrame according to train/val/test.
-    size = len(df)
-    train_df = df[:size*train]
-    test_df = df[size*train:size*(train+val)]
-    val_df = df[size*(train+val):]
-    
-    # Creating + saving the 3 TFRecord files
-    name = base_name + split + ".tfrecord"
-    save_examples_to_tffile(train_df, os.path.join(output_dir,"train_"+name), audio_format, root_dir, tag_path, verbose)
-    save_examples_to_tffile(test_df, os.path.join(output_dir, "test_"+name), audio_format, root_dir, tag_path, verbose)
-    save_examples_to_tffile(val_df, os.path.join(output_dir, "val_"+name), audio_format, root_dir, tag_path, verbose)
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -312,11 +262,29 @@ if __name__ == '__main__':
     else:
         base_name = os.path.join(args.output_dir, "waveform_")
     
+    # Save in a TRAIN/VAL/TEST split if specified
     if args.split: 
-        # Save in a TRAIN/VAL/TEST split if specified
-        save_split(df, args.split, args.format, args.root_dir, args.tag_path, args.verbose, base_name, args.output_dir)
+        # Setting up train, val, test from split and ensuring their sum is 1.
+        values = [float(_) for _ in args.split.split("/") ]
+        tot = sum(values)
+        train, val, test = [val/tot for val in values]
+
+
+        # Splits the DataFrame according to train/val/test.
+        size = len(df)
+        train_df = df[:size*train]
+        test_df = df[size*train:size*(train+val)]
+        val_df = df[size*(train+val):]
+
+        # Creating + saving the 3 TFRecord files
+        name = base_name + args.split + ".tfrecord"
+        save_examples_to_tffile(train_df, os.path.join(args.output_dir,"train_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
+        save_examples_to_tffile(test_df, os.path.join(args.output_dir, "test_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
+        save_examples_to_tffile(val_df, os.path.join(args.output_dir, "val_"+name), args.format, args.root_dir, args.tag_path, args.verbose)
+
+    # Otherwise save in args.num_files equal-sized files.
     else:
-        # Save in num_files different files. If interval is specified only create files over the given interval.
+        # If interval is specified only create files over the given interval.
         if args.interval:
             # Getting start and end of interval
             start, stop = [int(_) for _ in args.interval.split("/")]
