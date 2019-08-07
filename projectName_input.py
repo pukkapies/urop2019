@@ -37,92 +37,81 @@ def _tag_filter_hotenc_mask(features, tags):
     features['tags'] = tf.boolean_mask(features['tags'], tags_mask)
     return features
 
-def _reshape(features, shape = 96):
+def _shape(features, shape = 96):
     if isinstance(shape, int):
         shape = (shape, -1)
 
-    features['audio'] = tf.sparse.reshape(data['audio'], shape)
+    features['audio'] = tf.sparse.reshape(features['audio'], shape)
     return features
 
-def _window(data, location='middle', window_size=15):
+def _slice(features, where='middle', window_size=15):
     
-    sr = 16000 # sample rate is 16000 kHz
+    sr = 16000 # sample rate
     hop_length = 512 # hop length when creating mel_spectrogram
     
-    # length of the final slize
     if format == 'waveform':
-        slice_length = sr*window_size 
+        length = len(features['audio'])
+        slice_length = sr*window_size
 
-        if location == 'middle':
-            length = len(data['audio'])
-            return {
-                'audio': tf.sparse.to_dense(data['audio'][length-slice_length//2:length+slice_length//2])
-                'tid': data['tid']
-                'tag': data['tag']}
-        elif location == 'beginning':
-            return {
-                'audio': tf.sparse.to_dense(data['audio'][:slice_length])
-                'tid': data['tid']
-                'tag': data['tag']}
+        if where == 'middle':
+            features['audio'] = tf.sparse.to_dense(features['audio'][length-slice_length//2:length+slice_length//2])
 
-        elif location == 'end':
-            return {
-                'audio': tf.sparse.to_dense(data['audio'][-slice_length:])
-                'tid': data['tid']
-                'tag': data['tag']}
+        elif where == 'beginning':
+            features['audio'] = tf.sparse.to_dense(features['audio'][:slice_length])
 
-        elif location == 'random':
-            length = len(data['audio'].float_list.value)
+        elif where == 'end':
+            features['audio'] = tf.sparse.to_dense(features['audio'][-slice_length:])
+
+        elif where == 'random':
             s = np.random.randint(0, length-slice_length)
-            return {
-                'audio': tf.sparse.to_dense(data['audio'][s:s+slice_length])
-                'tid': data['tid']
-                'tag': data['tag']}
+            features['audio'] = tf.sparse.to_dense(features['audio'][s:s+slice_length])
+
         else:
-            print("Please enter a valid location")
+            print("Please enter a valid location!")
             exit()
 
-    elif format == 'log-mel-spectrogram':
+    elif format == 'log-mel-spectrogram': # THIS PART NEEDS TO BE FIXED, SPARSE TENSORS ARE NOT SUBSCRIPTABLE
         slice_length = sr*window_size//hop_length 
-
-        if location == 'middle':
-            length = len(data['audio'][1])
+        if where == 'middle':
+            length = len(features['audio'][1])
             return {
-                'audio': tf.sparse.to_dense(data['audio'][:,length-slice_length//2:length+slice_length//2])
-                'tid': data['tid']
-                'tag': data['tag']}
-        elif location == 'beginning':
+                'audio': tf.sparse.to_dense(features['audio'][:,length-slice_length//2:length+slice_length//2])
+                'tid': features['tid']
+                'tag': features['tag']}
+        elif where == 'beginning':
             return {
-                'audio': tf.sparse.to_dense(data['audio'][:,:slice_length])
-                'tid': data['tid']
-                'tag': data['tag']}
+                'audio': tf.sparse.to_dense(features['audio'][:,:slice_length])
+                'tid': features['tid']
+                'tag': features['tag']}
 
-        elif location == 'end':
+        elif where == 'end':
             return {
-                'audio': tf.sparse.to_dense(data['audio'][:,-slice_length:])
-                'tid': data['tid']
-                'tag': data['tag']}
+                'audio': tf.sparse.to_dense(features['audio'][:,-slice_length:])
+                'tid': features['tid']
+                'tag': features['tag']}
 
-        elif location == 'random':
-            length = len(data['audio'].float_list.value)
+        elif where == 'random':
+            length = len(features['audio'].float_list.value)
             s = np.random.randint(0, length-slice_length)
             return {
-                'audio': tf.sparse.to_dense(data['audio'][:,s:s+slice_length])
-                'tid': data['tid']
-                'tag': data['tag']}
+                'audio': tf.sparse.to_dense(features['audio'][:,s:s+slice_length])
+                'tid': features['tid']
+                'tag': features['tag']}
         else:
-            print("Please enter a valid location")
+            print("Please enter a valid location!")
             exit()
+    
+    return features
 
-def _batch_normalization(data, epsilon=.0001): # not sure if we need this... there's already a batch normalization layer in the model. not even sure if it works
-    tensor = tf.unstack(data['spectogram'])
+def _batch_normalization(features, epsilon=.0001): # not sure if we need this... there's already a batch normalization layer in the model. not even sure if it works
+    tensor = tf.unstack(features['spectogram'])
     mean,variance = tf.nn.moments(tensor, axes=[0])
     tensor_normalized = (tensor-mean)/(variance+epsilon)
     
     return {
         'spectogram': tensor_normalized,
-        'tid': data['tid'],
-        'tags': data['tags']}
+        'tid': features['tid'],
+        'tags': features['tags']}
 
 def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buffer_size=10000, window_size=15, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     if root_dir:
@@ -141,7 +130,7 @@ def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buf
     if with_tids:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
     if reshape:
-        dataset = dataset.map(lambda x: _reshape(x, reshape))
+        dataset = dataset.map(lambda x: _shape(x, reshape))
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
     
