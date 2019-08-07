@@ -103,16 +103,6 @@ def _slice(features, where='middle', window_size=15):
     
     return features
 
-def _batch_normalization(features, epsilon=.0001): # not sure if we need this... there's already a batch normalization layer in the model. not even sure if it works
-    tensor = tf.unstack(features['spectogram'])
-    mean,variance = tf.nn.moments(tensor, axes=[0])
-    tensor_normalized = (tensor-mean)/(variance+epsilon)
-    
-    return {
-        'spectogram': tensor_normalized,
-        'tid': features['tid'],
-        'tags': features['tags']}
-
 def genrate_dataset(root_dir=tfrecord_root_dir, shuffle=True, batch_size=32, buffer_size=10000, window_size=15, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     if root_dir:
         set_tfrecords_root_dir(os.path.abspath(os.path.expanduser(root_dir)))
