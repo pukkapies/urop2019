@@ -214,7 +214,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
             # skip tracks which dont have any "clean" tags    
             if encoded_tags.size == 0:
                 if verbose:
-                    print("{} as no tags. Skipping...".format(tid))
+                    print("{} has no tags. Skipping...".format(tid))
             
             # load the unsampled file from path of npz file and process it.
             unsampled_file = np.load(path)
