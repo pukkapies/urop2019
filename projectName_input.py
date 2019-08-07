@@ -54,17 +54,17 @@ def _slice(features, audio_format, window_size=15, where='middle'):
         slice_length = sr*window_size
 
         if where == 'middle':
-            features['audio'] = tf.sparse.to_dense(features['audio'][length-slice_length//2:length+slice_length//2])
+            features['audio'] = tf.sparse.to_dense(features['audio'])[length-slice_length//2:length+slice_length//2]
 
         elif where == 'beginning':
-            features['audio'] = tf.sparse.to_dense(features['audio'][:slice_length])
+            features['audio'] = tf.sparse.to_dense(features['audio'])[:slice_length]
 
         elif where == 'end':
-            features['audio'] = tf.sparse.to_dense(features['audio'][-slice_length:])
+            features['audio'] = tf.sparse.to_dense(features['audio'])[-slice_length:]
 
         elif where == 'random':
             s = np.random.randint(0, length-slice_length)
-            features['audio'] = tf.sparse.to_dense(features['audio'][s:s+slice_length])
+            features['audio'] = tf.sparse.to_dense(features['audio'])[s:s+slice_length]
 
         else:
             print("Please enter a valid location!")
@@ -128,4 +128,4 @@ def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, window_location='m
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
     
-    return dataset.map(lambda x: _window(x, audio_format, window_size, window_location)).batch(batch_size).map(_batch_normalization).repeat(num_epochs)
+    return dataset.map(lambda x: _slice(x, audio_format, window_size, window_location)).batch(batch_size).map(_batch_normalization).repeat(num_epochs)
