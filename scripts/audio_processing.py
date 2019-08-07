@@ -118,9 +118,9 @@ def get_encoded_tags(tid, fm, n_tags):
     
     tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
 
-    # returns None if empty, so that it is easy to check for tids without clean tags
+    # returns empty array if it has no clean tags, this makes it easy to check later on
     if not tag_nums:
-        return
+        return np.array([])
     
     # encodes the tags using a one-hot encoding
     encoded_tags = np.zeros(n_tags, dtype=np.int8)
@@ -176,8 +176,6 @@ def get_example(array, tid, encoded_tags):
 def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, verbose):
     ''' Creates and saves a TFRecord file.
 
-    TODO: More documentation here
-
     Parameters
     ----------
     df : DataFrame
@@ -215,17 +213,15 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
                 start = time.time()
 
             # unpack columns
-            # TODO
-            tid, mp3_path, npz_path = cols
+            tid, npz_path = cols
             # path to the .npz file
             path = os.path.join(root_dir, npz_path)
 
             # encode tags
             encoded_tags = get_encoded_tags(tid, fm, n_tags)
             
-            # TODO
             # skip tracks which dont have any "clean" tags    
-            if encoded_tags.size == 0:
+            if encoded.size == 0:
                 if verbose:
                     print("{} has no tags. Skipping...".format(tid))
             
@@ -259,7 +255,7 @@ if __name__ == '__main__':
     if args.interval:
         np.random.seed(1)
     # gets useful columns from ultimate_csv.csv and shuffles the data
-    df = pd.read_csv(args.csv_path, usecols=["track_id", "mp3_path", "npz_path"], comment="#").sample(frac=1).reset_index(drop=True)
+    df = pd.read_csv(args.csv_path, usecols=["track_id", "npz_path"], comment="#").sample(frac=1).reset_index(drop=True)
     
     # create base name, for naming the TFRecord files
     if args.format == "log-mel-spectrogram":
