@@ -60,7 +60,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath
 
 import query_lastfm as q_fm
 
-def process_array(array, sr, audio_format=None):
+def process_array(array, sr, audio_format):
     ''' Processesing array and applying desired audio format 
     
     The array is processed by the following steps:
@@ -173,7 +173,7 @@ def get_example(array, tid, encoded_tags):
 
     return example
 
-def save_examples_to_tffile(df, output_path, audio_format=None, root_dir, tag_path, verbose):
+def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, verbose):
     ''' Creates and saves a TFRecord file.
 
     Parameters
@@ -221,7 +221,7 @@ def save_examples_to_tffile(df, output_path, audio_format=None, root_dir, tag_pa
             encoded_tags = get_encoded_tags(tid, fm, n_tags)
             
             # skip tracks which dont have any "clean" tags    
-            if encoded.size == 0:
+            if encoded_tags.size == 0:
                 if verbose:
                     print("{} has no tags. Skipping...".format(tid))
                 continue
@@ -247,7 +247,7 @@ if __name__ == '__main__':
     parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="set absolute path to directory containing the .npz files, defaults to path on boden")
     parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="set absolute path to .db file containing the 'clean' tags, defaults to path on boden")
     parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="set absolute path to csv file, defaults to path on boden")
-    parser.add_argument("--output-dir", default='/srv/data/urop/7digital-tfrecords/', help="set absolute path to output directory, defaults to path on boden")
+    parser.add_argument("--output-dir", default='/srv/data/urop/tfrecords/', help="set absolute path to output directory, defaults to path on boden")
     parser.add_argument("-i", "--interval", help="set which interval of files to process, supply as START/STOP (use in combination with --num-files)")
 
     args = parser.parse_args()
