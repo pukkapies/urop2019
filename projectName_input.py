@@ -17,9 +17,6 @@ if you feel it proper or necessary.
 
 Functions
 ---------
-- set_tfrecords_root_dir
-    Set root directory where .tfrecord files are stored.
-
 - _parse_audio
     Parse the serialized tf.Example.
 
@@ -47,11 +44,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-tfrecord_root_dir = '/srv/data/urop/7digital-tfrecords'
-
-def set_tfrecords_root_dir(new_root_dir): 
-    global tfrecord_root_dir
-    tfrecord_root_dir = new_root_dir
+default_tfrecords_root = '/srv/data/urop/tfrecords'
 
 audio_feature_description = {
     'audio' : tf.io.VarLenFeature(tf.float32),
@@ -139,12 +132,12 @@ def _slice(features, audio_format, window_size=15, where='middle'):
         Specifies how the window is to be extracted. Either 'middle', or 'beginning', or 'end', or 'random'.
     '''
 
-    sr = 16000 # sample rate
-    hop_length = 512 # hop length when creating mel_spectrogram
+    SR = 16000 # sample rate
+    HOP_LENGTH = 512 # hop length when creating log-mel-spectrogram
     
     if audio_format == 'waveform':
         length = features['audio'].shape[0]
-        slice_length = sr*window_size
+        slice_length = window_size*SR
 
         if where == 'middle':
             features['audio'] = tf.sparse.to_dense(features['audio'])[length-slice_length//2:length+slice_length//2]
@@ -164,8 +157,8 @@ def _slice(features, audio_format, window_size=15, where='middle'):
             exit()
             
     elif audio_format == 'log-mel-spectrogram':
-        slice_length = sr*window_size//hop_length 
         length = features['audio'].shape[1]
+        slice_length = window_size*SR//HOP_LENGTH 
 
         if where == 'middle':
             features['audio'] = tf.sparse.to_dense(features['audio'])[:,length-slice_length//2:length+slice_length//2]
@@ -189,16 +182,16 @@ def _slice(features, audio_format, window_size=15, where='middle'):
     
     return features
 
-def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_size=15, window_location='middle', reshape=None, with_tags=None, with_tids=None, num_epochs=None):
+def genrate_dataset(audio_format, root_dir=tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_size=15, window_location='middle', reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
     ----------
+    audio_format : {'waveform', 'log-mel-spectrogram'}
+        Specifies the feature audio format.
+
     root_dir : str
         Specifies the path to the directory containing the TFRecords.
-
-    audio_format : {'waveform', 'spectrogram'}
-        Specifies the feature audio format.
 
     batch_size : int
         Specifies the dataset batch_size.
@@ -229,13 +222,15 @@ def genrate_dataset(root_dir=tfrecord_root_dir, audio_format, batch_size=32, shu
     '''
 
     if root_dir:
-        set_tfrecords_root_dir(os.path.abspath(os.path.expanduser(root_dir)))
+        tfrecords_root_dir = os.path.abspath(os.path.expanduser(root_dir))
+    else:
+        tfrecords_root_dir = default_tfrecords_root + '-' + audio_format # follows the folder structure used on our server (specify root_dir explicitely otherwise)
 
     tfrecords = []
 
-    for file in os.listdir(tfrecord_root_dir):
+    for file in os.listdir(tfrecords_root_dir):
         if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
-            tfrecords.append(os.path.abspath(os.path.join(tfrecord_root_dir, file)))
+            tfrecords.append(os.path.abspath(os.path.join(tfrecords_root_dir, file)))
 
     dataset = tf.data.TFRecordDataset(tfrecords).map(_parse_audio)
     
