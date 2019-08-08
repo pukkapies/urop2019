@@ -222,25 +222,21 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
     '''
 
     if root_dir:
-        tfrecords_root_dir = os.path.abspath(os.path.expanduser(root_dir))
+        tfrecords_root_dir = os.path.normpath(os.path.expanduser(root_dir))
     else:
-        tfrecords_root_dir = default_tfrecord_root_dir + '-' + audio_format # follows the folder structure used on our server (specify root_dir explicitely otherwise)
+        tfrecords_root_dir = os.path.normpath(default_tfrecord_root_dir + '-' + audio_format) # follows the folder structure used on our server (specify root_dir explicitely otherwise)
 
-    tfrecords = []
-
-    for file in os.listdir(tfrecords_root_dir):
-        if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
-            tfrecords.append(os.path.abspath(os.path.join(tfrecords_root_dir, file)))
-
-    dataset = tf.data.TFRecordDataset(tfrecords).map(_parse_audio)
+    files = tf.data.Dataset.list_files(os.path.join(tfrecords_root_dir, audio_format + '_*.tfrecord'))
+    dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=FLAGS.num_parallel_reads, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(_parse_audio, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     if with_tags:
         dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
     if with_tids:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
     if reshape:
-        dataset = dataset.map(lambda x: _shape(x, reshape))
+        dataset = dataset.map(lambda x: _shape(x, reshape), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
     
-    return dataset.map(lambda x: _slice(x, audio_format, window_size, window_location)).batch(batch_size).repeat(num_epochs)
+    return dataset.map(lambda x: _slice(x, audio_format, window_size, window_location), num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(batch_size).repeat(num_epochs).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
