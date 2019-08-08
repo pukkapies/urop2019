@@ -44,7 +44,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-default_tfrecords_root = '/srv/data/urop/tfrecords'
+default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
 
 audio_feature_description = {
     'audio' : tf.io.VarLenFeature(tf.float32),
@@ -182,7 +182,7 @@ def _slice(features, audio_format, window_size=15, where='middle'):
     
     return features
 
-def genrate_dataset(audio_format, root_dir=tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_size=15, window_location='middle', reshape=None, with_tags=None, with_tids=None, num_epochs=None):
+def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_size=15, window_location='middle', reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
@@ -224,7 +224,7 @@ def genrate_dataset(audio_format, root_dir=tfrecord_root_dir, batch_size=32, shu
     if root_dir:
         tfrecords_root_dir = os.path.abspath(os.path.expanduser(root_dir))
     else:
-        tfrecords_root_dir = default_tfrecords_root + '-' + audio_format # follows the folder structure used on our server (specify root_dir explicitely otherwise)
+        tfrecords_root_dir = default_tfrecord_root_dir + '-' + audio_format # follows the folder structure used on our server (specify root_dir explicitely otherwise)
 
     tfrecords = []
 
