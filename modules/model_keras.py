@@ -47,78 +47,85 @@ POSSIBILITY OF SUCH DAMAGE.
 """
 
 import tensorflow as tf
-from tensorflow.keras.layers import AveragePooling2D, BatchNormalization, \
-Conv1D, Conv2D, Dense, Dropout, Flatten, MaxPool1D, MaxPool2D
+from tensorflow.keras.layers import Add, AveragePooling2D, BatchNormalization, \
+Concatenate, Conv1D, Conv2D, Dense, Dropout, Flatten, Lambda, MaxPool1D, \
+MaxPool2D, Permute, ZeroPadding2D
+from tensorflow.keras.backend import expand_dims, squeeze
 
 def wave_frontend(Input, is_training=True):
     initializer = tf.keras.initializers.VarianceScaling()
     
-    Input = tf.expand_dims(Input, 2)
+    Input = expand_dims(Input, 2)
     
     #conv0
     conv0 = Conv1D(filters=64, kernel_size=3, strides=3, padding='valid',
-                   activation='relu', kernel_initializer=initializer)(Input)
+                   activation='relu', kernel_initializer=initializer,
+                   name='conv0_wave')(Input)
     bn_conv0 = BatchNormalization()(conv0, training=is_training)
             
     #conv1
     conv1 = Conv1D(filters=64, kernel_size=3, strides=1, padding='valid',
-                   activation='relu', kernel_initializer=initializer)(bn_conv0)
+                   activation='relu', kernel_initializer=initializer,
+                   name='conv1_wave')(bn_conv0)
     bn_conv1 = BatchNormalization()(conv1, training=is_training)
     pool1 = MaxPool1D(pool_size=3, strides=3)(bn_conv1)
             
     #conv2
     conv2 = Conv1D(filters=64, kernel_size=3, strides=1, padding='valid',
-                   activation='relu', kernel_initializer=initializer)(pool1)
+                   activation='relu', kernel_initializer=initializer,
+                   name='conv2_wave')(pool1)
     bn_conv2 = BatchNormalization()(conv2, training=is_training)
     pool2 = MaxPool1D(pool_size=3, strides=3)(bn_conv2)
             
     #conv3
     conv3 = Conv1D(filters=128, kernel_size=3, strides=1, padding='valid',
-                   activation='relu', kernel_initializer=initializer)(pool2) 
+                   activation='relu', kernel_initializer=initializer,
+                   name='conv3_wave')(pool2) 
     bn_conv3 = BatchNormalization()(conv3, training=is_training)
     pool3 = MaxPool1D(pool_size=3, strides=3)(bn_conv3)
             
     #conv4
     conv4 = Conv1D(filters=128, kernel_size=3, strides=1, padding='valid',
-                   activation='relu', kernel_initializer=initializer)(pool3) 
+                   activation='relu', kernel_initializer=initializer,
+                   name='conv4_wave')(pool3) 
     bn_conv4 = BatchNormalization()(conv4, training=is_training)
     pool4 = MaxPool1D(pool_size=3, strides=3)(bn_conv4)
             
     #conv5
     conv5 = Conv1D(filters=128, kernel_size=3, strides=1, padding='valid',
-                   activation='relu', kernel_initializer=initializer)(pool4)
+                   activation='relu', kernel_initializer=initializer,
+                   name='conv5_wave')(pool4)
     bn_conv5 = BatchNormalization()(conv5, training=is_training)
     pool5 = MaxPool1D(pool_size=3, strides=3)(bn_conv5)
             
     #conv6
     conv6 = Conv1D(filters=256, kernel_size=3, strides=1, padding='valid',
-                   activation='relu', kernel_initializer=initializer)(pool5)
+                   activation='relu', kernel_initializer=initializer,
+                   name='conv6_wave')(pool5)
     bn_conv6 = BatchNormalization()(conv6, training=is_training)
     pool6 = MaxPool1D(pool_size=3, strides=3)(bn_conv6)
     
-    return tf.expand_dims(pool6, [3])
+    return expand_dims(pool6, [3])
 
 
 def spec_frontend(Input, y_input, is_training=True, num_filt=32):
     initializer = tf.keras.initializers.VarianceScaling()
     
-    Input = tf.expand_dims(Input, 3)
+    Input = expand_dims(Input, 3)
     
     #padding for time axis
-    Input_pad_7 = tf.pad(Input, [[0, 0], [0, 0], [3, 3], [0, 0]],
-                         'CONSTANT')
-    Input_pad_3 = tf.pad(Input, [[0, 0], [0, 0], [1, 1], [0, 0]],
-                         'CONSTANT')
+    Input_pad_7 = ZeroPadding2D(((0, 0), (3, 3)))(Input)
+    Input_pad_3 = ZeroPadding2D(((0, 0), (1, 1)))(Input)
     
     #conv1
     conv1 = Conv2D(filters=num_filt, 
                kernel_size=[int(0.9 * y_input), 7],
                padding='valid', activation='relu',
-               kernel_initializer=initializer)(Input_pad_7)
+               kernel_initializer=initializer)(Input_pad_7)    
     bn_conv1 = BatchNormalization()(conv1, training=is_training)
     pool1 = MaxPool2D(pool_size=[conv1.shape[1], 1], 
                       strides=[conv1.shape[1], 1])(bn_conv1)
-    p1 = tf.squeeze(pool1, [1])
+    p1 = squeeze(pool1, 1)
     
     #conv2
     conv2 = Conv2D(filters=num_filt*2,
@@ -128,7 +135,7 @@ def spec_frontend(Input, y_input, is_training=True, num_filt=32):
     bn_conv2 = BatchNormalization()(conv2, training=is_training)
     pool2 = MaxPool2D(pool_size=[conv2.shape[1], 1], 
                       strides=[conv2.shape[1], 1])(bn_conv2)
-    p2 = tf.squeeze(pool2, [1])
+    p2 = squeeze(pool2, 1)
     
     #conv3
     conv3 = Conv2D(filters=num_filt*4,
@@ -138,7 +145,7 @@ def spec_frontend(Input, y_input, is_training=True, num_filt=32):
     bn_conv3 = BatchNormalization()(conv3, training=is_training)
     pool3 = MaxPool2D(pool_size=[conv3.shape[1], 1], 
                       strides=[conv3.shape[1], 1])(bn_conv3)
-    p3 = tf.squeeze(pool3, [1])
+    p3 = squeeze(pool3, 1)
     
     #conv4
     conv4 = Conv2D(filters=num_filt,
@@ -148,7 +155,7 @@ def spec_frontend(Input, y_input, is_training=True, num_filt=32):
     bn_conv4 = BatchNormalization()(conv4, training=is_training)
     pool4 = MaxPool2D(pool_size=[conv4.shape[1], 1], 
                   strides=[conv4.shape[1], 1])(bn_conv4)
-    p4 = tf.squeeze(pool4, [1])
+    p4 = squeeze(pool4, 1)
     
     #conv5
     conv5 = Conv2D(filters=num_filt*2,
@@ -158,7 +165,7 @@ def spec_frontend(Input, y_input, is_training=True, num_filt=32):
     bn_conv5 = BatchNormalization()(conv5, training=is_training)
     pool5 = MaxPool2D(pool_size=[conv5.shape[1], 1], 
                       strides=[conv5.shape[1], 1])(bn_conv5)
-    p5 = tf.squeeze(pool5, [1])
+    p5 = squeeze(pool5, 1)
     
     #conv6
     conv6 = Conv2D(filters=num_filt*4,
@@ -168,13 +175,13 @@ def spec_frontend(Input, y_input, is_training=True, num_filt=32):
     bn_conv6 = BatchNormalization()(conv6, training=is_training)
     pool6 = MaxPool2D(pool_size=[conv6.shape[1], 1], 
                   strides=[conv6.shape[1], 1])(bn_conv6)
-    p6 = tf.squeeze(pool6, [1])
+    p6 = squeeze(pool6, 1)
     
     
     #average pooling
     avg_pool = AveragePooling2D(pool_size=[y_input, 1], 
                              strides=[y_input, 1])(Input)
-    avg_pool = tf.squeeze(avg_pool, [1])
+    avg_pool = squeeze(avg_pool, 1)
     
     
     #conv7
@@ -201,10 +208,10 @@ def spec_frontend(Input, y_input, is_training=True, num_filt=32):
                    kernel_initializer=initializer)(avg_pool)
     bn_conv10 = BatchNormalization()(conv10, training=is_training)
     
-    concat = tf.concat([p1, p2, p3, p4, p5, p6, bn_conv7, bn_conv8,
-                        bn_conv9, bn_conv10], 2)
+    concat = Concatenate(2)([p1, p2, p3, p4, p5, p6, bn_conv7, bn_conv8,
+                          bn_conv9, bn_conv10])
     
-    return tf.expand_dims(concat, 3)
+    return expand_dims(concat, 3)
 
 
 def backend(Input, numOutputNeurons, is_training=True, num_units=1024):
@@ -215,36 +222,34 @@ def backend(Input, numOutputNeurons, is_training=True, num_units=1024):
                    padding='valid', activation='relu',
                    kernel_initializer=initializer)(Input)
     bn_conv1 = BatchNormalization()(conv1, training=is_training)
-    bn_conv1_t = tf.transpose(bn_conv1, [0, 1, 3, 2])
+    bn_conv1_t = Permute((1, 3, 2))(bn_conv1)
     
     #conv2, residue connection
-    bn_conv1_pad = tf.pad(bn_conv1_t, [[0, 0], [3, 3], [0, 0], [0, 0]],
-                          'CONSTANT')
+    bn_conv1_pad = ZeroPadding2D(((3, 3), (0, 0)))(bn_conv1_t)
     conv2 = Conv2D(filters=512, kernel_size=[7, bn_conv1_pad.shape[2]],
                    padding='valid', activation='relu',
                    kernel_initializer=initializer)(bn_conv1_pad)
-    conv2_t = tf.transpose(conv2, [0, 1, 3, 2])
+    conv2_t = Permute((1,3,2))(conv2)
     bn_conv2 = BatchNormalization()(conv2_t, training=is_training)
-    res_conv2 = tf.math.add(bn_conv2, bn_conv1_t)
+    res_conv2 = Add()([bn_conv2, bn_conv1_t])
     
     
     #temporal pooling
     pool1 = MaxPool2D(pool_size=[2, 1], strides=[2, 1])(res_conv2)
     
     #conv3, residue connection
-    pool1_pad = tf.pad(pool1, [[0, 0], [3, 3], [0, 0], [0, 0]],
-                       'CONSTANT')
+    pool1_pad = ZeroPadding2D(((3, 3), (0, 0)))(pool1)
     conv3 = Conv2D(filters=512, kernel_size=[7, pool1_pad.shape[2]],
                    padding='valid', activation='relu',
                    kernel_initializer=initializer)(pool1_pad)
-    conv3_t = tf.transpose(conv3, [0, 1, 3, 2])
+    conv3_t = Permute((1, 3, 2))(conv3)
     bn_conv3 = BatchNormalization()(conv3_t, training=is_training)
-    res_conv3 = tf.math.add(bn_conv3, pool1)
+    res_conv3 = Add()([bn_conv3, pool1])
     
     #global pooling
-    max_pool2 = tf.reduce_max(res_conv3, axis=1)
-    avg_pool2, var_pool2 = tf.nn.moments(res_conv3, axes=[1])
-    pool2 = tf.concat([max_pool2, avg_pool2], 2)
+    max_pool2 = tf.keras.backend.max(res_conv3, axis=1)
+    avg_pool2, var_pool2 = Lambda(lambda x: tf.nn.moments(x, axes=[1]))(res_conv3)
+    pool2 = Concatenate(2)([max_pool2, avg_pool2])
     flat_pool2 = Flatten()(pool2)
     
     #dense1
@@ -256,8 +261,8 @@ def backend(Input, numOutputNeurons, is_training=True, num_units=1024):
     
     return Dense(activation='sigmoid', units=numOutputNeurons,
                  kernel_initializer=initializer)(dense_dropout)
-    
-    
+        
+
 def build_model(frontend_mode, numOutputNeurons, 
                 y_input=None, is_training=True, num_units=1024,
                 num_filt=32):
@@ -283,4 +288,6 @@ def build_model(frontend_mode, numOutputNeurons,
     else: 
         print('Please specify the frontend_mode: "wave" or "spec"')
     
+    
+
         
