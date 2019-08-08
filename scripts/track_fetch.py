@@ -57,7 +57,7 @@ def find_tracks(abs_path = False):
     Returns
     -------
     paths : list
-        list containing paths (str) to all mp3 files in mp3_root_dir.
+        Contains paths (str) to all mp3 files in mp3_root_dir.
     
     '''
 
@@ -82,7 +82,7 @@ def find_tracks_with_7dids(abs_path = False):
     Returns
     -------
     df : DataFrame
-        contains 1 column for the paths and 1 for the corresponding 7digitalids.
+        Contains 1 column for the paths and 1 for the corresponding 7digitalids.
     '''
 
     paths = find_tracks(abs_path)
@@ -205,7 +205,7 @@ if __name__ == "__main__":
        sys.exit(0)
     
     if args.root_dir:
-        mp3_root_dir = os.path.expanduser(args.root_dir)
+        mp3_root_dir = os.path.abspath(os.path.expanduser(args.root_dir))
     
     df = find_tracks_with_7dids(args.abs_path)
 
