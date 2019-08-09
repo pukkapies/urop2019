@@ -33,7 +33,7 @@ Functions
     Reshape parsed tf.Example if necessary (mel-spectograms were previously flattened...).
 
 - _slice
-    Extract a sample of n seconds (default 15) from each track.
+    Extract a sample of n seconds (default is 15) from each track.
 
 - _genrate_dataset
     Combine all previous functions to produce the final output.
@@ -81,11 +81,11 @@ def _tag_filter(features, tags):
         List containing tag idxs (as int) to be "allowed" in the output dataset.
     '''
 
-    tag_bool = tf.equal(tf.unstack(features['tags']), 1)
+    tags_bool = tf.equal(tf.unstack(features['tags']), 1) # bool tensor where True/False correspond to has/doesn't have tag
     tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
-    return tf.reduce_any(tag_bool & tags_mask)
+    return tf.reduce_any(tags_bool & tags_mask) # returns True if and only if at least one feature tag is in the desired 'tags' list
 
 def _tag_filter_hotenc_mask(features, tags):
     ''' Reshapes tag hot-encoded vector after filtering with _tag_filter (use with tf.data.Dataset.map).
@@ -106,7 +106,7 @@ def _tag_filter_hotenc_mask(features, tags):
     return features
 
 def _shape(features, shape = 96):
-    ''' Reshapes the sparse tensor features['audio'] into (shape, -1) (use with tf.data.Dataset.map). '''
+    ''' Reshapes the audio tensor into (shape, -1) (use with tf.data.Dataset.map). '''
 
     if isinstance(shape, int):
         shape = (shape, -1)
@@ -114,8 +114,8 @@ def _shape(features, shape = 96):
     features['audio'] = tf.sparse.reshape(features['audio'], shape)
     return features
 
-def _slice(features, audio_format, window_size=15, where='middle'):
-    ''' Extracts a window of the window_size seconds from the sparse tensor features['audio'] (use with tf.data.Dataset.map).
+def _slice(features, audio_format, window_length=15, random=False):
+    ''' Extracts a window of 'window_length' seconds from the audio tensor (use with tf.data.Dataset.map).
 
     Parameters
     ----------
@@ -125,64 +125,51 @@ def _slice(features, audio_format, window_size=15, where='middle'):
     audio_format : str
         Specifies the feature audio format. Either 'waveform' or 'log-mel-spectrogram'.
     
-    window_size : int
+    window_length : int
         Length (in seconds) of the desired output window.
     
-    where : str
-        Specifies how the window is to be extracted. Either 'middle', or 'beginning', or 'end', or 'random'.
+    random : bool
+        Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
     '''
 
-    SR = 16000 # sample rate
-    HOP_LENGTH = 512 # hop length when creating log-mel-spectrogram
+    features['audio'] = tf.sparse.to_dense(features['audio']) # convert the sparse tensor to dense tensor
     
-    if audio_format == 'waveform':
-        length = features['audio'].shape[0]
-        slice_length = window_size*SR
-
-        if where == 'middle':
-            features['audio'] = tf.sparse.to_dense(features['audio'])[length-slice_length//2:length+slice_length//2]
-
-        elif where == 'beginning':
-            features['audio'] = tf.sparse.to_dense(features['audio'])[:slice_length]
-
-        elif where == 'end':
-            features['audio'] = tf.sparse.to_dense(features['audio'])[-slice_length:]
-
-        elif where == 'random':
-            s = np.random.randint(0, length-slice_length)
-            features['audio'] = tf.sparse.to_dense(features['audio'])[s:s+slice_length]
-
-        else:
-            print("Please enter a valid location!")
-            exit()
-            
-    elif audio_format == 'log-mel-spectrogram':
-        length = features['audio'].shape[1]
-        slice_length = window_size*SR//HOP_LENGTH 
-
-        if where == 'middle':
-            features['audio'] = tf.sparse.to_dense(features['audio'])[:,length-slice_length//2:length+slice_length//2]
-
-        elif where == 'beginning':
-            features['audio'] = tf.sparse.to_dense(features['audio'])[:,:slice_length]
-
-        elif where == 'end':
-            features['audio'] = tf.sparse.to_dense(features['audio'])[:,-slice_length:]
-
-        elif where == 'random':
-            s = np.random.randint(0, length-slice_length)
-            features['audio'] = tf.sparse.to_dense(features['audio'])[:,s:s+slice_length]
-
-        else:
-            print("Please enter a valid location!")
-            exit()
-    else:
-        print("Please enter a valid audio format!")
+    if audio_format not in ('waveform', 'log-mel-spectrogram'):
+        raise KeyError("Please enter a valid audio format!")
         exit()
+    
+    elif audio_format == 'waveform':
+        slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SR, dtype=tf.int32)) # get the actual slice length
+        if random:
+            r = tf.math.floormod(tf.shape(features['audio'], out_type=tf.int32)[0], slice_length) # get remainder len(audio) % slice_length (in order to reshape)
+            x = tf.random.uniform(shape=(), maxval=r, dtype=tf.int32) # pick random value between 0 and r 
+            y = x - r
+            padded_audio = features['audio'][x:y]
+            window_samples = tf.reshape(padded_audio, (-1, slice_length)) # divide the audio into windows of length 'slice_length'
+            window_samples = tf.random.shuffle(window_samples) # pick random window
+            features['audio'] = window_samples[0]
+        else:
+            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[0], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensor
+            x = mid - tf.math.floordiv(slice_length, tf.constant(2, dtype=tf.int32))
+            y = mid + tf.math.floordiv(slice_length + 1, tf.constant(2, dtype=tf.int32)) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
+            features['audio'] = features['audio'][x:y]
+    
+    elif audio_format == 'log-mel-spectrogram':
+        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SR, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32))
+        if random:
+            maxval = tf.shape(features['audio'], out_type=tf.int32)[1] - slice_length
+            x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
+            y = x + slice_length
+            features['audio'] = features['audio'][:,x:y]
+        else:
+            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[1], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensor
+            x = mid - tf.math.floordiv(slice_length, tf.constant(2, dtype=tf.int32))
+            y = mid + tf.math.floordiv(slice_length + 1, tf.constant(2, dtype=tf.int32)) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
+            features['audio'] = features['audio'][:,x:y]
     
     return features
 
-def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_size=15, window_location='middle', reshape=None, with_tags=None, with_tids=None, num_epochs=None):
+def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
@@ -202,11 +189,11 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
     buffer_size : int
         If shuffle = True, set shuffle buffer size.
 
-    window_size : int
+    window_length : int
         Sets the desired window length (in seconds).
 
-    window_location : {'middle', 'beginning', 'end', 'random'}
-        Specifies how the window is to be extracted.
+    random : bool
+    Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
 
     reshape : int
         If not None, specifies the shape to reshape the feature audio into.
@@ -218,7 +205,7 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
         If not None, contains the tids to be trained on.
 
     num_epochs : int
-        If not None, repeats the dataset only for a given number of epochs (by default repeats indefinitely).
+        If not None, repeats the dataset only for a given number of epochs (default is repeat indefinitely).
     '''
 
     if root_dir:
@@ -239,4 +226,4 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
     
-    return dataset.map(lambda x: _slice(x, audio_format, window_size, window_location), num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(batch_size).repeat(num_epochs).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+    return dataset.map(lambda x: _slice(x, audio_format, window_length, window_location), num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(batch_size).repeat(num_epochs).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
