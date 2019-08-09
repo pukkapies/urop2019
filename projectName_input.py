@@ -145,13 +145,10 @@ def _slice(features, audio_format, window_length=15, random=False):
     elif audio_format == 'waveform':
         slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)) # get the actual slice length
         if random:
-            r = tf.math.floormod(tf.shape(features['audio'], out_type=tf.int32)[0], slice_length) # get remainder len(audio) % slice_length (in order to reshape)
-            x = tf.random.uniform(shape=(), maxval=r, dtype=tf.int32) # pick random value between 0 and r 
-            y = x - r
-            padded_audio = features['audio'][x:y]
-            window_samples = tf.reshape(padded_audio, (-1, slice_length)) # divide the audio into windows of length 'slice_length'
-            window_samples = tf.random.shuffle(window_samples) # pick random window
-            features['audio'] = window_samples[0]
+            maxval = tf.shape(features['audio'], out_type=tf.int32)[0] - slice_length
+            x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
+            y = x + slice_length
+            features['audio'] = features['audio'][x:y]
         else:
             mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[0], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensor
             x = mid - tf.math.floordiv(slice_length, tf.constant(2, dtype=tf.int32))
