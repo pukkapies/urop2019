@@ -110,7 +110,7 @@ def _tag_filter_hotenc_mask(features, tags):
     features['tags'] = tf.boolean_mask(features['tags'], tags_mask)
     return features
 
-def _shape(features, shape = 96):
+def _shape(features, shape = MEL_SPEC_WINDOW_SIZE):
     ''' Reshapes the audio tensor into (shape, -1) (use with tf.data.Dataset.map). '''
 
     if isinstance(shape, int):
@@ -140,8 +140,7 @@ def _slice(features, audio_format, window_length=15, random=False):
     features['audio'] = tf.sparse.to_dense(features['audio']) # convert the sparse tensor to dense tensor
     
     if audio_format not in ('waveform', 'log-mel-spectrogram'):
-        raise KeyError("Please enter a valid audio format!")
-        exit()
+        raise KeyError()
     
     elif audio_format == 'waveform':
         slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)) # get the actual slice length
@@ -160,7 +159,7 @@ def _slice(features, audio_format, window_length=15, random=False):
             features['audio'] = features['audio'][x:y]
     
     elif audio_format == 'log-mel-spectrogram':
-        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32))
+        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)), tf.constant(MEL_SPEC_HOP_LENGTH, dtype=tf.int32))
         if random:
             maxval = tf.shape(features['audio'], out_type=tf.int32)[1] - slice_length
             x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
@@ -174,7 +173,7 @@ def _slice(features, audio_format, window_length=15, random=False):
     
     return features
 
-def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, reshape=96, with_tags=None, with_tids=None, num_epochs=None):
+def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, any=False, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, reshape=96, with_tags=None, with_tids=None, num_epochs=None):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
@@ -184,6 +183,9 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
 
     root_dir : str
         Specifies the path to the directory containing the TFRecords.
+
+    any : bool
+        Overrides default convention and import all TFRecords in the specified folder.
 
     batch_size : int
         Specifies the dataset batch_size.
@@ -213,13 +215,16 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
         If not None, repeats the dataset only for a given number of epochs (default is repeat indefinitely).
     '''
 
-    if root_dir:
-        tfrecords_root_dir = os.path.normpath(os.path.expanduser(root_dir))
-    else:
-        tfrecords_root_dir = os.path.normpath(default_tfrecord_root_dir + '-' + audio_format) # follows the folder structure used on our server (specify root_dir explicitely otherwise)
+    assert audio_format in ('waveform', 'log-mel-spectrogram')
+    
+    tfrecords_root_dir = os.path.abspath(os.path.expanduser(root_dir))
 
-    files = tf.data.Dataset.list_files(os.path.join(tfrecords_root_dir, audio_format + '_*.tfrecord'))
-    dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=FLAGS.num_parallel_reads, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    if not any:
+        files = tf.data.Dataset.list_files(os.path.join(tfrecords_root_dir + '-' + audio_format, audio_format + '_*.tfrecord')) # follows convention used on our server
+    else:
+        files = tf.data.Dataset.list_files(os.path.join(tfrecords_root_dir, '*.tfrecord'))
+
+    dataset = files.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(_parse_audio, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     if shuffle:
