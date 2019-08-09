@@ -44,12 +44,17 @@ import os
 import numpy as np
 import tensorflow as tf
 
+MEL_SPEC_HOP_LENGTH = 512
+MEL_SPEC_WINDOW_SIZE = 96
+N_TAGS = 155
+SAMPLE_RATE = 16000
+
 default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
 
 audio_feature_description = {
     'audio' : tf.io.VarLenFeature(tf.float32),
     'tid' : tf.io.FixedLenFeature((), tf.string),
-    'tags' : tf.io.FixedLenFeature((155, ), tf.int64) # 155 is the number of tags in the clean database
+    'tags' : tf.io.FixedLenFeature((N_TAGS, ), tf.int64)
 }
 
 def _parse_audio(example):
@@ -82,7 +87,7 @@ def _tag_filter(features, tags):
     '''
 
     tags_bool = tf.equal(tf.unstack(features['tags']), 1) # bool tensor where True/False correspond to has/doesn't have tag
-    tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
+    tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([N_TAGS], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
     return tf.reduce_any(tags_bool & tags_mask) # returns True if and only if at least one feature tag is in the desired 'tags' list
@@ -99,7 +104,7 @@ def _tag_filter_hotenc_mask(features, tags):
         List containing tag idxs used for filtering with _tag_filter.
     '''
 
-    tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([155], dtype=np.int64))
+    tags_mask = tf.SparseTensor(indices=np.array(tags, dtype=np.int64).reshape(-1, 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([N_TAGS], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
     features['tags'] = tf.boolean_mask(features['tags'], tags_mask)
@@ -139,7 +144,7 @@ def _slice(features, audio_format, window_length=15, random=False):
         exit()
     
     elif audio_format == 'waveform':
-        slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SR, dtype=tf.int32)) # get the actual slice length
+        slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)) # get the actual slice length
         if random:
             r = tf.math.floormod(tf.shape(features['audio'], out_type=tf.int32)[0], slice_length) # get remainder len(audio) % slice_length (in order to reshape)
             x = tf.random.uniform(shape=(), maxval=r, dtype=tf.int32) # pick random value between 0 and r 
@@ -155,7 +160,7 @@ def _slice(features, audio_format, window_length=15, random=False):
             features['audio'] = features['audio'][x:y]
     
     elif audio_format == 'log-mel-spectrogram':
-        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SR, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32))
+        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32))
         if random:
             maxval = tf.shape(features['audio'], out_type=tf.int32)[1] - slice_length
             x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
@@ -169,7 +174,7 @@ def _slice(features, audio_format, window_length=15, random=False):
     
     return features
 
-def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, reshape=None, with_tags=None, with_tids=None, num_epochs=None):
+def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, reshape=96, with_tags=None, with_tids=None, num_epochs=None):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
@@ -196,7 +201,7 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
     Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
 
     reshape : int
-        If not None, specifies the shape to reshape the feature audio into.
+        If audio_format is not 'waveform', specifies the shape to reshape the feature audio into.
 
     with_tags : list
         If not None, contains the tags to be trained on.
@@ -217,13 +222,21 @@ def genrate_dataset(audio_format, root_dir=default_tfrecord_root_dir, batch_size
     dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=FLAGS.num_parallel_reads, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(_parse_audio, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
+    if shuffle:
+        dataset = dataset.shuffle(buffer_size)
+
+    dataset = dataset.batch(batch_size)
+    
     if with_tags:
         dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
     if with_tids:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
-    if reshape:
-        dataset = dataset.map(lambda x: _shape(x, reshape), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    if shuffle:
-        dataset = dataset.shuffle(buffer_size)
     
-    return dataset.map(lambda x: _slice(x, audio_format, window_length, window_location), num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(batch_size).repeat(num_epochs).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+    if audio_format != 'waveform':
+        dataset = dataset.map(lambda x: _shape(x, reshape), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(lambda x: _slice(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.repeat(num_epochs)
+    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+    
+    return dataset
