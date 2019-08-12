@@ -184,9 +184,6 @@ def genrate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer
     audio_format : {'waveform', 'log-mel-spectrogram'}
         Specifies the feature audio format.
 
-    any : bool
-        Overrides default convention and import all TFRecords in the specified folder.
-
     batch_size : int
         Specifies the dataset batch_size.
 
@@ -194,7 +191,7 @@ def genrate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer
         If True, shuffles the dataset with buffer size = buffer_size.
 
     buffer_size : int
-        If shuffle = True, set shuffle buffer size.
+        If shuffle is True, sets shuffle buffer size.
 
     window_length : int
         If not None, sets the desired window length (in seconds).
@@ -224,10 +221,12 @@ def genrate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer
         dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
     if with_tids:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
+    
+    dataset = dataset.batch(batch_size) # create batches before slicing the desired audio window to boost performance
+
     if window_length:
         dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    
-    dataset = dataset.batch(batch_size)    
+       
     dataset = dataset.repeat(num_epochs)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     
