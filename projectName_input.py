@@ -21,7 +21,7 @@ Functions
     Parse the serialized tf.Example.
 
 - _reshape
-    Reshape each flattened audio tensor.
+    Reshape each flattened audio tensor into the 'correct' one.
 
 - _tid_filter
     Remove (tracks with) unwanted tids from the dataset.
@@ -56,9 +56,13 @@ audio_feature_description = {
 }
 
 def _parse_features(example):
+    ''' Parses the serialized tf.Example. '''
+
     return tf.io.parse_single_example(example, audio_feature_description)
 
 def _reshape(features, shape):
+    ''' Reshapes each flattened audio tensor into the 'correct' one. '''
+
     features['audio'] = tf.sparse.reshape(features['audio'], shape)
     return features
 
