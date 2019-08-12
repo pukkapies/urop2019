@@ -21,7 +21,7 @@ Functions
     Parse the serialized tf.Example.
 
 - _reshape
-    Reshape each flattened audio tensor into the 'correct' one.
+    Reshape flattened audio tensors into the original ones.
 
 - _tid_filter
     Remove (tracks with) unwanted tids from the dataset.
@@ -33,7 +33,10 @@ Functions
     Change the shape of tag hot-encoded vector to suit the output of _tag_filter.
 
 - _window
-    Extract a sample of n seconds from each audio tensor.
+    Extract a sample of n seconds from each audio tensor within a batch.
+
+- _batch_normalization
+    Ensure zero mean and variation within a batch.
 
 - _genrate_dataset
     Combine all previous functions to produce the final output.
@@ -171,6 +174,13 @@ def _window(features, audio_format, window_length=15, random=False):
     
     return features
 
+def _batch_normalization(features):
+    ''' Normalizes a batch to ensure zero mean and unit variance. '''
+
+    mean, variance = tf.nn.moments(features['audio'], axes=[0])
+    features['audio'] = tf.nn.batch_normalization(features['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
+    return features
+
 def genrate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tags=None, with_tids=None, num_epochs=None):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
@@ -228,6 +238,7 @@ def genrate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer
     
     dataset = dataset.batch(batch_size) # create batches before slicing the desired audio window to boost performance
     dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE) # slice the desired audio window
+    dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE) # normalize data
     dataset = dataset.repeat(num_epochs)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
     
