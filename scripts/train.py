@@ -1,18 +1,17 @@
 '''
 TODO LIST:
-- set training=False to val
 - import test.py
 - solve incompatible dimension between model_keras.py and test.py
 - add printing
 - fix tensorboard and make it run on Boden (create graph, profile)
 - create json file
 - evaluation method (include test phase and convert tag_num to tag)
-- give names to all layers of model_keras.py
 
 '''
 
 import sys
 sys.path.insert(0, 'C://Users/hcw10/UROP2019')
+
 
 import tensorflow as tf
 import model_keras as Model
@@ -25,14 +24,15 @@ def train_exp(frontend_mode, numOutputNeurons, train_datasets, val_datasets,
           y_input=None, is_training=True, num_units=1024,
           num_filt=32, n_epoch=10, lr=0.001):
     
-    
+    #in case of keyboard interrupt during previous training
+    #tf.summary.trace_off()
     #initiate tensorboard
     current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
-    train_log_dir = 'logs/gradient_tape/' + current_time + '/train'
-    val_log_dir = 'logs/gradient_tape/' + current_time + '/val'
+    train_log_dir = 'logs/gradient_tape2/' + current_time + '/train'
+    val_log_dir = 'logs/gradient_tape2/' + current_time + '/val'
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
     val_summary_writer = tf.summary.create_file_writer(val_log_dir)
- 
+    
     tf.summary.trace_on(graph=True, profiler=False)
     
     #import model
@@ -59,7 +59,6 @@ def train_exp(frontend_mode, numOutputNeurons, train_datasets, val_datasets,
         #initialise metrics per epoch
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
         val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
-        
         
         tf.summary.trace_on(graph=False, profiler=True)
         #train all batches once
@@ -107,6 +106,7 @@ def train_comp(model, optimiser, x_batch_train, y_batch_train, loss):
 
 
 def transformation(x_batch_train, y_batch_train):
+
     x_batch_train = tf.sparse.to_dense(x_batch_train)
     x_batch_train = tf.expand_dims(x_batch_train, 0)
     y_batch_train = tf.reshape(y_batch_train, (-1, 155))
@@ -117,7 +117,6 @@ def transformation(x_batch_train, y_batch_train):
 def train_body(dataset, model, optimiser, loss, train_AUC):
     
          #https://www.tensorflow.org/tensorboard/r2/get_started
-    
     loss_value=0.
         
     for step, entry in dataset.enumerate():
@@ -133,8 +132,10 @@ def train_body(dataset, model, optimiser, loss, train_AUC):
             
 @tf.function      
 def val_body(dataset, model, val_AUC):
+
+    #set training phase =0 to use Dropout and BatchNormalization in test mode
+    tf.keras.backend.set_learning_phase(0)
     
-            
     for entry in dataset:
         x_batch_val, y_batch_val, tid = entry['audio'], entry['tags'], entry['tid']
         x_batch_val, y_batch_val = transformation(x_batch_val, y_batch_val)
@@ -143,9 +144,12 @@ def val_body(dataset, model, val_AUC):
         val_logits = model(x_batch_val)
         #calculate AUC
         val_AUC(y_batch_val, val_logits)
+    
+    #set training phase =1
+    tf.keras.backend.set_learning_phase(1)
             
        
-            
+
 #####################################################################################
 
 
