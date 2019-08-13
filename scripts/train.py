@@ -104,7 +104,16 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
         
     #initialise loss, optimiser, metric
     loss = tf.keras.losses.MeanSquaredError()
-    optimiser = tf.keras.optimizers.Nadam(learning_rate=lr)
+    optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
+    
+    # Setting up checkpoints, and loading one if one already exists
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, model=model)
+    manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
+    ckpt.restore(manager.latest_checkpoint)
+    if manager.latest_checkpoint:
+        print("Restored from {}".format(manager.latest_checkpoint))
+    else:
+        print("Initializing from scratch.")
     
     #epoch loop
     for epoch in range(num_epochs):
@@ -127,6 +136,13 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
             tf.print('Epoch', epoch, ': tfrecord', idx, '; loss', loss_value, '; AUC', train_AUC.result())
             tf.print(optimiser.iterations)
             tf.print(train_AUC.result())
+
+            # saving checkpoint
+            ckpt.step.assign_add(1)
+            if int(ckpt.step) % 10 == 0:
+                save_path = manager.save()
+                print("Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
+
             #log to tensorboard
             with train_summary_writer.as_default():
                 tf.summary.scalar('AUC', train_AUC.result(), step=int(optimiser.iterations.numpy()))
