@@ -64,7 +64,7 @@ def _parse_features(example):
     return tf.io.parse_single_example(example, audio_feature_description)
 
 def _reshape(features, shape):
-    ''' Reshapes each flattened audio tensor into the 'correct' one. '''
+    ''' Reshapes each flattened audio tensors into the 'correct' one. '''
 
     features['audio'] = tf.sparse.reshape(features['audio'], shape)
     return features
@@ -122,7 +122,7 @@ def _tag_filter_hotenc_mask(features, tags):
     return features
 
 def _window(features, audio_format, window_length=15, random=False):
-    ''' Extracts a window of 'window_length' seconds from the audio tensor (use with tf.data.Dataset.map).
+    ''' Extracts a window of 'window_length' seconds from the audio tensors (use with tf.data.Dataset.map).
 
     Parameters
     ----------
@@ -153,7 +153,7 @@ def _window(features, audio_format, window_length=15, random=False):
             y = x + slice_length
             features['audio'] = features['audio'][:,x:y]
         else:
-            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[1], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensor
+            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[1], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensors
             x = mid - tf.math.floordiv(slice_length, tf.constant(2, dtype=tf.int32))
             y = mid + tf.math.floordiv(slice_length + 1, tf.constant(2, dtype=tf.int32)) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
             features['audio'] = features['audio'][:,x:y]
@@ -167,7 +167,7 @@ def _window(features, audio_format, window_length=15, random=False):
             y = x + slice_length
             features['audio'] = features['audio'][:,:,x:y]
         else:
-            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[2], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensor
+            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[2], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensors
             x = mid - tf.math.floordiv(slice_length, tf.constant(2, dtype=tf.int32))
             y = mid + tf.math.floordiv(slice_length + 1, tf.constant(2, dtype=tf.int32)) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
             features['audio'] = features['audio'][:,:,x:y]
@@ -217,17 +217,17 @@ def genrate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer
         If not None, repeats the dataset only for a given number of epochs (default is repeat indefinitely).
     '''
 
-    assert audio_format in ('waveform', 'log-mel-spectrogram')
+    TENSOR_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (96, -1)} # set audio tensors dense shape
 
-    if isinstance(tfrecords, str): # parse to list if reading from a single file
-        tfrecords = [tfrecords]
+    assert audio_format in ('waveform', 'log-mel-spectrogram')
     
-    audio_shape = {'waveform': (-1, ), 'log-mel-spectrogram': (96, -1)}
+    tfrecords = np.array(tfrecords, dtype=np.unicode) # allow for single str as input
+    tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
 
     tfrecords = tf.data.Dataset.from_tensor_slices(tfrecords)
-    dataset = tfrecords.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE) # read files in parallel
+    dataset = tfrecords.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE) # load dataset, read files in parallel
     dataset = dataset.map(_parse_features, num_parallel_calls=tf.data.experimental.AUTOTUNE) # parse serialized features
-    dataset = dataset.map(lambda x: _reshape(x, audio_shape[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE) # reshape audio features
+    dataset = dataset.map(lambda x: _reshape(x, TENSOR_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE) # reshape
     
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
