@@ -58,7 +58,7 @@ import numpy as np
 import pandas as pd
 
 mp3_root_dir = '/srv/data/msd/7digital/'
-npz_root_dir = '/srv/data/urop/7digital_numpy/'
+npz_root_dir = ''
 
 def set_mp3_root_dir(new_root_dir):
     ''' Function to set mp3_root_dir, useful if script is used as a module. '''
@@ -245,9 +245,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     if args.root_dir_npz:
-        npz_root_dir = os.path.expanduser(args.root_dir_npz)
+        npz_root_dir = os.path.abspath(os.path.expanduser(args.root_dir_npz))
     if args.root_dir_mp3:
-        mp3_root_dir = os.path.expanduser(args.root_dir_mp3)
+        mp3_root_dir = os.path.abspath(os.path.expanduser(args.root_dir_mp3))
     
     df = pd.read_csv(args.input, comment='#')
 

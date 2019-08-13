@@ -172,7 +172,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input db filename or path, or csv folder path")
     parser.add_argument("output", help="output db filename or path")
-    parser.add_argument('--val-thresh', dest='val', type=float, help="discard tags with val less than threshold")
+    parser.add_argument('--val', type=float, help="discard tags with val less than or equal to specified threshold")
     parser.add_argument('--supp-txt-path', help="set supplementary txt folder path")
     
     args = parser.parse_args()
