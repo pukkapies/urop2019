@@ -194,7 +194,7 @@ def generate_datasets(tfrecord_dir, audio_format,
     
     for num in range(3):
         if train_val_test_split[num] >0:
-            dataset_list[num] = projectName_input(
+            dataset_list[num] = projectName_input.genrate_dataset(
                     tfrecords = tfrecords[split[num]:split[num+1]], 
                     audio_format = audio_format, 
                     batch_size=batch_size, 
