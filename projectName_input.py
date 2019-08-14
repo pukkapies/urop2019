@@ -66,39 +66,39 @@ def _parse_features(example):
 
     return tf.io.parse_single_example(example, audio_feature_description)
 
-def _reshape(features, shape):
+def _reshape(features_dict, shape):
     ''' Reshapes each flattened audio tensors into the 'correct' one. '''
 
-    features['audio'] = tf.sparse.reshape(features['audio'], shape)
-    return features
+    features_dict['audio'] = tf.sparse.reshape(features_dict['audio'], shape)
+    return features_dict
 
-def _tid_filter(features, tids):
+def _tid_filter(features_dict, tids):
     ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.filter).
         
     Parameters
     ----------
-    features : dict
+    features_dict : dict
         Dict of features (as provided by .filter).
 
     tids : list or list-like
         List containing tids (as strings) to be "allowed" in the output dataset.
     '''
 
-    return tf.math.reduce_any(tf.math.equal(tids, features['tid']))
+    return tf.math.reduce_any(tf.math.equal(tids, features_dict['tid']))
 
-def _tag_filter(features, tags):
+def _tag_filter(features_dict, tags):
     ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.filter).
     
     Parameters
     ----------
-    features : dict
+    features_dict : dict
         Dict of features (as provided by .filter).
 
     tags : list or list-like
         List containing tag idxs (as int) to be "allowed" in the output dataset.
     '''
 
-    feature_tags = tf.math.equal(tf.unstack(features['tags']), 1) # bool tensor where True/False correspond to has/doesn't have tag
+    feature_tags = tf.math.equal(tf.unstack(features_dict['tags']), 1) # bool tensor where True/False correspond to has/doesn't have tag
 
     tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([N_TAGS], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
@@ -106,7 +106,7 @@ def _tag_filter(features, tags):
 
     return tf.math.reduce_any(feature_tags & tags_mask) # returns True if and only if at least one feature tag is in the desired 'tags' list
 
-def _tag_filter_hotenc_mask(features, tags):
+def _tag_filter_hotenc_mask(features_dict, tags):
     ''' Reshapes tag hot-encoded vector after filtering with _tag_filter (use with tf.data.Dataset.map).
     
     Parameters
@@ -121,15 +121,15 @@ def _tag_filter_hotenc_mask(features, tags):
     tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([N_TAGS], dtype=np.int64))
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
-    features['tags'] = tf.boolean_mask(features['tags'], tags_mask)
-    return features
+    features_dict['tags'] = tf.boolean_mask(features_dict['tags'], tags_mask)
+    return features_dict
 
-def _window(features, audio_format, window_length=15, random=False):
+def _window(features_dict, audio_format, window_length=15, random=False):
     ''' Extracts a window of 'window_length' seconds from the audio tensors (use with tf.data.Dataset.map).
 
     Parameters
     ----------
-    features : dict
+    features_dict : dict
         Dict of features (as provided by .map).
 
     audio_format : str
@@ -148,46 +148,46 @@ def _window(features, audio_format, window_length=15, random=False):
         raise KeyError()
     
     elif audio_format == 'waveform':
-        features['audio'] = tf.sparse.to_dense(features['audio'])
+        features_dict['audio'] = tf.sparse.to_dense(features_dict['audio'])
         slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)) # get the actual slice length
         if random:
-            maxval = tf.shape(features['audio'], out_type=tf.int32)[1] - slice_length
+            maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[1] - slice_length
             x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
             y = x + slice_length
-            features['audio'] = features['audio'][:,x:y]
+            features_dict['audio'] = features_dict['audio'][:,x:y]
         else:
-            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[1], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensors
+            mid = tf.math.floordiv(tf.shape(features_dict['audio'], out_type=tf.int32)[1], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensors
             x = mid - tf.math.floordiv(slice_length, tf.constant(2, dtype=tf.int32))
             y = mid + tf.math.floordiv(slice_length + 1, tf.constant(2, dtype=tf.int32)) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
-            features['audio'] = features['audio'][:,x:y]
+            features_dict['audio'] = features_dict['audio'][:,x:y]
     
     elif audio_format == 'log-mel-spectrogram':
-        features['audio'] = tf.sparse.to_dense(features['audio'])
+        features_dict['audio'] = tf.sparse.to_dense(features_dict['audio'])
         slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32)) # get the actual slice length
         if random:
-            maxval = tf.shape(features['audio'], out_type=tf.int32)[2] - slice_length
+            maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[2] - slice_length
             x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
             y = x + slice_length
-            features['audio'] = features['audio'][:,:,x:y]
+            features_dict['audio'] = features_dict['audio'][:,:,x:y]
         else:
-            mid = tf.math.floordiv(tf.shape(features['audio'], out_type=tf.int32)[2], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensors
+            mid = tf.math.floordiv(tf.shape(features_dict['audio'], out_type=tf.int32)[2], tf.constant(2, dtype=tf.int32)) # find midpoint of audio tensors
             x = mid - tf.math.floordiv(slice_length, tf.constant(2, dtype=tf.int32))
             y = mid + tf.math.floordiv(slice_length + 1, tf.constant(2, dtype=tf.int32)) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
-            features['audio'] = features['audio'][:,:,x:y]
+            features_dict['audio'] = features_dict['audio'][:,:,x:y]
     
-    return features
+    return features_dict
 
-def _batch_normalization(features):
+def _batch_normalization(features_dict):
     ''' Normalizes a batch to ensure zero mean and unit variance. '''
 
     mean, variance = tf.nn.moments(features['audio'], axes=[0])
-    features['audio'] = tf.nn.batch_normalization(features['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
-    return features
+    features_dict['audio'] = tf.nn.batch_normalization(features_dict['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
+    return features_dict
 
-def _batch_tuplification(features):
+def _batch_tuplification(features_dict):
     ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. '''
 
-    return (features['audio'], features['tags'])
+    return (features_dict['audio'], features_dict['tags'])
 
 def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tags=None, with_tids=None, num_epochs=None, as_tuple=True):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
