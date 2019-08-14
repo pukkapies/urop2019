@@ -55,10 +55,12 @@ SAMPLE_RATE = 16000
 
 default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
 
-def _parse_features(example, features_description):
+def _parse_features(example, features_dict):
     ''' Parses the serialized tf.Example. '''
 
-    return tf.io.parse_single_example(example, features_description)
+    features_dict = tf.io.parse_single_example(example, features_dict)
+    features_dict['tags'] = tf.cast(features_dict['tags'], dtype = tf.float32) # tf.nn.softmax() requires floats
+    return features_dict
 
 def _reshape(features_dict, shape):
     ''' Reshapes each flattened audio tensors into the 'correct' one. '''
