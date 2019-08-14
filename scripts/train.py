@@ -59,7 +59,7 @@ def update_config_txt(config_path, new_filename=None, n_tags=None, n_mels=None,
         json.dump(file, f)
 
 @tf.function
-def train_comp(model, optimiser, x_batch_train, y_batch_train, loss):
+def train_comp(model, optimizer, x_batch_train, y_batch_train, loss):
     '''Optimisation and update gradient'''
 
     with tf.GradientTape() as tape:
@@ -68,13 +68,13 @@ def train_comp(model, optimiser, x_batch_train, y_batch_train, loss):
         loss_value = loss(y_batch_train, logits)
         
     grads = tape.gradient(loss_value, model.trainable_weights)
-    optimiser.apply_gradients(zip(grads, model.trainable_weights))
+    optimizer.apply_gradients(zip(grads, model.trainable_weights))
     
     
     return loss_value, logits    
     
 @tf.function
-def train_body(dataset, model, optimiser, loss, train_AUC):
+def train_body(dataset, model, optimizer, loss, train_AUC):
     '''Train and update metrics'''
     
          #https://www.tensorflow.org/tensorboard/r2/get_started
@@ -83,7 +83,7 @@ def train_body(dataset, model, optimiser, loss, train_AUC):
     for step, entry in dataset.enumerate():
         x_batch_train, y_batch_train = entry['audio'], entry['tags']
                 
-        loss_value, logits = train_comp(model, optimiser, x_batch_train, y_batch_train, loss)
+        loss_value, logits = train_comp(model, optimizer, x_batch_train, y_batch_train, loss)
             
         train_AUC(y_batch_train, logits)
         
@@ -136,7 +136,7 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
                               y_input=y_input, num_units=num_units, 
                               num_filt=num_filt)
         
-    #initialise loss, optimiser, metric
+    #initialise loss, optimizer, metric
     loss = tf.keras.losses.MeanSquaredError()
     optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
     
@@ -163,12 +163,12 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
         for idx, dataset in enumerate(train_datasets):
             tf.print('tfrecord {}'.format(idx))
             
-            loss_value = train_body(dataset, model, optimiser, loss, train_AUC)
+            loss_value = train_body(dataset, model, optimizer, loss, train_AUC)
             
             #print progress
             tf.print('tfrecord {} done'.format(idx))
             tf.print('Epoch', epoch, ': tfrecord', idx, '; loss', loss_value, '; AUC', train_AUC.result())
-            tf.print(optimiser.iterations)
+            tf.print(optimizer.iterations)
             tf.print(train_AUC.result())
 
             # saving checkpoint
@@ -179,8 +179,8 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
 
             #log to tensorboard
             with train_summary_writer.as_default():
-                tf.summary.scalar('AUC', train_AUC.result(), step=int(optimiser.iterations.numpy()))
-                tf.summary.scalar('Loss', loss_value, step=int(optimiser.iterations.numpy()))
+                tf.summary.scalar('AUC', train_AUC.result(), step=int(optimizer.iterations.numpy()))
+                tf.summary.scalar('Loss', loss_value, step=int(optimizer.iterations.numpy()))
             
         #print progress
         tf.print('Epoch {} --training done'.format(epoch))
