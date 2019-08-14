@@ -282,9 +282,10 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     num_filt = file['train_params']['n_filters']
     
 
-    train_datasets, val_datasets, test_datasets = \
+    train_datasets, val_datasets = \
     generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
                       train_val_test_split=train_val_test_split, 
+                      which = [True, True, False],
                       batch_size=batch_size, shuffle=shuffle, 
                       buffer_size=buffer_size, window_length=window_length, 
                       random=random, with_tags=with_tags, with_tids=with_tids, 

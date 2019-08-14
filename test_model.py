@@ -1,15 +1,17 @@
 import modules.query_lastfm as q_fm
+import scripts.train as train
 
 def test(model, tfrecord_dir, audio_format, train_val_test_split, batch_size, window_length, random, with_tags, with_tids):
     ''' Tests model '''
 
     test_datasets = \ 
-    generate_datasets(tfrecord_dir=tfrecord_dir, 
+    train.generate_datasets(tfrecord_dir=tfrecord_dir, 
                       train_val_test_split=train_val_test_split, 
+                      which = [False, False, True],
                       batch_size=batch_size, shuffle=shuffle, 
                       buffer_size=buffer_size, window_length=window_length, 
                       random=random, with_tags=with_tags, with_tids=with_tids, 
-                      num_epochs=1)[2]
+                      num_epochs=1)
 
     AUC = tf.keras.metrics.AUC(name='AUC', dtype=tf.float32)
 
@@ -42,7 +44,6 @@ def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db')
 
         return tags
     else:
-       
         track_tags = []
 
         for track_audio in audio:
