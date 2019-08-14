@@ -181,7 +181,7 @@ def _batch_normalization(features):
     features['audio'] = tf.nn.batch_normalization(features['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
     return features
 
-def genrate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tags=None, with_tids=None, num_epochs=None):
+def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tags=None, with_tids=None, num_epochs=None):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
