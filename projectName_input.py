@@ -180,7 +180,7 @@ def _window(features_dict, audio_format, window_length=15, random=False):
 def _batch_normalization(features_dict):
     ''' Normalizes a batch to ensure zero mean and unit variance. '''
 
-    mean, variance = tf.nn.moments(features['audio'], axes=[0])
+    mean, variance = tf.nn.moments(features_dict['audio'], axes=[0])
     features_dict['audio'] = tf.nn.batch_normalization(features_dict['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
     return features_dict
 
