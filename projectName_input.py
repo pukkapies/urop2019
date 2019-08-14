@@ -38,8 +38,11 @@ Functions
 - _batch_normalization
     Ensure zero mean and variation within a batch.
 
+- _batch_tuplification
+    Transform features from dict to tuple.
+
 - _genrate_dataset
-    Combine all previous functions to produce the final output.
+    Combine all previous functions to produce the final output dataset.
 '''
 
 import os
@@ -181,7 +184,12 @@ def _batch_normalization(features):
     features['audio'] = tf.nn.batch_normalization(features['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
     return features
 
-def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tags=None, with_tids=None, num_epochs=None):
+def _batch_tuplification(features):
+    ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. '''
+
+    return (features['audio'], features['tags'])
+
+def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tags=None, with_tids=None, num_epochs=None, as_tuple=True):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
@@ -215,6 +223,9 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
 
     num_epochs : int
         If not None, repeats the dataset only for a given number of epochs (default is repeat indefinitely).
+
+    as_tuple : bool
+        If True, discards tid's and transforms features into (audio, tags) tuples.
     '''
 
     TENSOR_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (96, -1)} # set audio tensors dense shape
@@ -239,6 +250,7 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
     dataset = dataset.batch(batch_size) # create batches before slicing the desired audio window to boost performance
     dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE) # slice the desired audio window
     dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE) # normalize data
+    dataset = dataset.map(_batch_tuplification, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.repeat(num_epochs)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
     
