@@ -245,7 +245,7 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST. The proportion of TRAIN, VAL, TEST dictates how many entries is in each file.")
     parser.add_argument("--num-files", default=10, type=int, help="number of equal-sized files to split the data into, defaults to 10")
     parser.add_argument("--root-dir", default='/srv/data/urop/npz/', help="set absolute path to directory containing the .npz files, defaults to path on Boden")
-    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm_val!=0.db', help="set absolute path to .db file containing the 'clean' tags, defaults to path on Boden")
+    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="set absolute path to .db file containing the 'clean' tags, defaults to path on Boden")
     parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="set absolute path to csv file, defaults to path on Boden")
     parser.add_argument("--output-dir", default='/srv/data/urop/tfrecords/', help="set absolute path to output directory, defaults to path on Boden")
     parser.add_argument("-i", "--interval", help="set which interval of files to process, supply as START/STOP (use in combination with --num-files)")
