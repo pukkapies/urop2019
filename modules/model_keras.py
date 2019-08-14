@@ -1,3 +1,36 @@
+''' Contains skeleton model for training 
+
+Notes
+-----
+This module reproduces the skeleton model proposed by (Pons, et al., 2018) in
+tensorflow 2.0 keras syntax. For more information, please refer to 
+(Pons, et al., 2018).
+
+This module can be divded into three parts:
+    1. Model frontends for waveform and log-mel-spectrogram input respectively.
+    2. Model backend for both model frontends
+    3. A final model combining a frontend and the backend.
+    
+Functions
+---------
+- wave_frontend
+    Model frontend for waveform input.
+
+- spec_frontend
+    Model frontend for log-mel-spectrogram input.
+
+- backend
+    Model backend for waveform and log-mel-spectrogram input.
+
+- build_model
+    Generate a final model by combining a frontend with the backend.
+    
+Reference
+---------
+Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
+
+
+'''
 """
 
 Copyright 2017-2019 Pandora Media, Inc.
@@ -45,14 +78,15 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 """
-
 import tensorflow as tf
 from tensorflow.keras.layers import Add, AveragePooling2D, BatchNormalization, \
 Concatenate, Conv1D, Conv2D, Dense, Dropout, Flatten, Lambda, MaxPool1D, \
 MaxPool2D, Permute, ZeroPadding2D
-
-
+        
+    
+    
 def wave_frontend(Input):
+    '''Model frontend for waveform input.'''
     initializer = tf.keras.initializers.VarianceScaling()
     
     Input = Lambda(lambda x: tf.expand_dims(x, 2), name='expdim_1_wave')(Input)
@@ -108,7 +142,10 @@ def wave_frontend(Input):
     return exp_dim
 
 
-def spec_frontend(Input, y_input, num_filt=32):
+def spec_frontend(Input, y_input=96, num_filt=32):
+    '''Model frontend for log-mel-spectrogram input, see documentation on 
+    build_model() for more details.'''
+    
     initializer = tf.keras.initializers.VarianceScaling()
     Input = tf.expand_dims(Input, 3)
     
@@ -215,6 +252,9 @@ def spec_frontend(Input, y_input, num_filt=32):
 
 
 def backend(Input, numOutputNeurons, num_units=1024):
+    '''Model backend for waveform and log-mel-spectrogram input, see 
+    documentation on build_model() for more detail.'''
+    
     initializer = tf.keras.initializers.VarianceScaling()
     
     #conv1
@@ -263,9 +303,35 @@ def backend(Input, numOutputNeurons, num_units=1024):
                  kernel_initializer=initializer, name='dense2_back')(dense_dropout)
         
 
-def build_model(frontend_mode, numOutputNeurons, 
-                y_input=None, is_training=True, num_units=1024,
+def build_model(frontend_mode, numOutputNeurons=155, 
+                y_input=96, num_units=1024,
                 num_filt=32):
+    '''Generate a final model by combining a frontend with the backend.
+    
+    Parameters
+    ----------
+    frontend_mode: string
+        'waveform', or 'log-mel-spectrogram' to indicate the frontend model.
+        
+    numOutputNeurons: int
+        The dimension of the prediction array for each audio input. This should
+        be set to the length of the a one-hot encoding of tags.
+        
+    y_input: int or None
+        For waveform frontend, y_input will not affect the output of function.
+        For log-mel-spectrogram frontend, this is the height of the spectrogram
+        and should therefore be set as the number of mel bands of the 
+        spectrogram.
+        
+    num_units: int
+        The number of neurons in the dense hidden layer of the backend.
+        
+    num_filts: int
+        For waveform, num_filts will not affect the ouput of function. For 
+        log-mel-spectrogram, this is the number of filters of the first CNN
+        layer. See (Pons, et al., 2018) for more details.
+    
+    '''
 
     if frontend_mode == 'waveform':
         Input = tf.keras.Input(shape=[None])
