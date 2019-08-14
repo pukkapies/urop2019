@@ -250,7 +250,9 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
     dataset = dataset.batch(batch_size) # create batches before slicing the desired audio window to boost performance
     dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE) # slice the desired audio window
     dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE) # normalize data
-    dataset = dataset.map(_batch_tuplification, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    if as_tuple:
+        dataset = dataset.map(_batch_tuplification, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
     dataset = dataset.repeat(num_epochs)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
     
