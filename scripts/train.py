@@ -2,7 +2,6 @@
 TODO LIST:
 - add printing
 - fix tensorboard and make it run on Boden (create graph, profile)
-- create json file
 - evaluation method (include test phase and convert tag_num to tag)
 
 '''
@@ -17,14 +16,52 @@ from datetime import datetime
 import os
 import time
 import projectName_input
+import json
 
 
+def create_config_txt(config_dir, n_tags=155, n_mels=96, lr=0.001, 
+                      n_dense_units=1024, n_filters=32):
+    '''Create configuration file for training'''
+    
+    data_params = {'n_tags':n_tags, 'n_mels':n_mels}
+    train_params = {'lr':0.001, 'n_dense_units':1024, 'n_filters':32}
+    file = {'data_params':data_params, 'train_params':train_params}
+    
+    with open(os.path.join(os.path.abspath(config_dir),'config.txt'), 'w') as f:
+        json.dump(file, f)
+
+def update_config_txt(config_path, new_filename=None, n_tags=None, n_mels=None, 
+                       lr=None, n_dense_units=None, n_filters=None):
+    '''Update parameters in configuration file produced by create_config_txt()'''
+    
+    if not os.path.isfile(config_path):
+        config_path = os.path.join(config_path, 'config.txt')
+    
+    config_path = os.path.normpath(config_path)
+    with open(config_path) as f:
+        file = json.load(f)
+        
+    if n_tags is not None:
+        file['data_params'].update({'n_tags':n_tags})
+    if n_mels is not None:
+        file['data_params'].update({'n_mels':n_mels})
+    if lr is not None:
+        file['train_params'].update({'lr':lr})
+    if n_dense_units is not None:
+        file['train_params'].update({'n_dense_units':n_dense_units})
+    if n_filters is not None:
+        file['train_params'].update({'n_filters':n_filters})
+    
+    if new_filename is not None:
+        config_path = os.path.join(config_path, new_filename) #replace filename
+    
+    with open(config_path, 'w') as f:
+        json.dump(file, f)
 
 @tf.function
 def train_comp(model, optimiser, x_batch_train, y_batch_train, loss):
     '''Optimisation and update gradient'''
-    tf.print('train_comp')
-    tf.print(tf.executing_eagerly())
+
     with tf.GradientTape() as tape:
         logits = model(x_batch_train)
                 
@@ -38,12 +75,11 @@ def train_comp(model, optimiser, x_batch_train, y_batch_train, loss):
     
 @tf.function
 def train_body(dataset, model, optimiser, loss, train_AUC):
-    '''Training and update metrics'''
+    '''Train and update metrics'''
     
          #https://www.tensorflow.org/tensorboard/r2/get_started
     loss_value=0.
-    tf.print('train_body')
-    tf.print(tf.executing_eagerly())
+
     for step, entry in dataset.enumerate():
         x_batch_train, y_batch_train = entry['audio'], entry['tags']
                 
@@ -59,8 +95,8 @@ def train_body(dataset, model, optimiser, loss, train_AUC):
             
 @tf.function      
 def val_body(dataset, model, val_AUC):
-    tf.print('val_body')
-    tf.print(tf.executing_eagerly())
+    '''Validation and update metrics'''
+    
     #set training phase =0 to use Dropout and BatchNormalization in test mode
     tf.keras.backend.set_learning_phase(0)
     
@@ -74,12 +110,10 @@ def val_body(dataset, model, val_AUC):
     #set training phase =1
     tf.keras.backend.set_learning_phase(1)
 
-
-
 def train(frontend_mode, train_datasets, val_datasets=None, validation=True, 
-          numOutputNeurons=155, y_input=96, num_units=1024, num_filt=32, 
-          num_epochs=10, lr=0.001, log_dir = 'logs/trial1/'):
-    tf.print(tf.executing_eagerly())
+          num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, 
+          num_filt=32, lr=0.001, log_dir = 'logs/trial1/'):
+    
     #in case of keyboard interrupt during previous training
     tf.summary.trace_off()
     
@@ -163,7 +197,7 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
         #report time
         time_taken = time.time()-start_time
         tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
-        
+
 def generate_datasets(tfrecord_dir, audio_format, 
                       train_val_test_split=(70, 10, 20), 
                       batch_size=32, shuffle=True, buffer_size=10000, 
@@ -208,11 +242,25 @@ def generate_datasets(tfrecord_dir, audio_format,
                     
     return dataset_list[0], dataset_list[1], dataset_list[2]
 
-def main(tfrecord_dir, frontend_mode, train_val_test_split=(70, 10, 20), 
+def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
          window_length=15, random=False, with_tags=None,
          log_dir = 'logs/trial1/', with_tids=None, num_epochs=None):
     
+    #initialise configuration
+    if not os.path.isfile(config_dir):
+        config_dir = os.path.join(os.path.normpath(config_dir), 'config.txt')
+        
+    with open(config_dir) as f:
+        file = json.load(f)
+        
+    numOutputNeurons = file['data_params']['n_tags']
+    y_input = file['data_params']['n_mels']
+    lr = file['train_params']['lr']
+    num_units = file['train_params']['n_dense_units']
+    num_filt = file['train_params']['n_filters']
+    
+
     train_datasets, val_datasets, test_datasets = \
     generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
                       train_val_test_split=train_val_test_split, 
@@ -222,7 +270,10 @@ def main(tfrecord_dir, frontend_mode, train_val_test_split=(70, 10, 20),
                       num_epochs=num_epochs)
     
     train(frontend_mode=frontend_mode, train_datasets=train_datasets, 
-          val_datasets=val_datasets, validation=validation)
+          val_datasets=val_datasets, validation=validation,  
+          num_epochs=num_epochs, numOutputNeurons=numOutputNeurons, 
+          y_input=y_input, num_units=num_units, num_filt=num_filt, 
+          lr=lr, log_dir = log_dir)
 
 
     
