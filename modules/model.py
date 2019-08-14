@@ -8,13 +8,19 @@ tensorflow 2.0 keras syntax. For more information, please refer to
 (Pons, et al., 2018).
 
 This module can be divded into four parts:
-    1. 
+    1. Store configuration
     2. Model frontends for waveform and log-mel-spectrogram input respectively.
     3. Model backend for both model frontends
     4. A final model combining a frontend and the backend.
     
 Functions
 ---------
+- create_config_txt
+    Create a txt file storing the parameters.
+    
+- update_config_txt
+    Update one or more parameters from a stored txt file.
+
 - wave_frontend
     Model frontend for waveform input.
 
@@ -91,7 +97,39 @@ import os
         
 def create_config_txt(config_dir, n_tags=155, n_mels=96, lr=0.001, 
                       n_dense_units=1024, n_filters=32):
-    '''Create configuration file for training'''
+    '''Create configuration file for training
+    Parameters
+    -----------
+    config_dir: str
+        The directory where the txt file will be stored.
+        
+    n_tags: int
+        The number of tags that form the one-hot encoding.
+        
+    n_mels: int
+        The number of mel-bands used to produce the log-mel-spectrogram.
+        
+    lr: float
+        Learning rate of optimiser in training.
+        
+    n_dense_units: int
+        The number of neurons in the dense hidden layer of the backend.
+        
+    n_filters: int
+        For waveform, num_filts will not affect the ouput of function. For 
+        log-mel-spectrogram, this is the number of filters of the first CNN
+        layer. See (Pons, et al., 2018) for more details.
+        
+    Outputs
+    -------
+    config.txt: txt file
+        This file contains a large dictionary which contains two smaller 
+        dictionaries 'data_params', and 'train_params':
+        - 'data_params' contains 'n_tags', 'n_mels', 
+        - 'train_params' contains 'lr', 'n_dense_units', 'n_filters'
+    
+    
+    '''
     
     data_params = {'n_tags':n_tags, 'n_mels':n_mels}
     train_params = {'lr':0.001, 'n_dense_units':1024, 'n_filters':32}
@@ -102,7 +140,25 @@ def create_config_txt(config_dir, n_tags=155, n_mels=96, lr=0.001,
 
 def update_config_txt(config_path, new_filename=None, n_tags=None, n_mels=None, 
                        lr=None, n_dense_units=None, n_filters=None):
-    '''Update parameters in configuration file produced by create_config_txt()'''
+    '''Update parameters in configuration file produced by create_config_txt()
+    
+    Parameters
+    ----------
+    config_path: str
+        The directory (if config.txt is the filename) or the exact path of 
+        where the txt file is produced by create_config_txt().
+        
+    new_filename: str/None
+        The new filename that contains the updated parameters. If None, the 
+        changes will overwrite the original input file.
+        
+    For other parameters, see documentation of create_config_txt().
+    
+    Outputs
+    -------
+    Updated txt file with new filename if specified.
+        
+    '''
     
     if not os.path.isfile(config_path):
         config_path = os.path.join(config_path, 'config.txt')
