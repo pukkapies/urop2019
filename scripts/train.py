@@ -178,11 +178,55 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
         tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
 
 def generate_datasets(tfrecord_dir, audio_format, 
-                      train_val_test_split=(70, 10, 20), 
+                      train_val_test_split=(70, 10, 20),
+                      which = [True, True, True],
                       batch_size=32, shuffle=True, buffer_size=10000, 
                       window_length=15, random=False, with_tags=None, 
                       with_tids=None, num_epochs=None):
+    ''' Generates.....
     
+    Parameters
+    ----------
+    tfrecord_dir : str
+        path to tfrecord directory.
+
+    train_val_test_split : tuple
+        contains the number of tfrecord files to be used to generate each of the
+        train, val and test datasets.
+
+    which : list of bools
+        determines which of the train, val and test datasets to create, useful when
+        testing and training in different locations
+
+    batch_size : int
+
+    shuffle : bool
+        determines weather to shuffle the entries in each of the datasets or not
+
+    buffer_size : int
+        buffer size when shuffling each of the datasets
+    
+    window_length: int
+        length in seconds of window to be extracted from the audio data.
+
+    random : bool
+        determines weather to extract window randomly, or from the middle.
+
+    with_tags : list
+        tags to be trained on
+
+    with_tids : list
+        tids to use
+
+    num_epochs : int or None
+
+    Returns
+    -------
+
+    A list of up to three datasets. Contains a train, validation and/or test datasets 
+    depending on the which parameter.
+    
+    ''' 
     tfrecords = []
 
     for file in os.listdir(tfrecord_dir):
@@ -190,8 +234,6 @@ def generate_datasets(tfrecord_dir, audio_format,
         if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
 
             tfrecords.append(os.path.abspath(os.path.join(tfrecord_dir, file)))
-    
-    np.random.shuffle(tfrecords)
     
     if isinstance(window_length, int):
         window_length = [window_length]*3
@@ -202,12 +244,12 @@ def generate_datasets(tfrecord_dir, audio_format,
     split = [0, train_val_test_split[0], train_val_test_split[0]+train_val_test_split[1],
              sum(train_val_test_split)]
     
-    dataset_list = [None, None, None]
+    dataset_list = []
     
-    
-    for num in range(3):
-        if train_val_test_split[num] >0:
-            dataset_list[num] = projectName_input.genrate_dataset(
+     
+    for num, save_bool in enumerate(which):
+        if train_val_test_split[num] > 0 and save_bool:
+            dataset_list.append(projectName_input.generate_dataset(
                     tfrecords = tfrecords[split[num]:split[num+1]], 
                     audio_format = audio_format, 
                     batch_size=batch_size, 
@@ -217,9 +259,9 @@ def generate_datasets(tfrecord_dir, audio_format,
                     random=random, 
                     with_tags=with_tags, 
                     with_tids=with_tids, 
-                    num_epochs=num_epochs)
+                    num_epochs=num_epochs))
                     
-    return dataset_list[0], dataset_list[1], dataset_list[2]
+    return dataset_list
 
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
