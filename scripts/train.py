@@ -176,6 +176,8 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
         #report time
         time_taken = time.time()-start_time
         tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
+    # saving model
+    model.save('/srv/data/urop/model.h5')
 
 def generate_datasets(tfrecord_dir, audio_format, 
                       train_val_test_split=(70, 10, 20),
