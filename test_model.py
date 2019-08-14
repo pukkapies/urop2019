@@ -38,9 +38,9 @@ def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db')
     if isinstance(audio[0], float):
         tags = []
 
-        for idx, acc in enumerate(logits):
-            if acc > 0.5:
-                tags.append((fm.tag_num_to_tag(with_tags[idx-1]), acc))
+        for idx, probability in enumerate(logits):
+            if probability > 0.5:
+                tags.append((fm.tag_num_to_tag(with_tags[idx-1]), probability))
 
         return tags
     else:
@@ -48,9 +48,9 @@ def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db')
 
         for track_audio in audio:
             tags = []
-            for idx, acc in enumerate(logits):
-                if acc > 0.5:
-                    tags.append((fm.tag_num_to_tag(with_tags[idx-1]), acc))
+            for idx, probability in enumerate(logits):
+                if probability > 0.5:
+                    tags.append((fm.tag_num_to_tag(with_tags[idx-1]), probability))
             
             track_tags.append(tags)
 
