@@ -19,44 +19,7 @@ import projectName_input
 import json
 
 
-def create_config_txt(config_dir, n_tags=155, n_mels=96, lr=0.001, 
-                      n_dense_units=1024, n_filters=32):
-    '''Create configuration file for training'''
-    
-    data_params = {'n_tags':n_tags, 'n_mels':n_mels}
-    train_params = {'lr':0.001, 'n_dense_units':1024, 'n_filters':32}
-    file = {'data_params':data_params, 'train_params':train_params}
-    
-    with open(os.path.join(os.path.abspath(config_dir),'config.txt'), 'w') as f:
-        json.dump(file, f)
 
-def update_config_txt(config_path, new_filename=None, n_tags=None, n_mels=None, 
-                       lr=None, n_dense_units=None, n_filters=None):
-    '''Update parameters in configuration file produced by create_config_txt()'''
-    
-    if not os.path.isfile(config_path):
-        config_path = os.path.join(config_path, 'config.txt')
-    
-    config_path = os.path.normpath(config_path)
-    with open(config_path) as f:
-        file = json.load(f)
-        
-    if n_tags is not None:
-        file['data_params'].update({'n_tags':n_tags})
-    if n_mels is not None:
-        file['data_params'].update({'n_mels':n_mels})
-    if lr is not None:
-        file['train_params'].update({'lr':lr})
-    if n_dense_units is not None:
-        file['train_params'].update({'n_dense_units':n_dense_units})
-    if n_filters is not None:
-        file['train_params'].update({'n_filters':n_filters})
-    
-    if new_filename is not None:
-        config_path = os.path.join(config_path, new_filename) #replace filename
-    
-    with open(config_path, 'w') as f:
-        json.dump(file, f)
 
 @tf.function
 def train_comp(model, optimizer, x_batch_train, y_batch_train, loss):
