@@ -234,10 +234,12 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
     
     tfrecords = np.array(tfrecords, dtype=np.unicode) # allow for single str as input
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
-
     tfrecords = tf.data.Dataset.from_tensor_slices(tfrecords)
+    
     dataset = tfrecords.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE) # load dataset, read files in parallel
+    
     dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION), num_parallel_calls=tf.data.experimental.AUTOTUNE) # parse serialized features
+    
     dataset = dataset.map(lambda x: _reshape(x, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE) # reshape
     
     if shuffle:
@@ -248,12 +250,16 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
     
     dataset = dataset.batch(batch_size) # create batches before slicing the desired audio window to boost performance
+    
     dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE) # slice the desired audio window
+    
     dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE) # normalize data
+    
     if as_tuple:
         dataset = dataset.map(_batch_tuplification, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.repeat(num_epochs)
+    
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
     
     return dataset
