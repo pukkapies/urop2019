@@ -55,16 +55,10 @@ SAMPLE_RATE = 16000
 
 default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
 
-audio_feature_description = {
-    'audio' : tf.io.VarLenFeature(tf.float32),
-    'tid' : tf.io.FixedLenFeature((), tf.string),
-    'tags' : tf.io.FixedLenFeature((N_TAGS, ), tf.int64)
-}
-
-def _parse_features(example):
+def _parse_features(example, features_description):
     ''' Parses the serialized tf.Example. '''
 
-    return tf.io.parse_single_example(example, audio_feature_description)
+    return tf.io.parse_single_example(example, features_description)
 
 def _reshape(features_dict, shape):
     ''' Reshapes each flattened audio tensors into the 'correct' one. '''
@@ -228,7 +222,13 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
         If True, discards tid's and transforms features into (audio, tags) tuples.
     '''
 
-    TENSOR_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (96, -1)} # set audio tensors dense shape
+    AUDIO_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (96, -1)} # set audio tensors dense shape
+
+    AUDIO_FEATURES_DESCRIPTION = {
+        'audio' : tf.io.VarLenFeature(tf.float32),
+        'tid' : tf.io.FixedLenFeature((), tf.string),
+        'tags' : tf.io.FixedLenFeature((N_TAGS, ), tf.int64)
+    }
 
     assert audio_format in ('waveform', 'log-mel-spectrogram')
     
@@ -237,8 +237,8 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
 
     tfrecords = tf.data.Dataset.from_tensor_slices(tfrecords)
     dataset = tfrecords.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE) # load dataset, read files in parallel
-    dataset = dataset.map(_parse_features, num_parallel_calls=tf.data.experimental.AUTOTUNE) # parse serialized features
-    dataset = dataset.map(lambda x: _reshape(x, TENSOR_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE) # reshape
+    dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION), num_parallel_calls=tf.data.experimental.AUTOTUNE) # parse serialized features
+    dataset = dataset.map(lambda x: _reshape(x, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE) # reshape
     
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
