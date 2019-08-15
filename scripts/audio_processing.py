@@ -1,4 +1,4 @@
-''' Script for processing .npz files and saving as a tfrecords file
+''' Contains tools to process the .npz files and create the .tfrecord files.
 
 
 Notes
@@ -226,7 +226,7 @@ def save_examples_to_tffile(df, output_path, audio_format, root_dir, tag_path, v
                     print("{} has no tags. Skipping...".format(tid))
                 continue
             
-            # load the unsampled file from path of npz file and process it.
+            # load the unsampled file from path of npz file and process it
             unsampled_file = np.load(path)
             processed_array = process_array(unsampled_file['array'], 
                                             unsampled_file['sr'], audio_format)
@@ -244,10 +244,10 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-s", "--split", help="train/val/test split, supply as TRAIN/VAL/TEST. The proportion of TRAIN, VAL, TEST dictates how many entries is in each file.")
     parser.add_argument("--num-files", default=10, type=int, help="number of equal-sized files to split the data into, defaults to 10")
-    parser.add_argument("--root-dir", default='/srv/data/urop/7digital/', help="set absolute path to directory containing the .npz files, defaults to path on boden")
-    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="set absolute path to .db file containing the 'clean' tags, defaults to path on boden")
-    parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="set absolute path to csv file, defaults to path on boden")
-    parser.add_argument("--output-dir", default='/srv/data/urop/tfrecords/', help="set absolute path to output directory, defaults to path on boden")
+    parser.add_argument("--root-dir", default='/srv/data/urop/npz/', help="set absolute path to directory containing the .npz files, defaults to path on Boden")
+    parser.add_argument("--tag-path", default='/srv/data/urop/clean_lastfm.db', help="set absolute path to .db file containing the 'clean' tags, defaults to path on Boden")
+    parser.add_argument("--csv-path", default='/srv/data/urop/ultimate.csv', help="set absolute path to csv file, defaults to path on Boden")
+    parser.add_argument("--output-dir", default='/srv/data/urop/tfrecords/', help="set absolute path to output directory, defaults to path on Boden")
     parser.add_argument("-i", "--interval", help="set which interval of files to process, supply as START/STOP (use in combination with --num-files)")
 
     args = parser.parse_args()
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     
     # save in a TRAIN/VAL/TEST split if split is specified
     if args.split: 
-        # setting up train, val, test from split and scaling them to have sum 1.
+        # setting up train, val, test from split and scaling them to have sum 1
         values = [float(_) for _ in args.split.split("/") ]
         tot = sum(values)
         train, val, test = [v/tot for v in values]
@@ -278,51 +278,52 @@ if __name__ == '__main__':
         test_df = df[int(size*train):int(size*(train+val))]
         val_df = df[int(size*(train+val)):]
 
-        # creating + saving the 3 tfrecord files
+        # create + save the 3 tfrecord files
         ending = args.split.replace('/', '-') + ".tfrecord" 
         save_examples_to_tffile(train_df, base_name+"train_"+ending, args.format, args.root_dir, args.tag_path, args.verbose)
         save_examples_to_tffile(test_df, base_name+"test_"+ending, args.format, args.root_dir, args.tag_path, args.verbose)
         save_examples_to_tffile(val_df, base_name+"val_"+ending, args.format, args.root_dir, args.tag_path, args.verbose)
 
-    # save to args.num_files equal-sized files.
+    # save to args.num_files equal-sized files
     else:
-        # if args.interval is specified only create files over the given interval.
+        # if args.interval is specified, only create files over the given interval
         if args.interval:
-            # getting start and end of interval
+            # get start and end of interval
             start, stop = [int(_) for _ in args.interval.split("/")]
             
-            # if interval contains the last file this will need to be dealt with separately, as last file will contain
-            # the rounding errors, i.e. it will have a size thats slightly bigger than the others.
+            # if interval contains the last file, this will need to be dealt with separately as the last file will contain the rounding errors, i.e. it will have a size thats slightly bigger than the others
             if stop >= args.num_files:
                 stop = args.num_files-1
                 name = base_name + str(args.num_files) + ".tfrecord"
                 print("Now writing to: " + name)
-                # obtaining the df slice corresponding the last file
+                # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
-                # creating and saving to the .tfrecord file
+                # create and save to the .tfrecord file
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
 
-            # create and save the remaining files.
-            for i in range(start-1, stop):
-                name = base_name + str(i+1) + ".tfrecord"
+            # create and save all the remaining files at once
+            for num_file in range(start-1, stop):
+                name = base_name + str(num_file+1) + ".tfrecord"
                 print("Now writing to: " + name)
-                # obtaining the df slice corresponding to current file
-                df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
-                # creating and saving to the .tfrecord file
+                # obtain the df slice corresponding to current file
+                df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
+                # create and save to the .tfrecord file
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
-        # args.split not specified, so creating all files at once
+        
+        # otherwise, create all files at once
         else:
-            # create and save the num_files files
-            for i in range(args.num_files-1):
-                name = base_name + str(i+1) + ".tfrecord"
+            for num_file in range(args.num_files - 1):
+                name = base_name + str(num_file+1) + ".tfrecord"
                 print("Now writing to: " + name)
-                # obtaining the df slice corresponding to current file
-                df_slice = df[i*len(df)//args.num_files:(i+1)*len(df)//args.num_files]
-                # creating and saving to the .tfrecord file
+                # obtain the df slice corresponding to current file
+                df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
+                # create and save to the .tfrecord file
                 save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
-            name = base_name + str(args.num_files)
-            print("Now writing to: " + name) + ".tfrecord"
-            # obtaining the df slice corresponding to the last file
+            
+            # create and save all the remaining files at once
+            name = base_name + str(args.num_files) + ".tfrecord"
+            print("Now writing to: " + name)
+            # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
-            # creating and saving to the .tfrecord file
+            # create and save to the .tfrecord file
             save_examples_to_tffile(df_slice, name, args.format, args.root_dir, args.tag_path, args.verbose)
