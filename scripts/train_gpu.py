@@ -32,8 +32,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
-        # TODO: experiment with loss_metric instead of returning loss from each func
-        #loss_metric = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
+        train_loss = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
         loss = tf.keras.losses.MeanSquaredError()
 
         # fucntions needs to be defined within the strategy scope
@@ -50,22 +49,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
             # UPDATE LOSS METRIC
             train_AUC.update_state(label_batch, logits)
-            return loss_value
+            train_loss.update_state(loss_value)
 
         @tf.function 
-        def distributed_train_step(entry):
-            per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
+        def distributed_train_body(dist_dataset):
 
-            return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+            for step, entry in dist_dataset.enumerate()
+                strategy.experimental_run_v2(train_step, args=(entry,))
     
         #epoch loop
         for epoch in range(num_epochs):
 
             start_time = time.time()
-            
-            #train all batches once     
-            for step, entry in train_dist_dataset.enumerate():
-                loss_value = distributed_train_step(entry)
+            distributed_train_body(train_dist_dataset)            
 
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
