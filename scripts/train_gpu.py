@@ -20,7 +20,7 @@ import json
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, 
-          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', checkpoint_prefix='/srv/data/urop/training_checkpoints/ckpts'):
+          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
     
     with strategy.scope():
         #import model
@@ -31,8 +31,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
-
-        checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=model)
 
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
         train_loss = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
@@ -98,7 +96,16 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 strategy.experimental_run_v2(val_step, args=(entry,))
 
             tf.keras.backend.set_learning_phase(1)
-    
+
+
+        # setting up checkpoints
+        checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+        latest_checkpoint_file = tf.train.latest_checkpoint(model_dir)
+        if latest_checkpoint_file:
+            tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
+            checkpoint.restore(latest_checkpoint_file)
+            tf.print('Loading from checkpoint file completed')
+
         #epoch loop
         for epoch in range(num_epochs):
             start_time = time.time()
@@ -137,8 +144,10 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 # reset val metric per epoch
                 val_AUC.reset_states()
 
-            if epoch % 2 == 0:
-                checkpoint.save(checkpoint_prefix)
+            checkpoint.save(checkpoint_prefix)
+            checkpoint_path = os.path.join(model_dir, 'epoch_{}.ckpt'.format(epoch))
+            saved_path = checkpoint.save(checkpoint_path)
+            tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
 
             #report time
             time_taken = time.time()-start_time
