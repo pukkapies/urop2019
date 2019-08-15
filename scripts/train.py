@@ -9,9 +9,8 @@ TODO LIST:
 import sys
 sys.path.insert(0, 'C://Users/hcw10/UROP2019')
 
-import numpy as np
 import tensorflow as tf
-import model_keras as Model
+import model as Model
 from datetime import datetime
 import os
 import time
@@ -29,6 +28,7 @@ def train_comp(model, optimizer, x_batch_train, y_batch_train, loss):
         logits = model(x_batch_train)
                 
         loss_value = loss(y_batch_train, logits)
+        loss_value = tf.reduce_mean(loss_value)
         
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -73,7 +73,7 @@ def val_body(dataset, model, val_AUC):
     #set training phase =1
     tf.keras.backend.set_learning_phase(1)
 
-def train(frontend_mode, train_datasets, val_datasets=None, validation=True, 
+def train(frontend_mode, train_dataset, val_dataset=None, validation=True, 
           num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, 
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/'):
     
@@ -100,7 +100,7 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
                               num_filt=num_filt)
         
     #initialise loss, optimizer, metric
-    loss = tf.keras.losses.MeanSquaredError()
+    loss = tf.nn.sigmoid_cross_entropy_with_logits
     optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
     
     # Setting up checkpoints, and loading one if one already exists
@@ -122,32 +122,27 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
         
         
         tf.summary.trace_on(graph=False, profiler=True)
-        #train all batches once
-        for idx, dataset in enumerate(train_datasets):
-            tf.print('tfrecord {}'.format(idx))
-            
-            loss_value = train_body(dataset, model, optimizer, loss, train_AUC)
+        
+        #train all batches once     
+        loss_value = train_body(train_dataset, model, optimizer, loss, train_AUC)
+        loss_value = tf.reduce_mean(loss_value)
             
             #print progress
-            tf.print('tfrecord {} done'.format(idx))
-            tf.print('Epoch', epoch, ': tfrecord', idx, '; loss', loss_value, '; AUC', train_AUC.result())
-            tf.print(optimizer.iterations)
-            tf.print(train_AUC.result())
+        tf.print('Epoch', epoch,  ': loss', loss_value, '; AUC', train_AUC.result())
 
-            # saving checkpoint
-            ckpt.step.assign_add(1)
-            if int(ckpt.step) % 10 == 0:
-                save_path = manager.save()
-                print("Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
+        # saving checkpoint
+        ckpt.step.assign_add(1)
+        if int(ckpt.step) % 10 == 0:
+            save_path = manager.save()
+            print("Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
 
             #log to tensorboard
-            with train_summary_writer.as_default():
-                tf.summary.scalar('AUC', train_AUC.result(), step=int(optimizer.iterations.numpy()))
-                tf.summary.scalar('Loss', loss_value, step=int(optimizer.iterations.numpy()))
+        with train_summary_writer.as_default():
+            tf.summary.scalar('AUC', train_AUC.result(), step=epoch)
+            tf.summary.scalar('Loss', loss_value, step=epoch)
             
         #print progress
         tf.print('Epoch {} --training done'.format(epoch))
-        tf.print('Epoch', epoch, ': loss', loss_value, '; AUC', train_AUC.result())
         
         #tensorboard export profiling and record train AUC and loss
        
@@ -162,9 +157,9 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
         #validation
         if validation:
             val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
+            
             #run validation over all batches
-            for dataset in val_datasets:
-                val_body(dataset, model, val_AUC)
+            val_body(val_dataset, model, val_AUC)
         
             with val_summary_writer.as_default():
                 tf.summary.scalar('AUC', val_AUC.result(), step=epoch)
@@ -181,10 +176,10 @@ def train(frontend_mode, train_datasets, val_datasets=None, validation=True,
 
 def generate_datasets(tfrecord_dir, audio_format, 
                       train_val_test_split=(70, 10, 20),
-                      which = [True, True, True],
+                      which = None,
                       batch_size=32, shuffle=True, buffer_size=10000, 
                       window_length=15, random=False, with_tags=None, 
-                      with_tids=None, num_epochs=None):
+                      with_tids=None, num_epochs=None, as_tuple=False):
     ''' Generates.....
     
     Parameters
@@ -248,7 +243,10 @@ def generate_datasets(tfrecord_dir, audio_format,
     
     dataset_list = []
     
-     
+    if which is None:
+        which = [True if num!=0 else False for num in train_val_test_split]
+    
+    
     for num, save_bool in enumerate(which):
         if train_val_test_split[num] > 0 and save_bool:
             dataset_list.append(projectName_input.generate_dataset(
@@ -261,14 +259,15 @@ def generate_datasets(tfrecord_dir, audio_format,
                     random=random, 
                     with_tags=with_tags, 
                     with_tids=with_tids, 
-                    num_epochs=num_epochs))
+                    num_epochs=num_epochs,
+                    as_tuple=as_tuple))
                     
     return dataset_list
 
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
-         batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
+         which=None, batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
          window_length=15, random=False, with_tags=None,
-         log_dir = 'logs/trial1/', with_tids=None, num_epochs=None):
+         log_dir = 'logs/trial1/', with_tids=None, num_epochs=5):
     
     #initialise configuration
     if not os.path.isfile(config_dir):
@@ -277,30 +276,34 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     with open(config_dir) as f:
         file = json.load(f)
         
-    numOutputNeurons = file['data_params']['n_tags']
-    y_input = file['data_params']['n_mels']
+    numOutputNeurons = file['dataset_specs']['n_tags']
+    y_input = file['dataset_specs']['n_mels']
     lr = file['train_params']['lr']
     num_units = file['train_params']['n_dense_units']
     num_filt = file['train_params']['n_filters']
     
-
-    train_datasets, val_datasets = \
-    generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
-                      train_val_test_split=train_val_test_split, 
-                      which = [True, True, False],
-                      batch_size=batch_size, shuffle=shuffle, 
-                      buffer_size=buffer_size, window_length=window_length, 
-                      random=random, with_tags=with_tags, with_tids=with_tids, 
-                      num_epochs=num_epochs)
+    datasets = generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
+                                 train_val_test_split=train_val_test_split, 
+                                 which = None,
+                                 batch_size=batch_size, shuffle=shuffle, 
+                                 buffer_size=buffer_size, window_length=window_length, 
+                                 random=random, with_tags=with_tags, with_tids=with_tids, 
+                                 num_epochs=num_epochs, as_tuple=False)
     
-    train(frontend_mode=frontend_mode, train_datasets=train_datasets, 
-          val_datasets=val_datasets, validation=validation,  
+    if validation:
+        train_dataset, val_dataset = datasets[0], datasets[1]
+    else:
+        train_dataset = datasets[0]
+        val_dataset = None
+    
+    train(frontend_mode=frontend_mode, train_dataset=train_dataset, 
+          val_dataset=val_dataset, validation=validation,  
           num_epochs=num_epochs, numOutputNeurons=numOutputNeurons, 
           y_input=y_input, num_units=num_units, num_filt=num_filt, 
           lr=lr, log_dir = log_dir)
 
 
-    
+ 
     
     
     
