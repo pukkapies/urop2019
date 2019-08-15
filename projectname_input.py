@@ -302,13 +302,13 @@ def generate_dataset(tfrecords, audio_format, sample_rate=16000, batch_size=32, 
         dataset = dataset.shuffle(buffer_size)
 
     # apply tid and tag filters
-    if with_tags:
+    if with_tags is not None:
         if merge_tags is not None:
             dataset = dataset.map(lambda x: _tag_merge(x, merge_tags))
             dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
         else:
             dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
-    if with_tids:
+    if with_tids is not None:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
     
     # split into batches before slicing the desired audio window in order to boost performance
