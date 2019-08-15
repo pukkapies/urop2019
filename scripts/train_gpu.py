@@ -156,8 +156,8 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     with open(config_dir) as f:
         file = json.load(f)
         
-    numOutputNeurons = file['data_params']['n_tags']
-    y_input = file['data_params']['n_mels']
+    numOutputNeurons = file['data_specs']['n_tags']
+    y_input = file['data_specs']['n_mels']
     lr = file['train_params']['lr']
     num_units = file['train_params']['n_dense_units']
     num_filt = file['train_params']['n_filters']
