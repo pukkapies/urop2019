@@ -1,4 +1,4 @@
-''' Contains tools to read the TFRecords and generate a tf.data.Dataset.
+''' Contains tools to read the serialized .tfrecord files and generate a tf.data.Dataset.
 
 
 Notes
@@ -44,8 +44,11 @@ Functions
 - _batch_tuplification
     Transform features from dict to tuple.
 
-- _genrate_dataset
-    Combine all previous functions to produce the final output dataset.
+- generate_dataset
+    Combine all previous functions to produce a final dataset.
+
+- generate_datasets_with_split
+    Combine all previous functions to produce a list with train/valid/test dataset.
 '''
 
 import os
@@ -90,7 +93,7 @@ def _tag_merge(features_dict, merge_tags):
     
     merge_tags = np.array(merge_tags)
 
-    assert len(merge_tags.shape) == 2 # sanity check
+    assert len(merge_tags.shape) == 2 , 'merge_tags must be a two-dimensional array'
 
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
@@ -229,12 +232,12 @@ def _batch_tuplification(features_dict):
     return (features_dict['audio'], features_dict['tags'])
 
 def generate_dataset(tfrecords, audio_format, sample_rate=16000, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_epochs=None, as_tuple=True):
-    ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
+    ''' Reads the TFRecords and produce a tf.data.Dataset object ready for using during training/evaluation.
     
     Parameters:
     ----------
     tfrecords: str, list
-        List of TFRecords to read.
+        List of .tfrecord files.
 
     audio_format: {'waveform', 'log-mel-spectrogram'}
         Specifies the feature audio format.
@@ -281,7 +284,7 @@ def generate_dataset(tfrecords, audio_format, sample_rate=16000, batch_size=32, 
         'tags': tf.io.FixedLenFeature((num_tags, ), tf.int64)
     }
 
-    assert audio_format in ('waveform', 'log-mel-spectrogram')
+    assert audio_format in ('waveform', 'log-mel-spectrogram') , 'invalid audio format'
     
     tfrecords = np.array(tfrecords, dtype=np.unicode) # allow for single str as input
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
@@ -327,3 +330,83 @@ def generate_dataset(tfrecords, audio_format, sample_rate=16000, batch_size=32, 
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
     
     return dataset
+
+def generate_datasets_with_split(tfrecords_dir, audio_format, split, sample_rate=16000, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_epochs=None, as_tuple=True):
+    ''' Reads the TFRecords from tfrecords_dir and uses generate_dataset() to produce a tuple of train/valid/test tf.data.Dataset objects.
+    
+    Parameters:
+    ----------
+    tfrecords_dir: str
+        Directory containing the .tfrecord files.
+
+    audio_format: {'waveform', 'log-mel-spectrogram'}
+        Specifies the feature audio format.
+
+    split: tuple
+        Specifies the train/validation/test percentage to use when selecting the .tfrecord files (can be a tuple of any length).
+
+    sample_rate: int
+        Specifies the sample rate used to process audio tracks.
+
+    batch_size: int
+        Specifies the dataset batch_size.
+
+    shuffle: bool
+        If True, shuffles the dataset with buffer size = buffer_size.
+
+    buffer_size: int
+        If shuffle is True, sets the shuffle buffer size.
+
+    window_length: list, int
+        Specifies the desired window length (in seconds) for the various datasets.
+
+    random: bool
+        Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+
+    with_tids: list
+        If not None, contains the tids to use.
+
+    with_tags: list
+        If not None, contains the tags to use.
+
+    merge_tags: list
+        If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
+
+    num_epochs: int
+        If not None, repeats the various dataset only for a given number of epochs (default is repeat indefinitely).
+
+    as_tuple: bool
+        If True, discards tid's and transforms features into (audio, tags) tuples.
+    '''
+
+    tfrecords = []
+
+    for file in os.listdir(os.path.expanduser(tfrecords_dir)):
+        if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
+            tfrecords.append(os.path.abspath(os.path.join(tfrecords_dir, file)))
+
+    assert len(tfrecords) > np.sum(split) , 'too few .tfrecord files to apply split, try using generate_dataset()'
+    
+    split = np.cumsum(split)
+    split = np.multiply(split, len(tfrecords) / split[-1]).astype(np.int32)[:-1] # scale up (or down) the 'split' array to match the actual number of .tfrecord files, and pop last entry
+    
+    tfrecords_split = np.split(tfrecords, split)
+
+    output = []
+
+    for tfrecords in tfrecords_split:
+        output.append(generate_dataset(
+            tfrecords = tfrecords, 
+            audio_format = audio_format, 
+            batch_size=batch_size, 
+            shuffle=shuffle, 
+            buffer_size=buffer_size,
+            window_length=window_length, 
+            random=random,
+            with_tids=with_tids,
+            with_tags=with_tags, 
+            merge_tags=merge_tags,
+            num_epochs=num_epochs,
+            as_tuple=as_tuple))
+    
+    return tuple(output)
