@@ -20,7 +20,7 @@ import json
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, 
-          num_filt=32, lr=0.001, log_dir = 'logs/trial1/'):
+          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
     
     with strategy.scope():
         #import model
@@ -31,11 +31,16 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
+
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
         train_loss = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
+
         loss = tf.keras.losses.MeanSquaredError()
+
         if validation:
             val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
+            # TODO: val loss?
+            # val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
 
         #in case of keyboard interrupt during previous training
         tf.summary.trace_off()
@@ -68,13 +73,39 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_AUC.update_state(label_batch, logits)
             train_loss.update_state(loss_value)
 
+        def val_step(entry):
+            audio_batch, label_batch = entry['audio'], entry['tags']
+
+            logits = model(audio_batch)
+            # TODO: record loss for val dataset?
+            # loss_value = loss(label_batch, logits)
+            # val_loss.update_state(loss_value)
+            val_AUC.update_state(label_batch, logits)
 
         @tf.function 
         def distributed_train_body(dist_dataset):
 
             for step, entry in dist_dataset.enumerate()
                 strategy.experimental_run_v2(train_step, args=(entry,))
-    
+
+        @tf.function
+        def distributed_val_body(dist_dataset):
+            tf.keras.backend.set_learning_phase(0)
+
+            for entry in dist_dataset:
+                strategy.experimental_run_v2(val_step, args=(entry,))
+
+            tf.keras.backend.set_learning_phase(1)
+
+
+        # setting up checkpoints
+        checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+        latest_checkpoint_file = tf.train.latest_checkpoint(model_dir)
+        if latest_checkpoint_file:
+            tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
+            checkpoint.restore(latest_checkpoint_file)
+            tf.print('Loading from checkpoint file completed')
+
         #epoch loop
         for epoch in range(num_epochs):
             start_time = time.time()
@@ -104,14 +135,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_loss().reset_states()
 
             if validation:
-                # TODO: val_body
+               distributed_val_body(val_dist_dataset) 
 
                 with val_summary_writer.as_default():
                     tf.summary.scalar('AUC', val_AUC.result(), step=epoch)
-
                 tf.print('Val- Epoch', epoch, ': AUC', val_AUC.result())
-
+                
+                # reset val metric per epoch
                 val_AUC.reset_states()
+
+            checkpoint.save(checkpoint_prefix)
+            checkpoint_path = os.path.join(model_dir, 'epoch_{}.ckpt'.format(epoch))
+            saved_path = checkpoint.save(checkpoint_path)
+            tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
 
             #report time
             time_taken = time.time()-start_time
@@ -129,11 +165,14 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     with open(config_dir) as f:
         file = json.load(f)
         
-    numOutputNeurons = file['data_params']['n_tags']
-    y_input = file['data_params']['n_mels']
+    numOutputNeurons = file['data_specs']['n_tags']
+    y_input = file['data_specs']['n_mels']
     lr = file['train_params']['lr']
     num_units = file['train_params']['n_dense_units']
     num_filt = file['train_params']['n_filters']
+
+    # TEMPORARY
+    checkpoint_prefix = os.path.join(checkpoint_dir, 'ckpt')
 
     strategy = tf.distribute.MirroredStrategy()
 
@@ -153,4 +192,4 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
           num_epochs=num_epochs, numOutputNeurons=numOutputNeurons, 
           y_input=y_input, num_units=num_units, num_filt=num_filt, 
-          lr=lr, log_dir=log_dir)
+          lr=lr, log_dir=log_dir, checkpoint_prefix=checkpoint_prefix)
