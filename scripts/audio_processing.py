@@ -1,4 +1,4 @@
-''' Contains tools to process .npz files and create the .tfrecords files.
+''' Contains tools to process .npz files and create the .tfrecord files.
 
 
 Notes
