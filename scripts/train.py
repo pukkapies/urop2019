@@ -28,7 +28,8 @@ def train_comp(model, optimizer, x_batch_train, y_batch_train, loss):
         logits = model(x_batch_train)
                 
         loss_value = loss(y_batch_train, logits)
-        loss_value = tf.reduce_mean(loss_value)
+        
+        
         
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -47,10 +48,10 @@ def train_body(dataset, model, optimizer, loss, train_AUC):
         x_batch_train, y_batch_train = entry['audio'], entry['tags']
                 
         loss_value, logits = train_comp(model, optimizer, x_batch_train, y_batch_train, loss)
-            
+        loss_value = tf.reduce_mean(loss_value)
         train_AUC(y_batch_train, logits)
         
-        if tf.equal(step%100, 0):   #change here for printing frequency
+        if tf.equal(step%1, 0):   #change here for printing frequency
             tf.print('Step', step, ': loss', loss_value, '; AUC', train_AUC.result())
             
             
@@ -125,7 +126,7 @@ def train(frontend_mode, train_dataset, val_dataset=None, validation=True,
         
         #train all batches once     
         loss_value = train_body(train_dataset, model, optimizer, loss, train_AUC)
-        loss_value = tf.reduce_mean(loss_value)
+        
             
             #print progress
         tf.print('Epoch', epoch,  ': loss', loss_value, '; AUC', train_AUC.result())
@@ -276,8 +277,8 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     with open(config_dir) as f:
         file = json.load(f)
         
-    numOutputNeurons = file['dataset_specs']['n_tags']
-    y_input = file['dataset_specs']['n_mels']
+    numOutputNeurons = file['data_params']['n_tags']
+    y_input = file['data_params']['n_mels']
     lr = file['train_params']['lr']
     num_units = file['train_params']['n_dense_units']
     num_filt = file['train_params']['n_filters']
