@@ -72,7 +72,7 @@ import os
 
 import tensorflow as tf
         
-def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000, n_dense_units=1024, n_filters=32):
+def create_config_json(config_dir, **kwargs):
     ''' Creates configuration file with training specs.
 
     Parameters
@@ -80,44 +80,32 @@ def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000, n_d
     config_dir: str
         The directory where the txt file will be stored.
         
-    n_tags: int
-        The number of tags in the one-hot encoding.
-        
-    n_mels: int
-        The number of mel-bands used to produce the log-mel-spectrogram.
-        
-    sample_rate: float
-        The sample rate used for saving the tracks.
-        
-    n_dense_units: int
-        The number of neurons in the dense hidden layer of the backend.
-        
-    n_filters: int
-        For waveform, num_filts will not affect the ouput of function. 
-        For log-mel-spectrogram, this is the number of filters of the first CNN layer. See (Pons, et al., 2018) for details.
-        
-    Output
-    ------
+    Outputs
+    -------
     config.json: json file
         Contains (a large dictionary containing) three dictionaries:
         - 'dataset_specs': contains specs about the dataset; should not be changed unless dataset has been re-generated with different specs;
-        - 'train_params_dataset': contains information about how to parse the dataset (e.g. window length, which tags to read);
-        - 'train_params' contains information about training parameters (e.g. learning rate).
+        - 'train_options_dataset': contains information about how to parse the dataset (e.g. window length, which tags to read);
+        - 'train_options' contains information about training parameters (e.g. learning rate).
+
+    Examples
+    --------
+    >>> create_config_json(config_dir, lr=0.00001, n_filters=64)
     '''
-    
+
     dataset_specs = {
-        'n_tags': n_tags, 
-        'n_mels': n_mels,
-        'sample_rate': sample_rate,
+        'n_tags': 155, 
+        'n_mels': 96,
+        'sample_rate': 16000,
     }
 
-    train_params = {
+    train_options = {
         'lr': 0.001,
-        'n_dense_units': n_dense_units,
-        'n_filters': n_filters,
+        'n_dense_units': 1024,
+        'n_filters': 32,
     }
 
-    train_params_dataset = {
+    train_options_dataset = {
         'presets': {
             'tags': [
                 ['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal'],
@@ -134,10 +122,19 @@ def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000, n_d
         'shuffle_buffer_size': 10000,
     }
 
-    file = {'dataset_specs': dataset_specs, 'train_params': train_params, 'train_params_dataset': train_params_dataset}
+    def substitute_into_dict(key, value):
+        for dict in (dataset_specs, train_options, train_options):
+            if key in dict:
+                dict[key] = value
+                return
+        raise KeyError(key)
+
+    for key, value in kwargs.items():
+        substitute_into_dict(key, value)
     
-    with open(os.path.join(os.path.abspath(config_dir),'config.json'), 'w') as f:
-        json.dump(file, f, indent=2, sort_keys=True)
+    with open(os.path.join(os.path.abspath(config_dir),'config.json'), 'w') as file:
+        d = {'dataset_specs': dataset_specs, 'training_options': train_options, 'training_options_dataset': train_options_dataset}
+        json.dump(d, file, indent=2)
 
 def update_config_json(config_path, new_filename=None, n_tags=None, n_mels=None, 
                        lr=None, n_dense_units=None, n_filters=None):
@@ -173,11 +170,11 @@ def update_config_json(config_path, new_filename=None, n_tags=None, n_mels=None,
     if n_mels is not None:
         file['data_params'].update({'n_mels':n_mels})
     if lr is not None:
-        file['train_params'].update({'lr':lr})
+        file['train_options'].update({'lr':lr})
     if n_dense_units is not None:
-        file['train_params'].update({'n_dense_units':n_dense_units})
+        file['train_options'].update({'n_dense_units':n_dense_units})
     if n_filters is not None:
-        file['train_params'].update({'n_filters':n_filters})
+        file['train_options'].update({'n_filters':n_filters})
     
     if new_filename is not None:
         config_path = os.path.join(config_path, new_filename) #replace filename
