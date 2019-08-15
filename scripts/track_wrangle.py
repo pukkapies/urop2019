@@ -154,14 +154,14 @@ def read_duplicates():
         l.append(t)
     return l
 
-def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
+def df_purge_duplicates(merged_df: pd.DataFrame, random = False):
     ''' Retain only one track for each set of duplicates. '''
 
     df = merged_df.set_index('track_id')
     dups = read_duplicates()
     idxs = df.index
     to_drop = [[tid for tid in sublist if tid in idxs] for sublist in dups] # contains lists of duplicates which are also in the purged dataframe
-    if not randomness:
+    if not random:
         np.random.seed(42)
     for sublist in to_drop:
         if len(sublist) > 1: # for each list of duplicates, only "save" one track (that is, pop it from to_drop)
@@ -172,7 +172,7 @@ def df_purge_duplicates(merged_df: pd.DataFrame, randomness: bool = False):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag: bool = False, discard_dupl: bool = False):
+def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, discard_dupl = False):
     ''' Produce a dataframe with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'.
     
     Parameters

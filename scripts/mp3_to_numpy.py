@@ -24,13 +24,13 @@ This script performs the following operations:
 Functions
 ---------
 - set_mp3_root_dir
-    Tell the script the root directory of where mp3s were stored.
+    Set root directory where .mp3 files are stored.
     
 - set_npz_root_dir
-    Tell the script the root directory of where numpy arrays will be stored.
+    Set root directory where .npz files are stored.
 
 - create_folder_structure  
-    Copies the folder structure under mp3_root_dir to npz_root_dir.
+    Copy the folder structure under mp3_root_dir to npz_root_dir.
 
 - mp3_path_to_npz_path
     Convert the path of a mp3 file into the path of the corresponding npz file.
@@ -45,7 +45,7 @@ Functions
     Apply savez() to the tracks provided provided by the input dataframe.
                                          
 - no_sound_count                    
-    Counts the number of mp3 files that have been correctly saved as npz files.
+    Count the number of mp3 files that have been correctly saved as npz files.
 '''
 
 import argparse
@@ -61,13 +61,13 @@ mp3_root_dir = '/srv/data/msd/7digital/'
 npz_root_dir = ''
 
 def set_mp3_root_dir(new_root_dir):
-    ''' Function to set mp3_root_dir, useful if script is used as a module. '''
+    ''' Sets mp3_root_dir, useful if script is used as a module. '''
 
     global mp3_root_dir
     mp3_root_dir = new_root_dir
 
 def set_npz_root_dir(new_root_dir):
-    ''' Function to set npz_root_dir, useful if script is used as a module. '''
+    ''' Sets npz_root_dir, useful if script is used as a module. '''
 
     global npz_root_dir
     npz_root_dir = new_root_dir
