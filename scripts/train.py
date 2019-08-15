@@ -9,7 +9,6 @@ TODO LIST:
 import sys
 sys.path.insert(0, 'C://Users/hcw10/UROP2019')
 
-import numpy as np
 import tensorflow as tf
 import model as Model
 from datetime import datetime
@@ -29,6 +28,7 @@ def train_comp(model, optimizer, x_batch_train, y_batch_train, loss):
         logits = model(x_batch_train)
                 
         loss_value = loss(y_batch_train, logits)
+        loss_value = tf.reduce_mean(loss_value)
         
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -100,7 +100,7 @@ def train(frontend_mode, train_dataset, val_dataset=None, validation=True,
                               num_filt=num_filt)
         
     #initialise loss, optimizer, metric
-    loss = tf.keras.losses.MeanSquaredError()
+    loss = tf.nn.sigmoid_cross_entropy_with_logits
     optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
     
     # Setting up checkpoints, and loading one if one already exists
@@ -125,6 +125,7 @@ def train(frontend_mode, train_dataset, val_dataset=None, validation=True,
         
         #train all batches once     
         loss_value = train_body(train_dataset, model, optimizer, loss, train_AUC)
+        loss_value = tf.reduce_mean(loss_value)
             
             #print progress
         tf.print('Epoch', epoch,  ': loss', loss_value, '; AUC', train_AUC.result())
@@ -175,10 +176,10 @@ def train(frontend_mode, train_dataset, val_dataset=None, validation=True,
 
 def generate_datasets(tfrecord_dir, audio_format, 
                       train_val_test_split=(70, 10, 20),
-                      which = [True, True, True],
+                      which = None,
                       batch_size=32, shuffle=True, buffer_size=10000, 
                       window_length=15, random=False, with_tags=None, 
-                      with_tids=None, num_epochs=None):
+                      with_tids=None, num_epochs=None, as_tuple=False):
     ''' Generates.....
     
     Parameters
@@ -242,7 +243,10 @@ def generate_datasets(tfrecord_dir, audio_format,
     
     dataset_list = []
     
-     
+    if which is None:
+        which = [True if num!=0 else False for num in train_val_test_split]
+    
+    
     for num, save_bool in enumerate(which):
         if train_val_test_split[num] > 0 and save_bool:
             dataset_list.append(projectName_input.generate_dataset(
@@ -255,12 +259,13 @@ def generate_datasets(tfrecord_dir, audio_format,
                     random=random, 
                     with_tags=with_tags, 
                     with_tids=with_tids, 
-                    num_epochs=num_epochs))
+                    num_epochs=num_epochs,
+                    as_tuple=as_tuple))
                     
     return dataset_list
 
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
-         batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
+         which=None, batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
          window_length=15, random=False, with_tags=None,
          log_dir = 'logs/trial1/', with_tids=None, num_epochs=5):
     
@@ -277,15 +282,19 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     num_units = file['train_params']['n_dense_units']
     num_filt = file['train_params']['n_filters']
     
-
-    train_dataset, val_dataset = \
-    generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
-                      train_val_test_split=train_val_test_split, 
-                      which = [True, True, False],
-                      batch_size=batch_size, shuffle=shuffle, 
-                      buffer_size=buffer_size, window_length=window_length, 
-                      random=random, with_tags=with_tags, with_tids=with_tids, 
-                      num_epochs=num_epochs)
+    datasets = generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
+                                 train_val_test_split=train_val_test_split, 
+                                 which = None,
+                                 batch_size=batch_size, shuffle=shuffle, 
+                                 buffer_size=buffer_size, window_length=window_length, 
+                                 random=random, with_tags=with_tags, with_tids=with_tids, 
+                                 num_epochs=num_epochs, as_tuple=False)
+    
+    if validation:
+        train_dataset, val_dataset = datasets[0], datasets[1]
+    else:
+        train_dataset = datasets[0]
+        val_dataset = None
     
     train(frontend_mode=frontend_mode, train_dataset=train_dataset, 
           val_dataset=val_dataset, validation=validation,  
