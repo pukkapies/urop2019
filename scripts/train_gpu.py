@@ -31,11 +31,16 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
+
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
         train_loss = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
+
         loss = tf.keras.losses.MeanSquaredError()
+
         if validation:
             val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
+            # TODO: val loss?
+            # val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
 
         #in case of keyboard interrupt during previous training
         tf.summary.trace_off()
@@ -68,12 +73,29 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_AUC.update_state(label_batch, logits)
             train_loss.update_state(loss_value)
 
+        def val_step(entry):
+            audio_batch, label_batch = entry['audio'], entry['tags']
+
+            logits = model(audio_batch)
+            # TODO: record loss for val dataset?
+            # loss_value = loss(label_batch, logits)
+            # val_loss.update_state(loss_value)
+            val_AUC.update_state(label_batch, logits)
 
         @tf.function 
         def distributed_train_body(dist_dataset):
 
             for step, entry in dist_dataset.enumerate()
                 strategy.experimental_run_v2(train_step, args=(entry,))
+
+        @tf.function
+        def distributed_val_body(dist_dataset):
+            tf.keras.backend.set_learning_phase(0)
+
+            for entry in dist_dataset:
+                strategy.experimental_run_v2(val_step, args=(entry,))
+
+            tf.keras.backend.set_learning_phase(1)
     
         #epoch loop
         for epoch in range(num_epochs):
@@ -104,13 +126,13 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_loss().reset_states()
 
             if validation:
-                # TODO: val_body
+               distributed_val_body(val_dist_dataset) 
 
                 with val_summary_writer.as_default():
                     tf.summary.scalar('AUC', val_AUC.result(), step=epoch)
-
                 tf.print('Val- Epoch', epoch, ': AUC', val_AUC.result())
-
+                
+                # reset val metric per epoch
                 val_AUC.reset_states()
 
             #report time
