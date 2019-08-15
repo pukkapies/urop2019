@@ -32,12 +32,28 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
-        # TODO: experiment with loss_metric instead of returning loss from each func
-        #loss_metric = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
+        train_loss = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
         loss = tf.keras.losses.MeanSquaredError()
+        if validation:
+            val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
+
+        #in case of keyboard interrupt during previous training
+        tf.summary.trace_off()
+        
+        # setting up summary writers
+        current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
+
+        train_log_dir = log_dir + current_time + '/train'
+        train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        
+        prof_log_dir = log_dir + current_time + '/prof'
+        prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
+
+        if validation:
+            val_log_dir = log_dir + current_time + '/val'
+            val_summary_writer = tf.summary.create_file_writer(val_log_dir)
 
         # fucntions needs to be defined within the strategy scope
-        
         def train_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
 
@@ -50,22 +66,56 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
             # UPDATE LOSS METRIC
             train_AUC.update_state(label_batch, logits)
-            return loss_value
+            train_loss.update_state(loss_value)
+
 
         @tf.function 
-        def distributed_train_step(entry):
-            per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
+        def distributed_train_body(dist_dataset):
 
-            return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+            for step, entry in dist_dataset.enumerate()
+                strategy.experimental_run_v2(train_step, args=(entry,))
     
         #epoch loop
         for epoch in range(num_epochs):
-
             start_time = time.time()
-            
-            #train all batches once     
-            for step, entry in train_dist_dataset.enumerate():
-                loss_value = distributed_train_step(entry)
+            tf.print('Epoch {}'.format(epoch))
+
+            tf.summary.trace_on(graph=False, profiler=True)
+
+            distributed_train_body(train_dist_dataset)            
+
+            # print progress
+            tf.print('Epoch', epoch,  ': loss', train_loss.result(), '; AUC', train_AUC.result())
+            # log to tensorboard
+            with train_summary_writer.as_default():
+                tf.summary.scalar('AUC', train_AUC.result(), step=epoch)
+                tf.summary.scalar('Loss', train_loss.result(), step=epoch)
+
+            #print progress
+            tf.print('Epoch {} --training done'.format(epoch))
+
+            # tensorboard export profiling and record train AUC and loss
+            with prof_summary_writer.as_default():   
+                tf.summary.trace_export(
+                        name="trace", 
+                        step=epoch, profiler_outdir=os.path.normpath(prof_log_dir)) 
+
+            train_AUC.reset_states()
+            train_loss().reset_states()
+
+            if validation:
+                # TODO: val_body
+
+                with val_summary_writer.as_default():
+                    tf.summary.scalar('AUC', val_AUC.result(), step=epoch)
+
+                tf.print('Val- Epoch', epoch, ': AUC', val_AUC.result())
+
+                val_AUC.reset_states()
+
+            #report time
+            time_taken = time.time()-start_time
+            tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
 
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
