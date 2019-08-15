@@ -184,10 +184,8 @@ def _window(features_dict, audio_format, sample_rate, window_length=15, random=F
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
     '''
 
-    HOP_LENGTH = 512
-
     if audio_format not in ('waveform', 'log-mel-spectrogram'):
-        raise KeyError()
+        raise KeyError('invalid audio format')
     
     elif audio_format == 'waveform':
         features_dict['audio'] = tf.sparse.to_dense(features_dict['audio'])
@@ -205,7 +203,7 @@ def _window(features_dict, audio_format, sample_rate, window_length=15, random=F
     
     elif audio_format == 'log-mel-spectrogram':
         features_dict['audio'] = tf.sparse.to_dense(features_dict['audio'])
-        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32)) # get the actual slice length
+        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)), tf.constant(512, dtype=tf.int32)) # get the actual slice length
         if random:
             maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[2] - slice_length
             x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
