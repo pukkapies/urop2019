@@ -53,9 +53,6 @@ import os
 import numpy as np
 import tensorflow as tf
 
-N_TAGS = 155
-SAMPLE_RATE = 16000
-
 default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
 
 def _parse_features(example, features_dict):
@@ -76,10 +73,10 @@ def _tag_merge(features_dict, merge_tags):
     
     Parameters
     ----------
-    features_dict : dict
+    features_dict: dict
         Dict of features (as provided by .map).
 
-    merge_tags : list or list-like
+    merge_tags: list or list-like
         List of lists of tags to be merged. Writes 1 for all tags in the hot-encoded vector whenever at least one tag of the list is present.
 
     Examples
@@ -95,8 +92,10 @@ def _tag_merge(features_dict, merge_tags):
 
     assert len(merge_tags.shape) == 2 # sanity check
 
+    n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
+
     for tags in merge_tags: # for each list of tags in 'merge_tags' (which is a list of lists...)
-        tags = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([N_TAGS], dtype=np.int64))
+        tags = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=n_tags)
         tags = tf.sparse.to_dense(tags)
         tags = tf.dtypes.cast(tags, tf.bool)
 
@@ -113,16 +112,18 @@ def _tag_filter(features_dict, tags):
     
     Parameters
     ----------
-    features_dict : dict
+    features_dict: dict
         Dict of features (as provided by .filter).
 
-    tags : list or list-like
+    tags: list or list-like
         List containing tag idxs (as int) to be "allowed" in the output dataset.
     '''
 
+    n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
+
     feature_tags = tf.math.equal(tf.unstack(features_dict['tags']), 1) # bool tensor where True/False correspond to has/doesn't have tag
 
-    tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([N_TAGS], dtype=np.int64))
+    tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=n_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
 
@@ -133,10 +134,10 @@ def _tid_filter(features_dict, tids):
         
     Parameters
     ----------
-    features_dict : dict
+    features_dict: dict
         Dict of features (as provided by .filter).
 
-    tids : list or list-like
+    tids: list or list-like
         List containing tids (as strings) to be "allowed" in the output dataset.
     '''
 
@@ -147,34 +148,36 @@ def _tag_filter_hotenc_mask(features_dict, tags):
     
     Parameters
     ----------
-    features : dict
+    features: dict
         Dict of features (as provided by .map).
 
-    tags : list or list-like
+    tags: list or list-like
         List containing tag idxs used for filtering with _tag_filter.
     '''
 
-    tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=np.array([N_TAGS], dtype=np.int64))
+    n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
+
+    tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=n_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
     features_dict['tags'] = tf.boolean_mask(features_dict['tags'], tags_mask)
     return features_dict
 
-def _window(features_dict, audio_format, window_length=15, random=False):
+def _window(features_dict, audio_format, sample_rate, window_length=15, random=False):
     ''' Extracts a window of 'window_length' seconds from the audio tensors (use with tf.data.Dataset.map).
 
     Parameters
     ----------
-    features_dict : dict
+    features_dict: dict
         Dict of features (as provided by .map).
 
-    audio_format : str
+    audio_format: str
         Specifies the feature audio format. Either 'waveform' or 'log-mel-spectrogram'.
     
-    window_length : int
+    window_length: int
         Length (in seconds) of the desired output window.
     
-    random : bool
+    random: bool
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
     '''
 
@@ -185,7 +188,7 @@ def _window(features_dict, audio_format, window_length=15, random=False):
     
     elif audio_format == 'waveform':
         features_dict['audio'] = tf.sparse.to_dense(features_dict['audio'])
-        slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)) # get the actual slice length
+        slice_length = tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)) # get the actual slice length
         if random:
             maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[1] - slice_length
             x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
@@ -199,7 +202,7 @@ def _window(features_dict, audio_format, window_length=15, random=False):
     
     elif audio_format == 'log-mel-spectrogram':
         features_dict['audio'] = tf.sparse.to_dense(features_dict['audio'])
-        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(SAMPLE_RATE, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32)) # get the actual slice length
+        slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_length, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)), tf.constant(HOP_LENGTH, dtype=tf.int32)) # get the actual slice length
         if random:
             maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[2] - slice_length
             x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
@@ -225,54 +228,57 @@ def _batch_tuplification(features_dict):
 
     return (features_dict['audio'], features_dict['tags'])
 
-def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_epochs=None, as_tuple=True):
+def generate_dataset(tfrecords, audio_format, sample_rate=16000, batch_size=32, shuffle=True, buffer_size=10000, window_length=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_epochs=None, as_tuple=True):
     ''' Reads the TFRecords and produce a tf.data.Dataset ready to be iterated during training/evaluation.
     
     Parameters:
     ----------
-    tfrecords : str, list
+    tfrecords: str, list
         List of TFRecords to read.
 
-    audio_format : {'waveform', 'log-mel-spectrogram'}
+    audio_format: {'waveform', 'log-mel-spectrogram'}
         Specifies the feature audio format.
 
-    batch_size : int
+    sample_rate: int
+        Specifies the sample rate used to process audio tracks.
+
+    batch_size: int
         Specifies the dataset batch_size.
 
-    shuffle : bool
+    shuffle: bool
         If True, shuffles the dataset with buffer size = buffer_size.
 
-    buffer_size : int
+    buffer_size: int
         If shuffle is True, sets the shuffle buffer size.
 
-    window_length : int
+    window_length: int
         Specifies the desired window length (in seconds).
 
-    random : bool
+    random: bool
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
 
-    with_tids : list
+    with_tids: list
         If not None, contains the tids to be trained on.
 
-    with_tags : list
+    with_tags: list
         If not None, contains the tags to be trained on.
 
-    merge_tags : list
+    merge_tags: list
         If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
 
-    num_epochs : int
+    num_epochs: int
         If not None, repeats the dataset only for a given number of epochs (default is repeat indefinitely).
 
-    as_tuple : bool
+    as_tuple: bool
         If True, discards tid's and transforms features into (audio, tags) tuples.
     '''
 
     AUDIO_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (96, -1)} # set audio tensors dense shape
 
     AUDIO_FEATURES_DESCRIPTION = {
-        'audio' : tf.io.VarLenFeature(tf.float32),
-        'tid' : tf.io.FixedLenFeature((), tf.string),
-        'tags' : tf.io.FixedLenFeature((N_TAGS, ), tf.int64)
+        'audio': tf.io.VarLenFeature(tf.float32),
+        'tid': tf.io.FixedLenFeature((), tf.string),
+        'tags': tf.io.FixedLenFeature((num_tags, ), tf.int64)
     }
 
     assert audio_format in ('waveform', 'log-mel-spectrogram')
@@ -308,7 +314,7 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
     dataset = dataset.batch(batch_size)
     
     # slice into audio windows
-    dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(lambda x: _window(x, audio_format, sample_rate, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     # normalize data
     dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
