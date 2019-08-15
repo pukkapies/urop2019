@@ -18,9 +18,6 @@ Functions
 ---------
 - create_config_json
     Create a json file storing the parameters.
-    
-- update_config_json
-    Create a json file storing the updated parameters (use to add presets).
 
 - wave_frontend
     Model frontend for waveform input.
@@ -138,44 +135,6 @@ def create_config_json(config_path, **kwargs):
     with open(config_path, 'w') as f:
         d = {'dataset_specs': dataset_specs, 'training_options': train_options, 'training_options_dataset': train_options_dataset}
         json.dump(d, f, indent=2)
-
-def update_config_json(config_path, presets, **kwargs ):
-    ''' Creates configuration file with training specs, and adds new presets to it.
-    
-    Parameters
-    -----------
-    config_path: str
-        The path to the json file.
-        
-    new_filename: str/None
-        The new filename that contains the updated parameters. If None, the 
-        changes will overwrite the original input file.
-        
-    For other parameters, see documentation of create_config_txt().
-    
-    Outputs
-    -------
-    Updated txt file with new filename if specified.
-        
-    '''
-    
-    with open(config_path) as f:
-        file = json.load(f)
-        
-    if n_tags is not None:
-        file['data_params'].update({'n_tags':n_tags})
-    if n_mels is not None:
-        file['data_params'].update({'n_mels':n_mels})
-    if lr is not None:
-        file['train_options'].update({'lr':lr})
-    if n_dense_units is not None:
-        file['train_options'].update({'n_dense_units':n_dense_units})
-    if n_filters is not None:
-        file['train_options'].update({'n_filters':n_filters})
-    
-    
-    with open(config_path, 'w') as f:
-        json.dump(file, f)
     
 def wave_frontend(input):
     ''' Creates the frontend model for waveform input. '''
