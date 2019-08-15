@@ -383,7 +383,7 @@ def generate_datasets_with_split(tfrecords_dir, audio_format, split, sample_rate
         if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
             tfrecords.append(os.path.abspath(os.path.join(tfrecords_dir, file)))
 
-    assert len(tfrecords) >= np.sum(split) , 'too few .tfrecord files to apply split, try using generate_dataset()'
+    assert len(tfrecords) >= len(split) , 'too few .tfrecord files to apply split, try using generate_dataset()'
     
     split = np.cumsum(split)
     split = np.multiply(split, len(tfrecords) / split[-1]).astype(np.int32)[:-1] # scale up (or down) the 'split' array to match the actual number of .tfrecord files, and pop last entry
