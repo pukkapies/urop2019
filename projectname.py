@@ -396,7 +396,7 @@ def backend(input, num_output_neurons, num_units=1024):
     return tf.keras.layers.Dense(activation='sigmoid', units=num_output_neurons,
                  kernel_initializer=initializer, name='dense2_back')(dense_dropout)
 
-def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=1024, num_filt=32):
+def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=1024, num_filt=32, batch_size=None):
     ''' Generates the final model by combining frontend and backend.
     
     Parameters
@@ -422,11 +422,11 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=102
     '''
 
     if frontend_mode == 'waveform':
-        input = tf.keras.Input(shape=[None])
+        input = tf.keras.Input(shape=[None], batch_size=batch_size)
         front_out = wave_frontend(input)
 
     elif frontend_mode == 'log-mel-spectrogram':
-        input = tf.keras.Input(shape=[y_input, None])
+        input = tf.keras.Input(shape=[y_input, None], batch_size=batch_size)
         front_out = log_mel_spec_frontend(input, y_input=y_input, num_filt=num_filt)
 
     else:
