@@ -17,10 +17,10 @@ This module can be divded into four parts:
 Functions
 ---------
 - create_config_json
-    Create a txt file storing the parameters.
+    Create a json file storing the parameters.
     
 - update_config_json
-    Update one or more parameters from a stored txt file.
+    Create a json file storing the updated parameters (use to add presets).
 
 - wave_frontend
     Model frontend for waveform input.
@@ -72,13 +72,13 @@ import os
 
 import tensorflow as tf
         
-def create_config_json(config_dir, **kwargs):
+def create_config_json(config_path, **kwargs):
     ''' Creates configuration file with training specs.
 
     Parameters
     -----------
-    config_dir: str
-        The directory where the txt file will be stored.
+    config_path: str
+        The path to the json file, or the directory where it will be saved.
         
     Outputs
     -------
@@ -90,7 +90,7 @@ def create_config_json(config_dir, **kwargs):
 
     Examples
     --------
-    >>> create_config_json(config_dir, lr=0.00001, n_filters=64)
+    >>> create_config_json(config_path, lr=0.00001, n_filters=64)
     '''
 
     dataset_specs = {
@@ -132,19 +132,20 @@ def create_config_json(config_dir, **kwargs):
     for key, value in kwargs.items():
         substitute_into_dict(key, value)
     
-    with open(os.path.join(os.path.abspath(config_dir),'config.json'), 'w') as file:
+    if not os.path.isfile(config_path):
+        config_path = os.path.join(os.path.abspath(config_path),'config.json')
+    
+    with open(config_path, 'w') as f:
         d = {'dataset_specs': dataset_specs, 'training_options': train_options, 'training_options_dataset': train_options_dataset}
-        json.dump(d, file, indent=2)
+        json.dump(d, f, indent=2)
 
-def update_config_json(config_path, new_filename=None, n_tags=None, n_mels=None, 
-                       lr=None, n_dense_units=None, n_filters=None):
-    '''Update parameters in configuration file produced by create_config_txt()
+def update_config_json(config_path, presets, **kwargs ):
+    ''' Creates configuration file with training specs, and adds new presets to it.
     
     Parameters
-    ----------
+    -----------
     config_path: str
-        The directory (if config.txt is the filename) or the exact path of 
-        where the txt file is produced by create_config_txt().
+        The path to the json file.
         
     new_filename: str/None
         The new filename that contains the updated parameters. If None, the 
@@ -158,10 +159,6 @@ def update_config_json(config_path, new_filename=None, n_tags=None, n_mels=None,
         
     '''
     
-    if not os.path.isfile(config_path):
-        config_path = os.path.join(config_path, 'config.txt')
-    
-    config_path = os.path.normpath(config_path)
     with open(config_path) as f:
         file = json.load(f)
         
@@ -176,8 +173,6 @@ def update_config_json(config_path, new_filename=None, n_tags=None, n_mels=None,
     if n_filters is not None:
         file['train_options'].update({'n_filters':n_filters})
     
-    if new_filename is not None:
-        config_path = os.path.join(config_path, new_filename) #replace filename
     
     with open(config_path, 'w') as f:
         json.dump(file, f)
