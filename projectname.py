@@ -95,8 +95,7 @@ MaxPool2D, Permute, ZeroPadding2D
 import json
 import os
         
-def create_config_txt(config_dir, n_tags=155, n_mels=96, lr=0.001, 
-                      n_dense_units=1024, n_filters=32):
+def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000):
     '''Create configuration file for training
     Parameters
     -----------
@@ -131,12 +130,39 @@ def create_config_txt(config_dir, n_tags=155, n_mels=96, lr=0.001,
     
     '''
     
-    data_params = {'n_tags':n_tags, 'n_mels':n_mels}
-    train_params = {'lr':0.001, 'n_dense_units':1024, 'n_filters':32}
-    file = {'data_params':data_params, 'train_params':train_params}
+    dataset_specs = {
+        'n_tags': n_tags, 
+        'n_mels': n_mels,
+        'sample_rate': sample_rate,
+    }
+
+    train_params = {
+        'lr': 0.001,
+        'n_dense_units': 1024,
+        'n_filters': 32,
+    }
+
+    train_params_dataset = {
+        'presets': {
+            'tags': [
+                ['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal'],
+                ['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal', 'male', 'female', 'instrumental'],
+            ],
+            'merge_tags': [
+                None,
+                None,
+            ],
+        },
+        'window_length': 15,
+        'window_extract_randomly': False,
+        'shuffle': True,
+        'shuffle_buffer_size': 10000,
+    }
+
+    file = {'dataset_specs': dataset_specs, 'train_params': train_params, 'train_params_dataset': train_params_dataset}
     
-    with open(os.path.join(os.path.abspath(config_dir),'config.txt'), 'w') as f:
-        json.dump(file, f)
+    with open(os.path.join(os.path.abspath(config_dir),'config.json'), 'w') as f:
+        json.dump(file, f, indent=2, sort_keys=True)
 
 def update_config_txt(config_path, new_filename=None, n_tags=None, n_mels=None, 
                        lr=None, n_dense_units=None, n_filters=None):
