@@ -1,4 +1,4 @@
-''' Contains skeleton model for training 
+''' Contains tools to build the training model and set all the various training parameters.
 
 
 Notes

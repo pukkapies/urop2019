@@ -1,4 +1,4 @@
-''' Contain tools to convert mp3 files to npz files and store silence information of tracks.
+''' Contains tools to convert .mp3 files to .npz and store information about silent bits within the tracks.
 
 
 Notes
