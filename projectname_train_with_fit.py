@@ -8,30 +8,30 @@ import projectname_input
 
 def main(tfrecords_dir, audio_format, config_path, preset=0, tids=None, tags=None, tags_to_merge=None):
     
-    # initialise configuration
-    if not os.path.isfile(config_path):
-        config_path = os.path.join(os.path.normpath(config_path), 'config.json')
+    if not os.path.isconfig(config_path):
+        config_path = os.path.join(os.path.abspath(os.path.expanduser(config_path), 'config.json'))
     
-    with open(config_path) as f:
-        file = json.load(f)
+    with open(config_path, 'r') as f:
+        d = f.read()
+    config = json.loads(d)
 
     # check whether we are training on a subset of the tags; check whether we are using default presets, or a custom list of tags
     if tags is None:
-        tags = file['dataset_parse_params']['presets'][preset]['tags']
+        tags = config['training_options_dataset']['presets'][preset]['tags']
     if tags_to_merge is None:
-        tags_to_merge = file['dataset_parse_params']['presets'][preset]['tags_to_merge']
+        tags_to_merge = config['training_options_dataset']['presets'][preset]['tags_to_merge']
     
     # check the total number of tags (that is, output neurons)
     if tags is not None:
         n_output_neurons = len(tags)
     else:
-        n_output_neurons = file['dataset_specs']
+        n_output_neurons = config['dataset_specs']
     
     # parse model specs
-    y_input = file['train_params']['n_mels']
-    lr = file['train_params']['lr']
-    n_units = file['train_params']['n_dense_units']
-    n_filters = file['train_params']['n_filters']
+    y_input = config['train_params']['n_mels']
+    lr = config['train_params']['lr']
+    n_units = config['train_params']['n_dense_units']
+    n_filters = config['train_params']['n_filters']
 
     # generate train and valid datasets
     train_dataset, valid_dataset = projectname_input.generate_dataset_with_split(tfrecords_dir = tfrecords_dir, audio_format = audio_format, train_val_test_split = (80, 20), with_tids = tids, with_tags = tags, merge_tags = tags_to_merge)
