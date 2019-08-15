@@ -1,91 +1,71 @@
 ''' Contains skeleton model for training 
 
+
 Notes
 -----
-This module create a txt file to record parameters used in training, and
-reproduces the skeleton model proposed by (Pons, et al., 2018) in
-tensorflow 2.0 keras syntax. For more information, please refer to 
-(Pons, et al., 2018).
+This module creates a json file to record parameters used in training, and
+reproduces the skeleton model proposed by (Pons, et al., 2018) in the
+new TensorFlow 2.0 Keras syntax. For more information, please refer to (Pons, et al., 2018).
 
 This module can be divded into four parts:
-    1. Store configuration
-    2. Model frontends for waveform and log-mel-spectrogram input respectively.
-    3. Model backend for both model frontends
-    4. A final model combining a frontend and the backend.
-    
+    1. store configuration;
+    2. define model of the frontend for waveform and log-mel-spectrogram input respectively;
+    3. define model of the backend for both frontends;
+    4. generate final model combining frontend and backend.
+
+
 Functions
 ---------
-- create_config_txt
+- create_config_json
     Create a txt file storing the parameters.
     
-- update_config_txt
+- update_config_json
     Update one or more parameters from a stored txt file.
 
 - wave_frontend
     Model frontend for waveform input.
 
-- spec_frontend
+- log_mel_spec_frontend
     Model frontend for log-mel-spectrogram input.
 
 - backend
-    Model backend for waveform and log-mel-spectrogram input.
+    Model backend for both waveform and log-mel-spectrogram input.
 
 - build_model
-    Generate a final model by combining a frontend with the backend.
-    
-Reference
+    Generate model by combining frontend and backend.
+
+
+Copyright
 ---------
-Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
-
-
-'''
-"""
-
 Copyright 2017-2019 Pandora Media, Inc.
 
-Redistribution and use in source and binary forms, with or without
+Redistribution and use in source and binary forms, with or without modification, are permitted 
+provided that the following conditions are met:
 
-modification, are permitted provided that the following conditions are met:
+1. Redistributions of source code must retain the above copyright notice, this list of 
+conditions and the following disclaimer.
 
-1. Redistributions of source code must retain the above copyright notice,
+2. Redistributions in binary form must reproduce the above copyright notice, this list of 
+conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-this list of conditions and the following disclaimer.
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or 
+promote products derived from this software without specific prior written permission.
 
-2. Redistributions in binary form must reproduce the above copyright notice,
 
-this list of conditions and the following disclaimer in the documentation
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-and/or other materials provided with the distribution.
 
-3. Neither the name of the copyright holder nor the names of its contributors
-
-may be used to endorse or promote products derived from this software without
-
-specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-
-POSSIBILITY OF SUCH DAMAGE.
-
-"""
+References
+----------
+    Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
+'''
 
 import tensorflow as tf
 from tensorflow.keras.layers import Add, AveragePooling2D, BatchNormalization, \
@@ -95,39 +75,37 @@ MaxPool2D, Permute, ZeroPadding2D
 import json
 import os
         
-def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000):
-    '''Create configuration file for training
+def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000, n_dense_units=1024, n_filters=32):
+    ''' Creates configuration file with training specs.
+
     Parameters
     -----------
     config_dir: str
         The directory where the txt file will be stored.
         
     n_tags: int
-        The number of tags that form the one-hot encoding.
+        The number of tags in the one-hot encoding.
         
     n_mels: int
         The number of mel-bands used to produce the log-mel-spectrogram.
         
-    lr: float
-        Learning rate of optimiser in training.
+    sample_rate: float
+        The sample rate used for saving the tracks.
         
     n_dense_units: int
         The number of neurons in the dense hidden layer of the backend.
         
     n_filters: int
-        For waveform, num_filts will not affect the ouput of function. For 
-        log-mel-spectrogram, this is the number of filters of the first CNN
-        layer. See (Pons, et al., 2018) for more details.
+        For waveform, num_filts will not affect the ouput of function. 
+        For log-mel-spectrogram, this is the number of filters of the first CNN layer. See (Pons, et al., 2018) for details.
         
-    Outputs
-    -------
-    config.txt: txt file
-        This file contains a large dictionary which contains two smaller 
-        dictionaries 'data_params', and 'train_params':
-        - 'data_params' contains 'n_tags', 'n_mels', 
-        - 'train_params' contains 'lr', 'n_dense_units', 'n_filters'
-    
-    
+    Output
+    ------
+    config.json: json file
+        Contains (a large dictionary containing) three dictionaries:
+        - 'dataset_specs': contains specs about the dataset; should not be changed unless dataset has been re-generated with different specs;
+        - 'train_params_dataset': contains information about how to parse the dataset (e.g. window length, which tags to read);
+        - 'train_params' contains information about training parameters (e.g. learning rate).
     '''
     
     dataset_specs = {
@@ -138,8 +116,8 @@ def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000):
 
     train_params = {
         'lr': 0.001,
-        'n_dense_units': 1024,
-        'n_filters': 32,
+        'n_dense_units': n_dense_units,
+        'n_filters': n_filters,
     }
 
     train_params_dataset = {
@@ -164,7 +142,7 @@ def create_config_json(config_dir, n_tags=155, n_mels=96, sample_rate=16000):
     with open(os.path.join(os.path.abspath(config_dir),'config.json'), 'w') as f:
         json.dump(file, f, indent=2, sort_keys=True)
 
-def update_config_txt(config_path, new_filename=None, n_tags=None, n_mels=None, 
+def update_config_json(config_path, new_filename=None, n_tags=None, n_mels=None, 
                        lr=None, n_dense_units=None, n_filters=None):
     '''Update parameters in configuration file produced by create_config_txt()
     
@@ -211,7 +189,8 @@ def update_config_txt(config_path, new_filename=None, n_tags=None, n_mels=None,
         json.dump(file, f)
     
 def wave_frontend(Input):
-    '''Model frontend for waveform input.'''
+    ''' Creates the frontend model for waveform input. '''
+
     initializer = tf.keras.initializers.VarianceScaling()
     
     Input = Lambda(lambda x: tf.expand_dims(x, 2), name='expdim_1_wave')(Input)
@@ -266,10 +245,8 @@ def wave_frontend(Input):
     exp_dim = Lambda(lambda x: tf.expand_dims(x, [3]), name='expdim2_wave')(pool6)
     return exp_dim
 
-
-def spec_frontend(Input, y_input=96, num_filt=32):
-    '''Model frontend for log-mel-spectrogram input, see documentation on 
-    build_model() for more details.'''
+def log_mel_spec_frontend(Input, y_input=96, num_filt=32):
+    ''' Creates the frontend model for log-mel-spectrogram input. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
     Input = tf.expand_dims(Input, 3)
@@ -375,10 +352,8 @@ def spec_frontend(Input, y_input=96, num_filt=32):
     exp_dim = Lambda(lambda x: tf.expand_dims(x, 3), name='expdim1_spec')(concat)
     return exp_dim
 
-
-def backend(Input, numOutputNeurons, num_units=1024):
-    '''Model backend for waveform and log-mel-spectrogram input, see 
-    documentation on build_model() for more detail.'''
+def backend(Input, num_output_neurons, num_units=1024):
+    ''' Creates the backend model. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
     
@@ -397,7 +372,6 @@ def backend(Input, numOutputNeurons, num_units=1024):
     conv2_t = Permute((1,3,2), name='perm2_back')(conv2)
     bn_conv2 = BatchNormalization(name='bn2_back')(conv2_t)
     res_conv2 = Add(name='add1_back')([bn_conv2, bn_conv1_t])
-    
     
     #temporal pooling
     pool1 = MaxPool2D(pool_size=[2, 1], strides=[2, 1], name='pool1_back')(res_conv2)
@@ -424,38 +398,32 @@ def backend(Input, numOutputNeurons, num_units=1024):
     bn_dense = BatchNormalization(name='bn_dense_back')(dense)
     dense_dropout = Dropout(rate=0.5, name='drop2_back')(bn_dense)
     
-    return Dense(activation='sigmoid', units=numOutputNeurons,
+    return Dense(activation='sigmoid', units=num_output_neurons,
                  kernel_initializer=initializer, name='dense2_back')(dense_dropout)
-        
 
-def build_model(frontend_mode, numOutputNeurons=155, 
-                y_input=96, num_units=1024,
-                num_filt=32):
-    '''Generate a final model by combining a frontend with the backend.
+def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=1024, num_filt=32):
+    ''' Generates the final model by combining frontend and backend.
     
     Parameters
     ----------
-    frontend_mode: string
-        'waveform', or 'log-mel-spectrogram' to indicate the frontend model.
+    frontend_mode: {'waveform', 'log-mel-spectrogram'} 
+        Specifies the frontend model.
         
-    numOutputNeurons: int
+    num_output_neurons: int
         The dimension of the prediction array for each audio input. This should
         be set to the length of the a one-hot encoding of tags.
         
-    y_input: int or None
-        For waveform frontend, y_input will not affect the output of function.
-        For log-mel-spectrogram frontend, this is the height of the spectrogram
-        and should therefore be set as the number of mel bands of the 
-        spectrogram.
+    y_input: int, None
+        For waveform frontend, y_input will not affect the output of the function.
+        For log-mel-spectrogram frontend, this is the height of the spectrogram and should therefore be set as the 
+        number of mel bands in the spectrogram.
         
     num_units: int
         The number of neurons in the dense hidden layer of the backend.
         
     num_filts: int
-        For waveform, num_filts will not affect the ouput of function. For 
-        log-mel-spectrogram, this is the number of filters of the first CNN
-        layer. See (Pons, et al., 2018) for more details.
-    
+        For waveform, num_filts will not affect the ouput of the function. 
+        For log-mel-spectrogram, this is the number of filters of the first CNN layer. See (Pons, et al., 2018) for more details.
     '''
 
     if frontend_mode == 'waveform':
@@ -463,21 +431,21 @@ def build_model(frontend_mode, numOutputNeurons=155,
         front_out = wave_frontend(Input)
         model = tf.keras.Model(Input,
                                backend(front_out,
-                                       numOutputNeurons=numOutputNeurons,
+                                       num_output_neurons=num_output_neurons,
                                        num_units=num_units))
         return model
     
     elif frontend_mode == 'log-mel-spectrogram':
         Input = tf.keras.Input(shape=[y_input, None])
-        front_out = spec_frontend(Input, y_input=y_input, num_filt=num_filt)
+        front_out = log_mel_spec_frontend(Input, y_input=y_input, num_filt=num_filt)
         model = tf.keras.Model(Input,
                                backend(front_out,
-                                       numOutputNeurons=numOutputNeurons,
+                                       num_output_neurons=num_output_neurons,
                                        num_units=num_units))
         return model
     
-    else: 
-        print('Please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
+    else:
+        raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
     
 
 
