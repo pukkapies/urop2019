@@ -105,16 +105,16 @@ def create_config_json(config_path, **kwargs):
     }
 
     train_options_dataset = {
-        'presets': {
-            'tags': [
-                NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal']),
-                NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal', 'male', 'female', 'instrumental']),
-            ],
-            'merge_tags': [
-                None,
-                None,
-            ],
-        },
+        'presets': [
+            {
+                'tags': NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal']),
+                'merge_tags': None,
+            },
+            {
+                'tags': NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal', 'instrumental', 'male', 'female']),
+                'merge_tags': None,
+            },
+        ],
         'window_length': 15,
         'window_extract_randomly': False,
         'shuffle': True,
