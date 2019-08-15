@@ -68,6 +68,8 @@ import json
 import os
 
 import tensorflow as tf
+
+from pretty_print import MyEncoder, NoIndent
         
 def create_config_json(config_path, **kwargs):
     ''' Creates configuration file with training specs.
@@ -105,8 +107,8 @@ def create_config_json(config_path, **kwargs):
     train_options_dataset = {
         'presets': {
             'tags': [
-                ['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal'],
-                ['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal', 'male', 'female', 'instrumental'],
+                NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal']),
+                NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal', 'male', 'female', 'instrumental']),
             ],
             'merge_tags': [
                 None,
@@ -134,7 +136,8 @@ def create_config_json(config_path, **kwargs):
     
     with open(config_path, 'w') as f:
         d = {'dataset_specs': dataset_specs, 'training_options': train_options, 'training_options_dataset': train_options_dataset}
-        json.dump(d, f, indent=2)
+        s = json.dumps(d, cls=MyEncoder, indent=2)
+        f.write(s)
     
 def wave_frontend(input):
     ''' Creates the frontend model for waveform input. '''
