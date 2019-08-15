@@ -1,4 +1,4 @@
-''' Script for processing .npz files and save as a .tfrecords files
+''' Contains tools to process the .npz files and create the .tfrecord files.
 
 
 Notes

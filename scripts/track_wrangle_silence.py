@@ -1,4 +1,4 @@
-''' Contains tools for discarding mp3 files that are entirely or in major part silent
+''' Contains tools to discard .mp3 files that are entirely or in major part silent.
 
 
 Notes
