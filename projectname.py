@@ -424,20 +424,16 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=102
     if frontend_mode == 'waveform':
         input = tf.keras.Input(shape=[None])
         front_out = wave_frontend(input)
-        model = tf.keras.Model(input,
-                               backend(front_out,
-                                       num_output_neurons=num_output_neurons,
-                                       num_units=num_units))
-        return model
-    
+
     elif frontend_mode == 'log-mel-spectrogram':
         input = tf.keras.Input(shape=[y_input, None])
         front_out = log_mel_spec_frontend(input, y_input=y_input, num_filt=num_filt)
-        model = tf.keras.Model(input,
-                               backend(front_out,
-                                       num_output_neurons=num_output_neurons,
-                                       num_units=num_units))
-        return model
-    
+
     else:
         raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
+
+    model = tf.keras.Model(input,
+                           backend(front_out,
+                                   num_output_neurons=num_output_neurons,
+                                   num_units=num_units))
+    return model
