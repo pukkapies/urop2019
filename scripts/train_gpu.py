@@ -20,7 +20,7 @@ import json
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, 
-          num_filt=32, lr=0.001, log_dir = 'logs/trial1/'):
+          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', checkpoint_prefix='/srv/data/urop/training_checkpoints/ckpts'):
     
     with strategy.scope():
         #import model
@@ -31,6 +31,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
+
+        checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=model)
 
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
         train_loss = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
@@ -135,6 +137,9 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 # reset val metric per epoch
                 val_AUC.reset_states()
 
+            if epoch % 2 == 0:
+                checkpoint.save(checkpoint_prefix)
+
             #report time
             time_taken = time.time()-start_time
             tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
@@ -157,6 +162,9 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     num_units = file['train_params']['n_dense_units']
     num_filt = file['train_params']['n_filters']
 
+    # TEMPORARY
+    checkpoint_prefix = os.path.join(checkpoint_dir, 'ckpt')
+
     strategy = tf.distribute.MirroredStrategy()
 
     train_dataset, val_dataset = \
@@ -175,4 +183,4 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
           num_epochs=num_epochs, numOutputNeurons=numOutputNeurons, 
           y_input=y_input, num_units=num_units, num_filt=num_filt, 
-          lr=lr, log_dir=log_dir)
+          lr=lr, log_dir=log_dir, checkpoint_prefix=checkpoint_prefix)
