@@ -122,7 +122,7 @@ def create_config_json(config_path, **kwargs):
     }
 
     def substitute_into_dict(key, value):
-        for dict in (dataset_specs, train_options, train_options):
+        for dict in (dataset_specs, train_options, train_options_dataset):
             if key in dict:
                 dict[key] = value
                 return
