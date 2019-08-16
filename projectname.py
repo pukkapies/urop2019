@@ -195,8 +195,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     initializer = tf.keras.initializers.VarianceScaling()
     input = tf.expand_dims(input, 3)
     
-    input_pad_7 = tf.keras.layers.ZeroPadding2D(((0, 0), (3, 3)), name='pad3_spec')(input)
-    input_pad_3 = tf.keras.layers.ZeroPadding2D(((0, 0), (1, 1)), name='pad7_spec')(input)
+    input_pad_7 = tf.keras.layers.ZeroPadding2D(((0, 0), (3, 3)), name='pad7_spec')(input)
+    input_pad_3 = tf.keras.layers.ZeroPadding2D(((0, 0), (1, 1)), name='pad3_spec')(input)
     
     conv1 = tf.keras.layers.Conv2D(filters=num_filt, 
                kernel_size=[int(0.9 * y_input), 7],
