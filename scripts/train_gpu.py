@@ -20,12 +20,12 @@ import train_cpu
 
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
-          num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, global_batch_size=32,
+          num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
     with strategy.scope():
         #import model
         model = Model.build_model(frontend_mode=frontend_mode,
-                                  num_output_neurons=numOutputNeurons,
+                                  num_output_neurons=num_output_neurons,
                                   y_input=y_input, num_units=num_units, 
                                   num_filt=num_filt)
         
@@ -170,7 +170,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     with open(config_dir) as f:
         file = json.load(f)
         
-    numOutputNeurons = file['dataset_specs']['n_tags']
+    num_output_neurons = file['dataset_specs']['n_tags']
     y_input = file['dataset_specs']['n_mels']
     lr = file['training_options']['lr']
     num_units = file['training_options']['n_dense_units']
@@ -192,9 +192,9 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     
     train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
-          num_epochs=num_epochs, numOutputNeurons=numOutputNeurons, 
-          y_input=y_input, num_units=num_units, num_filt=num_filt, 
+          num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
+          y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size
           lr=lr, log_dir=log_dir)
 
 if __name__ == '__main__':
-    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json')
+    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(80, 10, 10))
