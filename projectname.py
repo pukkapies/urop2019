@@ -100,8 +100,8 @@ def create_config_json(config_path, **kwargs):
 
     train_options = {
         'lr': 0.001,
-        'n_dense_units': 1024,
-        'n_filters': 32,
+        'n_dense_units': 500,
+        'n_filters': 16,
     }
 
     train_options_dataset = {
