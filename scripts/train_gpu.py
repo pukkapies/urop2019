@@ -6,16 +6,17 @@ TODO LIST:
 '''
 
 import sys
+import os
+import time
+import json
+from datetime import datetime
 sys.path.insert(0, 'C://Users/hcw10/UROP2019')
 
 import numpy as np
 import tensorflow as tf
-import model as Model
-from datetime import datetime
-import os
-import time
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
+import projectname as Model
 import projectName_input
-import json
 
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
@@ -85,7 +86,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         @tf.function 
         def distributed_train_body(dist_dataset):
 
-            for step, entry in dist_dataset.enumerate()
+            for step, entry in dist_dataset.enumerate():
                 strategy.experimental_run_v2(train_step, args=(entry,))
 
         @tf.function
@@ -135,7 +136,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_loss().reset_states()
 
             if validation:
-               distributed_val_body(val_dist_dataset) 
+                distributed_val_body(val_dist_dataset) 
 
                 with val_summary_writer.as_default():
                     tf.summary.scalar('AUC', val_AUC.result(), step=epoch)
@@ -183,7 +184,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
                       batch_size=batch_size, shuffle=shuffle, 
                       buffer_size=buffer_size, window_length=window_length, 
                       random=random, with_tags=with_tags, with_tids=with_tids, 
-                      num_epochs=num_epochs)
+                      num_epochs=1)
 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
