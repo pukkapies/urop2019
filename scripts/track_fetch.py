@@ -1,4 +1,4 @@
-''' Contains tools to fetch mp3 files on our server and analyze their size, length and number of channels
+''' Contains tools to fetch .mp3 files on our server and analyze their size, length and number of channels.
 
 
 Notes

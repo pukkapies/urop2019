@@ -1,4 +1,4 @@
-''' Contains tool to generate a new lastfm_tags.db file containing only the "clean" merged tags
+''' Contains tools to generate a new lastfm_tags.db file containing only the "clean" merged tags.
 
 
 Notes

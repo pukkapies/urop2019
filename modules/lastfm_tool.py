@@ -1,4 +1,4 @@
-''' Contains tools for merging and cleaning the lastfm_tags.db file
+''' Contains tools to clean the lastfm_tags.db database, discard unwanted tags and merge the similar ones together.
 
 
 Notes
