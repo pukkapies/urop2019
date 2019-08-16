@@ -61,5 +61,4 @@ def main(tfrecords_dir, audio_format, config_path, lastfm_path, split=(70,10,20)
     return history.history
 
 if __name__ == '__main__':
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db', split=(80,20), num_epochs=5)
-    # main('~/Desktop/7D-TFRecords', 'log-mel-spectrogram', '~/Desktop/config.json', '~/Desktop/last.fm/clean_lastfm.db', split=(1,1), num_epochs=5)
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db', split=(80,20), num_epochs=20)
