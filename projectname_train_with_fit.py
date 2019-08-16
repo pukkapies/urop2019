@@ -43,7 +43,7 @@ def main(tfrecords_dir, audio_format, config_path, lastfm_path, split=(70,10,20)
     n_filts = config['training_options']['n_filters']
 
     # generate train and valid datasets
-    train_dataset, valid_dataset = projectname_input.generate_datasets_with_split(tfrecords_dir = os.path.expanduser(tfrecords_dir), audio_format = audio_format, split = split, with_tids = tids, with_tags = tags, merge_tags = tags_to_merge, num_epochs=num_epochs)
+    train_dataset, valid_dataset = projectname_input.generate_datasets_with_split(tfrecords_dir = os.path.expanduser(tfrecords_dir), audio_format = audio_format, split = split, shuffle = False, with_tids = tids, with_tags = tags, merge_tags = tags_to_merge, num_epochs=num_epochs)
 
     # build model
     model = projectname.build_model(audio_format, n_output_neurons, y_input, n_units, n_filts)
