@@ -49,7 +49,14 @@ def main(tfrecords_dir, audio_format, config_path, lastfm_path, split=(70,10,20)
     model = projectname.build_model(audio_format, n_output_neurons, y_input, n_units, n_filts)
     model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=lr), loss=lambda x, y: tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(x, y)), metrics=[[tf.keras.metrics.AUC(curve='ROC', name='roc-auc'), tf.keras.metrics.AUC(curve='PR', name='pr-auc')]])
 
-    history = model.fit(train_dataset, epochs=num_epochs, validation_data=valid_dataset, validation_steps=10)
+    callbacks = [
+        tf.keras.callbacks.ModelCheckpoint(
+            filepath='mymodel_{epoch}.h5',
+            save_best_only=True,
+            monitor='val_loss',
+            verbose=1)
+]
+    history = model.fit(train_dataset, epochs=num_epochs, callbacks=callbacks, validation_data=valid_dataset, validation_steps=10)
     
     return history.history
 
