@@ -325,7 +325,7 @@ def backend(input, num_output_neurons, num_units=1024):
     return tf.keras.layers.Dense(activation='sigmoid', units=num_output_neurons,
                  kernel_initializer=initializer, name='dense2_back')(dense_dropout)
 
-def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=1024, num_filt=32, batch_size=None):
+def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500, num_filt=32, batch_size=None):
     ''' Generates the final model by combining frontend and backend.
     
     Parameters
