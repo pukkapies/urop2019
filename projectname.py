@@ -198,6 +198,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     input_pad_7 = tf.keras.layers.ZeroPadding2D(((0, 0), (3, 3)), name='pad7_spec')(input)
     input_pad_3 = tf.keras.layers.ZeroPadding2D(((0, 0), (1, 1)), name='pad3_spec')(input)
     
+    # [TIMBRE] filter shape: 0.9y*7
     conv1 = tf.keras.layers.Conv2D(filters=num_filt, 
                kernel_size=[int(0.9 * y_input), 7],
                padding='valid', activation='relu',
@@ -207,6 +208,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                       strides=[conv1.shape[1], 1], name='pool1_spec')(bn_conv1)
     p1 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque1_spec')(pool1)
     
+    # [TIMBRE] filter shape: 0.9y*3
     conv2 = tf.keras.layers.Conv2D(filters=num_filt*2,
                kernel_size=[int(0.9 * y_input), 3],
                padding='valid', activation='relu',
@@ -216,6 +218,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                       strides=[conv2.shape[1], 1], name='pool2_spec')(bn_conv2)
     p2 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque2_spec')(pool2)
     
+    # [TIMBRE] filter shape: 0.9y*1
     conv3 = tf.keras.layers.Conv2D(filters=num_filt*4,
                kernel_size=[int(0.9 * y_input), 1], 
                padding='valid', activation='relu',
@@ -224,7 +227,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     pool3 = tf.keras.layers.MaxPool2D(pool_size=[conv3.shape[1], 1], 
                       strides=[conv3.shape[1], 1], name='pool3_spec')(bn_conv3)
     p3 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque3_spec')(pool3)
-    
+
+    # [TIMBRE] filter shape: 0.4y*7
     conv4 = tf.keras.layers.Conv2D(filters=num_filt,
                kernel_size=[int(0.4 * y_input), 7],
                padding='valid', activation='relu',
@@ -233,7 +237,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     pool4 = tf.keras.layers.MaxPool2D(pool_size=[conv4.shape[1], 1], 
                   strides=[conv4.shape[1], 1], name='pool4_spec')(bn_conv4)
     p4 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque4_spec')(pool4)
-    
+
+    # [TIMBRE] filter shape: 0.4y*3
     conv5 = tf.keras.layers.Conv2D(filters=num_filt*2,
                kernel_size=[int(0.4 * y_input), 3],
                padding='valid', activation='relu',
@@ -242,7 +247,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     pool5 = tf.keras.layers.MaxPool2D(pool_size=[conv5.shape[1], 1], 
                       strides=[conv5.shape[1], 1], name='pool5_spec')(bn_conv5)
     p5 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque5_spec')(pool5)
-    
+
+    # [TIMBRE] filter shape: 0.4y*1
     conv6 = tf.keras.layers.Conv2D(filters=num_filt*4,
                kernel_size=[int(0.4 * y_input), 1],
                padding='valid', activation='relu',
@@ -252,25 +258,30 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                   strides=[conv6.shape[1], 1], name='pool6_spec')(bn_conv6)
     p6 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque6_spec')(pool6)
 
+    # Avarage pooling frequency axis
     avg_pool = tf.keras.layers.AveragePooling2D(pool_size=[y_input, 1], 
                              strides=[y_input, 1], name='avgpool_spec')(input)
     avg_pool = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque7_spec')(avg_pool)
-    
+
+    # [TEMPORAL] filter shape: 165*1
     conv7 = tf.keras.layers.Conv1D(filters=num_filt, kernel_size=165,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv7_spec')(avg_pool)
     bn_conv7 = tf.keras.layers.BatchNormalization(name='bn7_spec')(conv7)
     
+    # [TEMPORAL] filter shape: 128*1
     conv8 = tf.keras.layers.Conv1D(filters=num_filt*2, kernel_size=128,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv8_spec')(avg_pool)
     bn_conv8 = tf.keras.layers.BatchNormalization(name='bn8_spec')(conv8)
-    
+
+    # [TEMPORAL] filter shape: 64*1
     conv9 = tf.keras.layers.Conv1D(filters=num_filt*4, kernel_size=64,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv9_spec')(avg_pool)
     bn_conv9 = tf.keras.layers.BatchNormalization(name='bn9_spec')(conv9)
     
+    # [TEMPORAL] filter shape: 32*1
     conv10 = tf.keras.layers.Conv1D(filters=num_filt*8, kernel_size=32,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv10_spec')(avg_pool)
