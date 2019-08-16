@@ -16,13 +16,13 @@ import numpy as np
 import tensorflow as tf
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 import projectname as Model
-import projectName_input
+import train_cpu
 
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, 
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
-    
+    print('hello -- in training')    
     with strategy.scope():
         #import model
         model = Model.build_model(frontend_mode=frontend_mode,
@@ -30,6 +30,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                                   y_input=y_input, num_units=num_units, 
                                   num_filt=num_filt)
         
+        print('hello --- in strategy.scope()')    
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
 
@@ -109,6 +110,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         #epoch loop
         for epoch in range(num_epochs):
+            print('hello -- in epoch loop')    
             start_time = time.time()
             tf.print('Epoch {}'.format(epoch))
 
@@ -161,24 +163,22 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     
     #initialise configuration
     if not os.path.isfile(config_dir):
-        config_dir = os.path.join(os.path.normpath(config_dir), 'config.txt')
+        config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
         
     with open(config_dir) as f:
         file = json.load(f)
         
-    numOutputNeurons = file['data_specs']['n_tags']
-    y_input = file['data_specs']['n_mels']
-    lr = file['train_params']['lr']
-    num_units = file['train_params']['n_dense_units']
-    num_filt = file['train_params']['n_filters']
-
-    # TEMPORARY
-    checkpoint_prefix = os.path.join(checkpoint_dir, 'ckpt')
+    numOutputNeurons = file['dataset_specs']['n_tags']
+    y_input = file['dataset_specs']['n_mels']
+    lr = file['training_options']['lr']
+    num_units = file['training_options']['n_dense_units']
+    num_filt = file['training_options']['n_filters']
 
     strategy = tf.distribute.MirroredStrategy()
+    print('hello -- post strategy')    
 
     train_dataset, val_dataset = \
-    generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
+    train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
                       train_val_test_split=train_val_test_split, 
                       which = [True, True, False],
                       batch_size=batch_size, shuffle=shuffle, 
@@ -186,11 +186,39 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
                       random=random, with_tags=with_tags, with_tids=with_tids, 
                       num_epochs=1)
 
+    print('hello -- post dataset gen')    
+    print(strategy.num_replicas_in_sync)
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
     
+    print('hello -- post dist dataset gen')    
     train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
           num_epochs=num_epochs, numOutputNeurons=numOutputNeurons, 
           y_input=y_input, num_units=num_units, num_filt=num_filt, 
-          lr=lr, log_dir=log_dir, checkpoint_prefix=checkpoint_prefix)
+          lr=lr, log_dir=log_dir)
+
+if __name__ == '__main__':
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        # try:
+        #     tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
+        #     logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        #     print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
+        # except RuntimeError as e:
+        #     # Visible devices must be set before GPUs have been initialized
+        #     print(e)
+        try:
+          # Currently, memory growth needs to be the same across GPUs
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(e)
+    print('--------------------------------------------------------------------------------------------')
+    print('--------------------------------------------------------------------------------------------')
+    print('--------------------------------------------------------------------------------------------')
+    print('--------------------------------------------------------------------------------------------')
+    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json')

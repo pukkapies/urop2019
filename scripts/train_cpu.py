@@ -7,12 +7,13 @@ TODO LIST:
 '''
 
 import sys
+import os
 sys.path.insert(0, 'C://Users/hcw10/UROP2019')
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 
 import tensorflow as tf
-import model as Model
+import projectname as Model
 from datetime import datetime
-import os
 import time
 import projectName_input
 import json
