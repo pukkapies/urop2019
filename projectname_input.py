@@ -125,8 +125,9 @@ def _tag_filter(features_dict, tags):
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
     feature_tags = tf.math.equal(tf.unstack(features_dict['tags']), 1) # bool tensor where True/False correspond to has/doesn't have tag
-
-    tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=n_tags)
+    idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)).reshape(-1, 1), 1)
+    vals = np.ones(len(tags), dtype=np.int64)
+    tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
 
@@ -160,7 +161,9 @@ def _tag_filter_hotenc_mask(features_dict, tags):
 
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
-    tags_mask = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=n_tags)
+    idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)).reshape(-1, 1), 1)
+    vals = np.ones(len(tags), dtype=np.int64)
+    tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
     features_dict['tags'] = tf.boolean_mask(features_dict['tags'], tags_mask)
