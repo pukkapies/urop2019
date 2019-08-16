@@ -34,7 +34,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
 
-        loss_obj = tf.keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
+        loss_obj = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
         if validation:
             val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
