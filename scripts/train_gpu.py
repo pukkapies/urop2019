@@ -10,7 +10,6 @@ import os
 import time
 import json
 from datetime import datetime
-sys.path.insert(0, 'C://Users/hcw10/UROP2019')
 
 import numpy as np
 import tensorflow as tf
@@ -32,12 +31,15 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
 
-        train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
+        train_ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='train_ROC_AUC', dtype=tf.float32)
+        train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
 
-        loss_obj = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
+        loss_obj = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
 
         if validation:
-            val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
+            val_ROC_AUC = tf.keras.metrics.AUC(curve = 'ROC', name='val_ROC_AUC', dtype=tf.float32)
+            val_PR_AUC = tf.keras.metrics.AUC(curve = 'PR', name='val_PR_AUC', dtype=tf.float32)
+
             # TODO: val loss?
             # val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
 
@@ -69,7 +71,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             grads = tape.gradient(loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
-            train_AUC.update_state(label_batch, logits)
+            train_ROC_AUC.update_state(label_batch, logits)
+            train_PR_AUC.update_state(label_batch, logits)
             return loss
 
 
@@ -80,17 +83,22 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             # TODO: record loss for val dataset?
             # loss_value = loss(label_batch, logits)
             # val_loss.update_state(loss_value)
-            val_AUC.update_state(label_batch, logits)
+            val_ROC_AUC.update_state(label_batch, logits)
+            val_PR_AUC.update_state(label_batch, logits)
 
         @tf.function 
         def distributed_train_body(dist_dataset):
             total_loss = 0.0
             num_batches = 0
-
+            
             for entry in dist_dataset:
                 per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
-                total_loss += strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+                loss = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+                total_loss += loss
                 num_batches += 1
+
+                if tf.equal(num_batches % 50, 0):
+                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', loss, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
 
             return total_loss / tf.cast(num_batches, tf.float32)
 
@@ -122,11 +130,13 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             loss = distributed_train_body(train_dist_dataset)            
 
             # print progress
-            tf.print('Epoch', epoch,  ': loss', loss, '; AUC', train_AUC.result())
+            tf.print('Epoch', epoch,  ': loss', loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
             # log to tensorboard
             with train_summary_writer.as_default():
-                tf.summary.scalar('AUC', train_AUC.result(), step=epoch)
+                tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=epoch)
+                tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=epoch)
                 tf.summary.scalar('Loss', loss, step=epoch)
+                train_summary_writer.flush()
 
             #print progress
             tf.print('Epoch {} --training done'.format(epoch))
@@ -137,17 +147,22 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                         name="trace", 
                         step=epoch, profiler_outdir=os.path.normpath(prof_log_dir)) 
 
-            train_AUC.reset_states()
+            train_ROC_AUC.reset_states()
+            train_PR_AUC.reset_states()
 
             if validation:
                 distributed_val_body(val_dist_dataset) 
 
                 with val_summary_writer.as_default():
-                    tf.summary.scalar('AUC', val_AUC.result(), step=epoch)
-                tf.print('Val- Epoch', epoch, ': AUC', val_AUC.result())
+                    tf.summary.scalar('ROC_AUC', val_ROC_AUC.result(), step=epoch)
+                    tf.summary.scalar('PR_AUC', val_PR_AUC.result(), step=epoch)
+                    val_summry_writer.flush()
+
+                tf.print('Val- Epoch', epoch, ': ROC_AUC', val_ROC_AUC.result(), '; PR_AUC', val_PR_AUC.result())
                 
                 # reset val metric per epoch
-                val_AUC.reset_states()
+                val_ROC_AUC.reset_states()
+                val_PR_AUC.reset_states()
 
             checkpoint.save(checkpoint_prefix)
             checkpoint_path = os.path.join(model_dir, 'epoch_{}.ckpt'.format(epoch))
@@ -176,7 +191,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     num_units = file['training_options']['n_dense_units']
     num_filt = file['training_options']['n_filters']
 
-    strategy = tf.distribute.MirroredStrategy()
+    strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
 
     train_dataset, val_dataset = \
     train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
@@ -193,8 +208,8 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
           num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
-          y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size
+          y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size,
           lr=lr, log_dir=log_dir)
 
 if __name__ == '__main__':
-    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(80, 10, 10))
+    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(80, 10, 10), shuffle=False, batch_size=128, buffer_size=1000)
