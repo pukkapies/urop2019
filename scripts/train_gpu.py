@@ -20,24 +20,21 @@ import train_cpu
 
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
-          num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, 
+          num_epochs=10, numOutputNeurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
-    print('hello -- in training')    
     with strategy.scope():
         #import model
         model = Model.build_model(frontend_mode=frontend_mode,
-                                  numOutputNeurons=numOutputNeurons,
+                                  num_output_neurons=numOutputNeurons,
                                   y_input=y_input, num_units=num_units, 
                                   num_filt=num_filt)
         
-        print('hello --- in strategy.scope()')    
         #initialise loss, optimizer, metric
-        optimizer = tf.keras.optimizers.Nadam(learning_rate=lr)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
 
         train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
-        train_loss = tf.keras.metrics.Mean(name='training_loss', dtype=tf.float32)
 
-        loss = tf.keras.losses.MeanSquaredError()
+        loss_obj = tf.keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
 
         if validation:
             val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
@@ -67,13 +64,14 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             with tf.GradientTape() as tape:
                 logits = model(audio_batch) # TODO: training=True????
 
-                loss_value = loss(label_batch, logits)
+                loss = tf.nn.compute_average_loss(loss_obj(label_batch, logits), global_batch_size=global_batch_size)
 
-            grads = tape.gradient(loss_value, model.trainable_weights)
+            grads = tape.gradient(loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
-            # UPDATE LOSS METRIC
+
             train_AUC.update_state(label_batch, logits)
-            train_loss.update_state(loss_value)
+            return loss
+
 
         def val_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
@@ -86,9 +84,15 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         @tf.function 
         def distributed_train_body(dist_dataset):
+            total_loss = 0.0
+            num_batches = 0
 
-            for step, entry in dist_dataset.enumerate():
-                strategy.experimental_run_v2(train_step, args=(entry,))
+            for entry in dist_dataset:
+                per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
+                total_loss += strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+                num_batches += 1
+
+            return total_loss / tf.cast(num_batches, tf.float32)
 
         @tf.function
         def distributed_val_body(dist_dataset):
@@ -110,20 +114,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         #epoch loop
         for epoch in range(num_epochs):
-            print('hello -- in epoch loop')    
             start_time = time.time()
             tf.print('Epoch {}'.format(epoch))
 
             tf.summary.trace_on(graph=False, profiler=True)
 
-            distributed_train_body(train_dist_dataset)            
+            loss = distributed_train_body(train_dist_dataset)            
 
             # print progress
-            tf.print('Epoch', epoch,  ': loss', train_loss.result(), '; AUC', train_AUC.result())
+            tf.print('Epoch', epoch,  ': loss', loss, '; AUC', train_AUC.result())
             # log to tensorboard
             with train_summary_writer.as_default():
                 tf.summary.scalar('AUC', train_AUC.result(), step=epoch)
-                tf.summary.scalar('Loss', train_loss.result(), step=epoch)
+                tf.summary.scalar('Loss', loss, step=epoch)
 
             #print progress
             tf.print('Epoch {} --training done'.format(epoch))
@@ -135,7 +138,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                         step=epoch, profiler_outdir=os.path.normpath(prof_log_dir)) 
 
             train_AUC.reset_states()
-            train_loss().reset_states()
 
             if validation:
                 distributed_val_body(val_dist_dataset) 
@@ -175,7 +177,6 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     num_filt = file['training_options']['n_filters']
 
     strategy = tf.distribute.MirroredStrategy()
-    print('hello -- post strategy')    
 
     train_dataset, val_dataset = \
     train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
@@ -186,12 +187,9 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
                       random=random, with_tags=with_tags, with_tids=with_tids, 
                       num_epochs=1)
 
-    print('hello -- post dataset gen')    
-    print(strategy.num_replicas_in_sync)
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
     
-    print('hello -- post dist dataset gen')    
     train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
           num_epochs=num_epochs, numOutputNeurons=numOutputNeurons, 
@@ -199,26 +197,4 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
           lr=lr, log_dir=log_dir)
 
 if __name__ == '__main__':
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        # try:
-        #     tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
-        #     logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-        #     print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
-        # except RuntimeError as e:
-        #     # Visible devices must be set before GPUs have been initialized
-        #     print(e)
-        try:
-          # Currently, memory growth needs to be the same across GPUs
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-        except RuntimeError as e:
-            # Memory growth must be set before GPUs have been initialized
-            print(e)
-    print('--------------------------------------------------------------------------------------------')
-    print('--------------------------------------------------------------------------------------------')
-    print('--------------------------------------------------------------------------------------------')
-    print('--------------------------------------------------------------------------------------------')
     main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json')

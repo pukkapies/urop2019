@@ -315,11 +315,3 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
           lr=lr, log_dir = log_dir)
 
 
- 
-    
-    
-    
-    
-    
-    
-    
