@@ -1,4 +1,4 @@
-''' Contains simple tools for querying the lastfm_tags.db file
+''' Contains tools to query the lastfm_tags.db database.
 
 
 Notes

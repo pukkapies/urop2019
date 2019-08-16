@@ -55,10 +55,12 @@ SAMPLE_RATE = 16000
 
 default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
 
-def _parse_features(example, features_description):
+def _parse_features(example, features_dict):
     ''' Parses the serialized tf.Example. '''
 
-    return tf.io.parse_single_example(example, features_description)
+    features_dict = tf.io.parse_single_example(example, features_dict)
+    features_dict['tags'] = tf.cast(features_dict['tags'], dtype = tf.float32) # tf.nn.softmax() requires floats
+    return features_dict
 
 def _reshape(features_dict, shape):
     ''' Reshapes each flattened audio tensors into the 'correct' one. '''
@@ -234,22 +236,37 @@ def generate_dataset(tfrecords, audio_format, batch_size=32, shuffle=True, buffe
     
     tfrecords = np.array(tfrecords, dtype=np.unicode) # allow for single str as input
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
-
     tfrecords = tf.data.Dataset.from_tensor_slices(tfrecords)
-    dataset = tfrecords.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE) # load dataset, read files in parallel
-    dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION), num_parallel_calls=tf.data.experimental.AUTOTUNE) # parse serialized features
-    dataset = dataset.map(lambda x: _reshape(x, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE) # reshape
     
+    # load dataset, read files in parallel
+    dataset = tfrecords.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    # parse serialized features
+    dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    # reshape
+    dataset = dataset.map(lambda x: _reshape(x, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    # shuffle
     if shuffle:
         dataset = dataset.shuffle(buffer_size)
+
+    # apply tid and tag filters
     if with_tags:
         dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
     if with_tids:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
     
-    dataset = dataset.batch(batch_size) # create batches before slicing the desired audio window to boost performance
-    dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE) # slice the desired audio window
-    dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE) # normalize data
+    # split into batches before slicing the desired audio window in order to boost performance
+    dataset = dataset.batch(batch_size)
+    
+    # slice into audio windows
+    dataset = dataset.map(lambda x: _window(x, audio_format, window_length, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    # normalize data
+    dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    # convert features from dict into tuple
     if as_tuple:
         dataset = dataset.map(_batch_tuplification, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
