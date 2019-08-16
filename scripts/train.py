@@ -2,8 +2,7 @@
 TODO LIST:
 - add printing
 - fix tensorboard and make it run on Boden (create graph, profile)
-- evaluation method (include test phase and convert tag_num to tag)
-
+- remove generate_datasets
 '''
 
 import sys
@@ -38,7 +37,7 @@ def train_comp(model, optimizer, x_batch_train, y_batch_train, loss):
     return loss_value, logits    
     
 @tf.function
-def train_body(dataset, model, optimizer, loss, train_AUC):
+def train_body(dataset, model, optimizer, loss, train_ROC_AUC, train_PR_AUC):
     '''Train and update metrics'''
     
          #https://www.tensorflow.org/tensorboard/r2/get_started
@@ -49,16 +48,17 @@ def train_body(dataset, model, optimizer, loss, train_AUC):
                 
         loss_value, logits = train_comp(model, optimizer, x_batch_train, y_batch_train, loss)
         loss_value = tf.reduce_mean(loss_value)
-        train_AUC(y_batch_train, logits)
+        train_ROC_AUC(y_batch_train, logits)
+        train_PR_AUC(y_batch_train, logits)
         
         if tf.equal(step%1, 0):   #change here for printing frequency
-            tf.print('Step', step, ': loss', loss_value, '; AUC', train_AUC.result())
+            tf.print('Step', step, ': loss', loss_value, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
             
             
     return loss_value
             
 @tf.function      
-def val_body(dataset, model, val_AUC):
+def val_body(dataset, model, val_ROC_AUC, val_PR_AUC):
     '''Validation and update metrics'''
     
     #set training phase =0 to use Dropout and BatchNormalization in test mode
@@ -69,7 +69,8 @@ def val_body(dataset, model, val_AUC):
             
         val_logits = model(x_batch_val)
         #calculate AUC
-        val_AUC(y_batch_val, val_logits)
+        val_ROC_AUC(y_batch_val, val_logits)
+        val_PR_AUC(y_batch_val, val_logits)
     
     #set training phase =1
     tf.keras.backend.set_learning_phase(1)
@@ -119,17 +120,17 @@ def train(frontend_mode, train_dataset, val_dataset=None, validation=True,
         tf.print('Epoch {}'.format(epoch))
         
         #initialise metrics per epoch
-        train_AUC = tf.keras.metrics.AUC(name='train_AUC', dtype=tf.float32)
-        
+        train_ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='train_ROC_AUC', dtype=tf.float32)
+        train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
         
         tf.summary.trace_on(graph=False, profiler=True)
         
         #train all batches once     
-        loss_value = train_body(train_dataset, model, optimizer, loss, train_AUC)
+        loss_value = train_body(train_dataset, model, optimizer, loss, train_ROC_AUC, train_PR_AUC)
         
             
             #print progress
-        tf.print('Epoch', epoch,  ': loss', loss_value, '; AUC', train_AUC.result())
+        tf.print('Epoch', epoch,  ': loss', loss_value, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
 
         # saving checkpoint
         ckpt.step.assign_add(1)
@@ -139,8 +140,10 @@ def train(frontend_mode, train_dataset, val_dataset=None, validation=True,
 
             #log to tensorboard
         with train_summary_writer.as_default():
-            tf.summary.scalar('AUC', train_AUC.result(), step=epoch)
+            tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=epoch)
+            tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=epoch)
             tf.summary.scalar('Loss', loss_value, step=epoch)
+            train_summary_writer.flush()
             
         #print progress
         tf.print('Epoch {} --training done'.format(epoch))
@@ -153,21 +156,28 @@ def train(frontend_mode, train_dataset, val_dataset=None, validation=True,
                     step=epoch, profiler_outdir=os.path.normpath(prof_log_dir)) 
             
         #reset train metric per epoch
-        train_AUC.reset_states()
+        train_ROC_AUC.reset_states()
+        train_PR_AUC.reset_states()
         
         #validation
         if validation:
-            val_AUC = tf.keras.metrics.AUC(name='val_AUC', dtype=tf.float32)
+            val_ROC_AUC = tf.keras.metrics.AUC(curve = 'ROC', name='val_ROC_AUC', dtype=tf.float32)
+            val_PR_AUC = tf.keras.metrics.AUC(curve = 'PR', name='val_PR_AUC', dtype=tf.float32)
             
             #run validation over all batches
-            val_body(val_dataset, model, val_AUC)
+            val_body(val_dataset, model, val_ROC_AUC)
+            val_body(val_dataset, model, val_PR_AUC)
         
             with val_summary_writer.as_default():
-                tf.summary.scalar('AUC', val_AUC.result(), step=epoch)
-            tf.print('Val- Epoch', epoch, ': AUC', val_AUC.result())
+                tf.summary.scalar('ROC_AUC', val_ROC_AUC.result(), step=epoch)
+                tf.summary.scalar('PR_AUC', val_PR_AUC.result(), step=epoch)
+                val_summary_writer.flush()
+            tf.print('Val- Epoch', epoch, ': ROC_AUC', val_ROC_AUC.result(), '; PR_AUC', val_PR_AUC.result())
         
             #reset val metric per epoch
-            val_AUC.reset_states()  
+            val_ROC_AUC.reset_states()  
+            val_PR_AUC.reset_states()  
+            
             
         #report time
         time_taken = time.time()-start_time
@@ -277,11 +287,11 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     with open(config_dir) as f:
         file = json.load(f)
         
-    numOutputNeurons = file['data_params']['n_tags']
-    y_input = file['data_params']['n_mels']
-    lr = file['train_params']['lr']
-    num_units = file['train_params']['n_dense_units']
-    num_filt = file['train_params']['n_filters']
+    numOutputNeurons = file['dataset_spec']['n_tags']
+    y_input = file['dataset_spec']['n_mels']
+    lr = file['train_options']['lr']
+    num_units = file['train_options']['n_dense_units']
+    num_filt = file['train_options']['n_filters']
     
     datasets = generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
                                  train_val_test_split=train_val_test_split, 
