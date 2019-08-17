@@ -98,7 +98,9 @@ def _tag_merge(features_dict, merge_tags):
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
     for tags in merge_tags: # for each list of tags in 'merge_tags' (which is a list of lists...)
-        tags = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=n_tags)
+        idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)).reshape(-1, 1), 1)
+        vals = np.ones(len(tags), dtype=np.int64)
+        tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
         tags = tf.sparse.to_dense(tags)
         tags = tf.dtypes.cast(tags, tf.bool)
 
@@ -111,7 +113,7 @@ def _tag_merge(features_dict, merge_tags):
     return features_dict
 
 def _tag_filter(features_dict, tags):
-    ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.filter).
+    ''' Removes unwanted tids from the dataset based on given tags (use with tf.data.Dataset.filter).
     
     Parameters
     ----------
@@ -134,7 +136,7 @@ def _tag_filter(features_dict, tags):
     return tf.math.reduce_any(feature_tags & tags_mask) # returns True if and only if at least one feature tag is in the desired 'tags' list
 
 def _tid_filter(features_dict, tids):
-    ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.filter).
+    ''' Removes unwanted tids from the dataset based on given tids (use with tf.data.Dataset.filter).
         
     Parameters
     ----------
