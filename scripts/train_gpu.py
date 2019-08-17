@@ -11,7 +11,6 @@ import time
 import json
 from datetime import datetime
 
-import numpy as np
 import tensorflow as tf
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 import projectname as Model
@@ -23,6 +22,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
     with strategy.scope():
         #import model
+        print('Building Model')
         model = Model.build_model(frontend_mode=frontend_mode,
                                   num_output_neurons=num_output_neurons,
                                   y_input=y_input, num_units=num_units, 
@@ -42,7 +42,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
             # TODO: val loss?
             # val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
-
+        
+        print('Setting Up Tensorboard')
         #in case of keyboard interrupt during previous training
         tf.summary.trace_off()
         
@@ -58,7 +59,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         if validation:
             val_log_dir = log_dir + current_time + '/val'
             val_summary_writer = tf.summary.create_file_writer(val_log_dir)
-
+        
         # fucntions needs to be defined within the strategy scope
         def train_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
@@ -97,7 +98,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 total_loss += loss
                 num_batches += 1
 
-                if tf.equal(num_batches % 50, 0):
+                if tf.equal(num_batches % 1, 0): #adjust for printing frequency
                     tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', loss, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
 
             return total_loss / tf.cast(num_batches, tf.float32)
@@ -113,6 +114,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
 
         # setting up checkpoints
+        print('Setting Up Checkpoints')
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
         latest_checkpoint_file = tf.train.latest_checkpoint(model_dir)
         if latest_checkpoint_file:
@@ -156,7 +158,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC', val_ROC_AUC.result(), step=epoch)
                     tf.summary.scalar('PR_AUC', val_PR_AUC.result(), step=epoch)
-                    val_summry_writer.flush()
+                    val_summary_writer.flush()
 
                 tf.print('Val- Epoch', epoch, ': ROC_AUC', val_ROC_AUC.result(), '; PR_AUC', val_PR_AUC.result())
                 
@@ -164,7 +166,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 val_ROC_AUC.reset_states()
                 val_PR_AUC.reset_states()
 
-            checkpoint.save(checkpoint_prefix)
+            #checkpoint.save(checkpoint_prefix)
             checkpoint_path = os.path.join(model_dir, 'epoch_{}.ckpt'.format(epoch))
             saved_path = checkpoint.save(checkpoint_path)
             tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
@@ -192,7 +194,8 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     num_filt = file['training_options']['n_filters']
 
     strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
-
+    
+    print('Preparing Dataset')
     train_dataset, val_dataset = \
     train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
                       train_val_test_split=train_val_test_split, 
@@ -205,6 +208,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
     
+    print('Train Begin')
     train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
           num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
@@ -212,4 +216,8 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
           lr=lr, log_dir=log_dir)
 
 if __name__ == '__main__':
+    #solve the warning--Could not dlopen library 'libcupti.so.10.0' warning
+    #https://github.com/google/seq2seq/issues/336
+    os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
+    
     main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(80, 10, 10), shuffle=False, batch_size=128, buffer_size=1000)
