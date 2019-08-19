@@ -191,7 +191,8 @@ def generate_datasets(tfrecord_dir, audio_format,
                       which = None,
                       batch_size=32, shuffle=True, buffer_size=10000, 
                       window_length=15, random=False, with_tags=None, 
-                      with_tids=None, num_epochs=None, as_tuple=False):
+                      with_tids=None, num_epochs=None, as_tuple=False,
+                      merge_tags=None):
     ''' Generates.....
     
     Parameters
