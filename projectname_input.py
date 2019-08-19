@@ -344,7 +344,7 @@ def generate_datasets_with_split(tfrecords_dir, audio_format, split, sample_rate
         Specifies the feature audio format.
 
     split: tuple
-        Specifies the train/validation/test percentage to use when selecting the .tfrecord files (can be a tuple of any length).
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as there are enough files).
 
     sample_rate: int
         Specifies the sample rate used to process audio tracks.
@@ -389,9 +389,8 @@ def generate_datasets_with_split(tfrecords_dir, audio_format, split, sample_rate
     assert len(tfrecords) >= len(split) , 'too few .tfrecord files to apply split, try using generate_dataset()'
     
     split = np.cumsum(split)
-    split = np.multiply(split, len(tfrecords) / split[-1]).astype(np.int32)[:-1] # scale up (or down) the 'split' array to match the actual number of .tfrecord files, and pop last entry
-    
     tfrecords_split = np.split(tfrecords, split)
+    tfrecords_split = tfrecords_split[:-1] # discard last 'empty' split
 
     output = []
 
