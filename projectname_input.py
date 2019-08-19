@@ -98,7 +98,9 @@ def _tag_merge(features_dict, merge_tags):
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
     for tags in merge_tags: # for each list of tags in 'merge_tags' (which is a list of lists...)
-        tags = tf.SparseTensor(indices=np.subtract(np.array(tags, dtype=np.int64).reshape(-1, 1), 1), values=np.ones(len(tags), dtype=np.int64), dense_shape=n_tags)
+        idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)).reshape(-1, 1), 1)
+        vals = np.ones(len(tags), dtype=np.int64)
+        tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
         tags = tf.sparse.to_dense(tags)
         tags = tf.dtypes.cast(tags, tf.bool)
 
@@ -111,7 +113,7 @@ def _tag_merge(features_dict, merge_tags):
     return features_dict
 
 def _tag_filter(features_dict, tags):
-    ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.filter).
+    ''' Removes unwanted tids from the dataset based on given tags (use with tf.data.Dataset.filter).
     
     Parameters
     ----------
@@ -134,7 +136,7 @@ def _tag_filter(features_dict, tags):
     return tf.math.reduce_any(feature_tags & tags_mask) # returns True if and only if at least one feature tag is in the desired 'tags' list
 
 def _tid_filter(features_dict, tids):
-    ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.filter).
+    ''' Removes unwanted tids from the dataset based on given tids (use with tf.data.Dataset.filter).
         
     Parameters
     ----------
@@ -342,7 +344,7 @@ def generate_datasets_with_split(tfrecords_dir, audio_format, split, sample_rate
         Specifies the feature audio format.
 
     split: tuple
-        Specifies the train/validation/test percentage to use when selecting the .tfrecord files (can be a tuple of any length).
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as there are enough files).
 
     sample_rate: int
         Specifies the sample rate used to process audio tracks.
@@ -387,9 +389,8 @@ def generate_datasets_with_split(tfrecords_dir, audio_format, split, sample_rate
     assert len(tfrecords) >= len(split) , 'too few .tfrecord files to apply split, try using generate_dataset()'
     
     split = np.cumsum(split)
-    split = np.multiply(split, len(tfrecords) / split[-1]).astype(np.int32)[:-1] # scale up (or down) the 'split' array to match the actual number of .tfrecord files, and pop last entry
-    
     tfrecords_split = np.split(tfrecords, split)
+    tfrecords_split = tfrecords_split[:-1] # discard last 'empty' split
 
     output = []
 
