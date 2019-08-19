@@ -182,7 +182,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
-         window_length=15, random=False, with_tags=None,
+         window_length=15, random=False, with_tags=None, merge_tags=None,
          log_dir = 'logs/trial1/', with_tids=None, num_epochs=5):
    
     '''Combines data input pipeline, networks, train and validation loops to 
