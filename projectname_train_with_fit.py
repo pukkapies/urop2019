@@ -55,7 +55,6 @@ def main(tfrecords_dir, audio_format, config_path, lastfm_path, split, preset=0,
             verbose=1)
         ]
 
-    # generate train and valid datasets
     if len(split) == 1:
         train_dataset = projectname_input.generate_datasets_with_split(tfrecords_dir = os.path.expanduser(tfrecords_dir), audio_format = audio_format, split = split, batch_size = batch_size, shuffle = shuffle, window_length = window_length, with_tids = tids, with_tags = tags, merge_tags = tags_to_merge, num_epochs=num_epochs)[0]
         history = model.fit(train_dataset, epochs=num_epochs, steps_per_epoch=num_steps_per_epoch, callbacks=callbacks)
