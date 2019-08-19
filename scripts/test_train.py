@@ -34,8 +34,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         train_ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='train_ROC_AUC', dtype=tf.float32)
         train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
 
-        loss_obj = tf.keras.losses.CategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-
         if validation:
             val_ROC_AUC = tf.keras.metrics.AUC(curve = 'ROC', name='val_ROC_AUC', dtype=tf.float32)
             val_PR_AUC = tf.keras.metrics.AUC(curve = 'PR', name='val_PR_AUC', dtype=tf.float32)
@@ -59,14 +57,17 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             val_log_dir = log_dir + current_time + '/val'
             val_summary_writer = tf.summary.create_file_writer(val_log_dir)
 
+        def compute_loss(labels, logits):
+            per_example_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits)
+            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
+
         # fucntions needs to be defined within the strategy scope
         def train_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
 
             with tf.GradientTape() as tape:
                 logits = model(audio_batch) # TODO: training=True????
-
-                loss = tf.nn.compute_average_loss(loss_obj(label_batch, logits), global_batch_size=global_batch_size)
+                loss = compute_loss(label_batch, logits)
 
             grads = tape.gradient(loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -78,7 +79,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         def val_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
-
             logits = model(audio_batch)
             # TODO: record loss for val dataset?
             # loss_value = loss(label_batch, logits)
@@ -87,27 +87,15 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             val_PR_AUC.update_state(label_batch, logits)
 
         @tf.function 
-        def distributed_train_body(dist_dataset):
-            total_loss = 0.0
-            num_batches = 0
-            
-            for entry in dist_dataset:
-                per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
-                loss = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
-                total_loss += loss
-                num_batches += 1
-
-                if tf.equal(num_batches % 50, 0):
-                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', loss, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
-
-            return total_loss / tf.cast(num_batches, tf.float32)
+        def distributed_train_body(entry):
+            per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
+            return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
         @tf.function
-        def distributed_val_body(dist_dataset):
+        def distributed_val_body(entry):
             tf.keras.backend.set_learning_phase(0)
 
-            for entry in dist_dataset:
-                strategy.experimental_run_v2(val_step, args=(entry,))
+            strategy.experimental_run_v2(val_step, args=(entry,))
 
             tf.keras.backend.set_learning_phase(1)
 
@@ -127,10 +115,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
             tf.summary.trace_on(graph=False, profiler=True)
 
-            loss = distributed_train_body(train_dist_dataset)            
+            total_loss = 0.0
+            num_batches = 0
+            for entry in train_dist_dataset:
+                loss = distributed_train_body(entry)            
+                total_loss += loss
+                num_batches += 1
 
+                if tf.equal(num_batches % 10, 0):
+                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', loss, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
+
+            train_loss = total_loss / num_batches
             # print progress
-            tf.print('Epoch', epoch,  ': loss', loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
+            tf.print('Epoch', epoch,  ': loss', train_loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
             # log to tensorboard
             with train_summary_writer.as_default():
                 tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=epoch)
@@ -151,12 +148,17 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_PR_AUC.reset_states()
 
             if validation:
-                distributed_val_body(val_dist_dataset) 
+                tf.print('IN VAL')
+                num_batches = 0
+                for entry in val_dist_dataset:
+                    distributed_val_body(entry) 
+                    num_batches += 1
+                    tf.print('STEP: ', num_batches)
 
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC', val_ROC_AUC.result(), step=epoch)
                     tf.summary.scalar('PR_AUC', val_PR_AUC.result(), step=epoch)
-                    val_summry_writer.flush()
+                    val_summary_writer.flush()
 
                 tf.print('Val- Epoch', epoch, ': ROC_AUC', val_ROC_AUC.result(), '; PR_AUC', val_PR_AUC.result())
                 
@@ -164,7 +166,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 val_ROC_AUC.reset_states()
                 val_PR_AUC.reset_states()
 
-            checkpoint.save(checkpoint_prefix)
             checkpoint_path = os.path.join(model_dir, 'epoch_{}.ckpt'.format(epoch))
             saved_path = checkpoint.save(checkpoint_path)
             tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
@@ -212,4 +213,4 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
           lr=lr, log_dir=log_dir)
 
 if __name__ == '__main__':
-    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(80, 10, 10), shuffle=False, batch_size=128, buffer_size=1000)
+    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(85, 10, 5), shuffle=False, batch_size=128, buffer_size=1000, num_epochs=10)
