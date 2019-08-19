@@ -9,7 +9,7 @@ import projectname
 import projectname_input
 from modules.query_lastfm import LastFm
 
-def main(tfrecords_dir, audio_format, config_path, lastfm_path, split, preset=0, batch_size=32, shuffle=False, window_length=15, tids=None, tags=None, tags_to_merge=None, num_epochs=1, num_steps_per_epoch=None):
+def main(tfrecords_dir, audio_format, config_path, lastfm_path, split, preset=0, batch_size=32, shuffle=False, window_length=15, tids=None, tags=None, tags_to_merge=None, num_epochs=None, num_steps_per_epoch=None):
 
     lastfm = LastFm(os.path.expanduser(lastfm_path))
     
