@@ -178,39 +178,105 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
          window_length=15, random=False, with_tags=None,
          log_dir = 'logs/trial1/', with_tids=None, num_epochs=5):
-    
-    #initialise configuration
-    if not os.path.isfile(config_dir):
-        config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
-        
-    with open(config_dir) as f:
-        file = json.load(f)
-        
-    num_output_neurons = file['dataset_specs']['n_tags']
-    y_input = file['dataset_specs']['n_mels']
-    lr = file['training_options']['lr']
-    num_units = file['training_options']['n_dense_units']
-    num_filt = file['training_options']['n_filters']
+   
+    '''Combines data input pipeline, networks, train and validation loops to 
+        perform model training.
+            
+    Parameters
+    ----------
+    tfrecord_dir: str
+        The directory of where the tfrecord files of the specified audio format
+        are stored.
 
-    strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
+    frontend_mode: str
+        '''waveform' or 'log-mel-spectrogram', indicating the format of the
+        audio inputs contained in the tfrecord files.
 
-    train_dataset, val_dataset = \
-    train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
-                      train_val_test_split=train_val_test_split, 
-                      which = [True, True, False],
-                      batch_size=batch_size, shuffle=shuffle, 
-                      buffer_size=buffer_size, window_length=window_length, 
-                      random=random, with_tags=with_tags, with_tids=with_tids, 
-                      num_epochs=1)
+    config_dir: str
+        The directory (config.json) or path of where the json file (contains 
+        training and dataset configuration info) created in projectname.py 
+        is stored.
 
-    train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
-    val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
-    
-    train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
-          strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
-          num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
-          y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size,
-          lr=lr, log_dir=log_dir)
+    train_val_test_split: tuple (a tuple of three integers)
+        Specifies the train/validation/test percentage to use when selecting 
+        the .tfrecord files.
+
+    batch_size: int
+        Specifies the dataset batch_size.
+
+    validation: bool
+        If True, validation is performed within each epoch.
+
+    shuffle: bool
+        If True, shuffles the dataset with buffer size = buffer_size.
+
+    buffer_size: int
+        If shuffle is True, sets the shuffle buffer size.
+
+    window_length: list, int
+        Specifies the desired window length (in seconds) for the various datasets.
+
+    random: bool
+        Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+
+    with_tags: list
+        If not None, contains the tags to use.
+
+    merge_tags: list
+        If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
+                                                                                                                        
+    with_tids: list
+        If not None, contains the tids to use.
+
+    log_dir: str
+        The directory of where the tensorboard scalar and profiler logs are stored.
+
+    num_epochs: int
+        Number of epochs.
+
+    model_dir: str
+        The directory of where the Checkpoint files are stored.
+    '''
+
+
+
+
+
+
+
+
+#initialise configuration
+if not os.path.isfile(config_dir):
+config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
+
+with open(config_dir) as f:
+file = json.load(f)
+
+num_output_neurons = file['dataset_specs']['n_tags']
+y_input = file['dataset_specs']['n_mels']
+lr = file['training_options']['lr']
+num_units = file['training_options']['n_dense_units']
+num_filt = file['training_options']['n_filters']
+
+strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
+
+train_dataset, val_dataset = \
+train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
+          train_val_test_split=train_val_test_split, 
+          which = [True, True, False],
+          batch_size=batch_size, shuffle=shuffle, 
+          buffer_size=buffer_size, window_length=window_length, 
+              random=random, with_tags=with_tags, with_tids=with_tids, 
+              num_epochs=1)
+
+train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
+val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
+
+train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
+  strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
+  num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
+  y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size,
+  lr=lr, log_dir=log_dir)
 
 if __name__ == '__main__':
-    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(85, 10, 5), shuffle=False, batch_size=128, buffer_size=1000, num_epochs=10)
+main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(85, 10, 5), shuffle=False, batch_size=128, buffer_size=1000, num_epochs=10)
