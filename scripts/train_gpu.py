@@ -20,6 +20,9 @@ import train_cpu
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
+    '''Trains model, see doc on main() for more details.'''
+    
+    
     with strategy.scope():
         #import model
         print('Building Model')
@@ -176,9 +179,70 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
 
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
-         batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
-         window_length=15, random=False, with_tags=None,
-         log_dir = 'logs/trial1/', with_tids=None, num_epochs=5):
+         num_epochs=5, batch_size=32, validation=True, shuffle=True, 
+         buffer_size=10000, window_length=15, random=False, with_tags=None, 
+         merge_tags=None, log_dir = 'logs/trial1/', with_tids=None, 
+         model_dir='/srv/data/urop/model'):
+    
+    '''Combines data input pipeline, networks, train and validation loops to 
+    perform model training.
+    
+    Parameters
+    ----------
+    tfrecord_dir: str
+        The directory of where the tfrecord files of the specified audio format
+        are stored.
+        
+    frontend_mode: str
+        'waveform' or 'log-mel-spectrogram', indicating the format of the
+        audio inputs contained in the tfrecord files.
+        
+    config_dir: str
+        The directory (config.json) or path of where the json file (contains 
+        training and dataset configuration info) created in projectname.py 
+        is stored.
+        
+    train_val_test_split: tuple (a tuple of three integers)
+        Specifies the train/validation/test percentage to use when selecting 
+        the .tfrecord files.
+        
+    batch_size: int
+        Specifies the dataset batch_size.
+        
+    validation: bool
+        If True, validation is performed within each epoch.
+        
+    shuffle: bool
+        If True, shuffles the dataset with buffer size = buffer_size.
+
+    buffer_size: int
+        If shuffle is True, sets the shuffle buffer size.
+
+    window_length: list, int
+        Specifies the desired window length (in seconds) for the various datasets.
+
+    random: bool
+        Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+
+    with_tags: list
+        If not None, contains the tags to use.
+
+    merge_tags: list
+        If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
+        
+    with_tids: list
+        If not None, contains the tids to use.
+        
+    log_dir: str
+        The directory of where the tensorboard scalar and profiler logs are stored.
+        
+    num_epochs: int
+        Number of epochs.
+        
+    model_dir: str
+        The directory of where the Checkpoint files are stored.
+    
+    '''
     
     #initialise configuration
     if not os.path.isfile(config_dir):
@@ -202,8 +266,8 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
                       which = [True, True, False],
                       batch_size=batch_size, shuffle=shuffle, 
                       buffer_size=buffer_size, window_length=window_length, 
-                      random=random, with_tags=with_tags, with_tids=with_tids, 
-                      num_epochs=1)
+                      random=random, with_tags=with_tags, merge_tags=merge_tags,
+                      with_tids=with_tids, num_epochs=1)
 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
@@ -218,6 +282,6 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
 if __name__ == '__main__':
     #solve the warning--Could not dlopen library 'libcupti.so.10.0' warning
     #https://github.com/google/seq2seq/issues/336
-    os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
-    
-    main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(80, 10, 10), shuffle=False, batch_size=128, buffer_size=1000)
+   #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
+
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/config.json', train_val_test_split=(70, 10, 0), shuffle=True, batch_size=64, buffer_size=1000, num_epochs=2)
