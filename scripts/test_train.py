@@ -11,7 +11,6 @@ import time
 import json
 from datetime import datetime
 
-import numpy as np
 import tensorflow as tf
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 import projectname as Model
@@ -21,8 +20,12 @@ import train_cpu
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
+    '''Trains model, see doc on main() for more details.'''
+    
+    
     with strategy.scope():
         #import model
+        print('Building Model')
         model = Model.build_model(frontend_mode=frontend_mode,
                                   num_output_neurons=num_output_neurons,
                                   y_input=y_input, num_units=num_units, 
@@ -40,7 +43,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
             # TODO: val loss?
             # val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
-
+        
+        print('Setting Up Tensorboard')
         #in case of keyboard interrupt during previous training
         tf.summary.trace_off()
         
@@ -61,6 +65,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             per_example_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits)
             return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
 
+        
         # fucntions needs to be defined within the strategy scope
         def train_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
@@ -101,6 +106,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
 
         # setting up checkpoints
+        print('Setting Up Checkpoints')
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
         latest_checkpoint_file = tf.train.latest_checkpoint(model_dir)
         if latest_checkpoint_file:
@@ -181,17 +187,14 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
    
     '''Combines data input pipeline, networks, train and validation loops to 
         perform model training.
-            
+
     Parameters
     ----------
-    tfrecord_dir: str
-        The directory of where the tfrecord files of the specified audio format
-        are stored.
-
+        
     frontend_mode: str
-        '''waveform' or 'log-mel-spectrogram', indicating the format of the
+        'waveform' or 'log-mel-spectrogram', indicating the format of the
         audio inputs contained in the tfrecord files.
-
+        
     config_dir: str
         The directory (config.json) or path of where the json file (contains 
         training and dataset configuration info) created in projectname.py 
@@ -206,7 +209,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
 
     validation: bool
         If True, validation is performed within each epoch.
-
+        
     shuffle: bool
         If True, shuffles the dataset with buffer size = buffer_size.
 
@@ -224,59 +227,46 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
 
     merge_tags: list
         If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
-                                                                                                                        
-    with_tids: list
-        If not None, contains the tids to use.
-
-    log_dir: str
-        The directory of where the tensorboard scalar and profiler logs are stored.
-
-    num_epochs: int
-        Number of epochs.
-
-    model_dir: str
-        The directory of where the Checkpoint files are stored.
     '''
+    
+    #initialise configuration
+    if not os.path.isfile(config_dir):
+        config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
+        
+    with open(config_dir) as f:
+        file = json.load(f)
+        
+    num_output_neurons = file['dataset_specs']['n_tags']
+    y_input = file['dataset_specs']['n_mels']
+    lr = file['training_options']['lr']
+    num_units = file['training_options']['n_dense_units']
+    num_filt = file['training_options']['n_filters']
 
+    strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
+    
+    print('Preparing Dataset')
+    train_dataset, val_dataset = \
+    train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
+                      train_val_test_split=train_val_test_split, 
+                      which = [True, True, False],
+                      batch_size=batch_size, shuffle=shuffle, 
+                      buffer_size=buffer_size, window_length=window_length, 
+                      random=random, with_tags=with_tags, merge_tags=merge_tags,
+                      with_tids=with_tids, num_epochs=1)
 
-
-
-
-
-
-
-#initialise configuration
-if not os.path.isfile(config_dir):
-config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
-
-with open(config_dir) as f:
-file = json.load(f)
-
-num_output_neurons = file['dataset_specs']['n_tags']
-y_input = file['dataset_specs']['n_mels']
-lr = file['training_options']['lr']
-num_units = file['training_options']['n_dense_units']
-num_filt = file['training_options']['n_filters']
-
-strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
-
-train_dataset, val_dataset = \
-train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
-          train_val_test_split=train_val_test_split, 
-          which = [True, True, False],
-          batch_size=batch_size, shuffle=shuffle, 
-          buffer_size=buffer_size, window_length=window_length, 
-              random=random, with_tags=with_tags, with_tids=with_tids, 
-              num_epochs=1)
-
-train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
-val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
-
-train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
-  strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
-  num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
-  y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size,
-  lr=lr, log_dir=log_dir)
+    train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
+    val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
+    
+    print('Train Begin')
+    train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
+          strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
+          num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
+          y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size,
+          lr=lr, log_dir=log_dir)
 
 if __name__ == '__main__':
-main('/srv/data/urop/tfrecords-waveform', 'waveform', '/home/calle/config.json', train_val_test_split=(85, 10, 5), shuffle=False, batch_size=128, buffer_size=1000, num_epochs=10)
+    #solve the warning--Could not dlopen library 'libcupti.so.10.0' warning
+    #https://github.com/google/seq2seq/issues/336
+   #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
+
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/config.json', train_val_test_split=(70, 10, 0), shuffle=True, batch_size=64, buffer_size=1000, num_epochs=2)
