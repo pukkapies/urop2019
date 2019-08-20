@@ -58,17 +58,12 @@ import tensorflow as tf
 
 default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
 
-def _parse_features(example, features_dict):
+def _parse_features(example, features_dict, shape):
     ''' Parses the serialized tf.Example. '''
 
     features_dict = tf.io.parse_single_example(example, features_dict)
-    features_dict['tags'] = tf.cast(features_dict['tags'], dtype = tf.float32) # tf.nn.softmax() requires floats
-    return features_dict
-
-def _reshape(features_dict, shape):
-    ''' Reshapes each flattened audio tensors into the 'correct' one. Converts sparse into dense. '''
-
     features_dict['audio'] = tf.reshape(tf.sparse.to_dense(features_dict['audio']), shape)
+    features_dict['tags'] = tf.cast(features_dict['tags'], dtype = tf.float32) # tf.nn.softmax() requires floats
     return features_dict
 
 def _tag_merge(features_dict, merge_tags):
@@ -97,6 +92,8 @@ def _tag_merge(features_dict, merge_tags):
 
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
+    feature_tags = tf.dtypes.cast(features_dict['tags'], tf.bool)
+
     for tags in merge_tags: # for each list of tags in 'merge_tags' (which is a list of lists...)
         idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)).reshape(-1, 1), 1)
         vals = np.ones(len(tags), dtype=np.int64)
@@ -104,11 +101,10 @@ def _tag_merge(features_dict, merge_tags):
         tags = tf.sparse.to_dense(tags)
         tags = tf.dtypes.cast(tags, tf.bool)
 
-        feature_tags = tf.dtypes.cast(features_dict['tags'], tf.bool)
 
         # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
         features_dict['tags'] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
-        features_dict['tags'] = tf.cast(features_dict['tags'], tf.float32) # cast back to float32
+    features_dict['tags'] = tf.cast(features_dict['tags'], tf.float32) # cast back to float32
         
     return features_dict
 
@@ -295,10 +291,7 @@ def generate_dataset(tfrecords, audio_format, sample_rate=16000, batch_size=32, 
     dataset = tfrecords.interleave(tf.data.TFRecordDataset, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     # parse serialized features
-    dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    
-    # reshape
-    dataset = dataset.map(lambda x: _reshape(x, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     # shuffle
     if shuffle:
@@ -308,9 +301,8 @@ def generate_dataset(tfrecords, audio_format, sample_rate=16000, batch_size=32, 
     if with_tags is not None:
         if merge_tags is not None:
             dataset = dataset.map(lambda x: _tag_merge(x, merge_tags))
-            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
-        else:
-            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
+
+        dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
     if with_tids is not None:
         dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
     
