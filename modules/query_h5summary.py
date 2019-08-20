@@ -1,4 +1,4 @@
-''' Contains simple tools for querying the msd_summary_file.h5 file
+''' Contains tools to query the msd_summary_file.h5 file.
 
 
 Notes
