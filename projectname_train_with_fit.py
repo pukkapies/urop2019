@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import json
 import os
 
@@ -24,9 +25,14 @@ def train(model, train_dataset, valid_dataset=None):
             filepath='mymodel_{epoch}.h5',
             save_best_only=True,
             monitor='val_loss',
-            verbose=1)
+            verbose=1),
+        tf.keras.callbacks.TensorBoard(
+            log_dir=log_dir, 
+            histogram_freq=1),
         ]
     
+    log_dir="logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M")
+
     history = model.fit(train_dataset, epochs=num_epochs, steps_per_epoch=num_steps_per_epoch, callbacks=callbacks, validation_data=valid_dataset)
 
     return history.history
