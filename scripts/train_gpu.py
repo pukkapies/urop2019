@@ -77,9 +77,9 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             with tf.GradientTape() as tape:
                 logits = model(audio_batch) # TODO: training=True????
                 loss = loss_obj(label_batch, logits)
-
-            grads = tape.gradient(loss, model.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.trainable_weights))
+            variables = model.trainable_variables
+            grads = tape.gradient(loss, variables)
+            optimizer.apply_gradients(zip(grads, variables))
 
             train_ROC_AUC.update_state(label_batch, logits)
             train_PR_AUC.update_state(label_batch, logits)
@@ -88,10 +88,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         def val_step(entry):
             audio_batch, label_batch = entry[0], entry[1]
-            logits = model(audio_batch)
-            # TODO: record loss for val dataset?
-            # loss_value = loss(label_batch, logits)
-            # val_loss.update_state(loss_value)
+            logits = model(audio_batch, training=False)
+
             val_ROC_AUC.update_state(label_batch, logits)
             val_PR_AUC.update_state(label_batch, logits)
 
@@ -102,11 +100,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         @tf.function
         def distributed_val_body(entry):
-            tf.keras.backend.set_learning_phase(0)
-
-            strategy.experimental_run_v2(val_step, args=(entry,))
-
-            tf.keras.backend.set_learning_phase(1)
+            return strategy.experimental_run_v2(val_step, args=(entry,))
 
 
         # setting up checkpoints
@@ -118,7 +112,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
             checkpoint.restore(latest_checkpoint_file)
             tf.print('Loading from checkpoint file completed')
-            prev_epoch = latest_checkpoint_file.split('_')[1][0]
+            print(latest_checkpoint_file)
+            prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
 
         #epoch loop
         for epoch in range(prev_epoch+1, num_epochs):
@@ -162,15 +157,11 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                                             step=epoch, 
                                             profiler_outdir=os.path.normpath(prof_log_dir)) 
 
-            train_ROC_AUC.reset_states()
-            train_PR_AUC.reset_states()
 
             if validation:
                 tf.print('Validation')
-                num_batches = 0
                 for entry in val_dist_dataset:
                     distributed_val_body(entry) 
-                    num_batches += 1
 
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC', val_ROC_AUC.result(), step=epoch)
@@ -183,18 +174,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 val_ROC_AUC.reset_states()
                 val_PR_AUC.reset_states()
 
-            checkpoint_path = os.path.join(ckpt_dir, 'epoch_{}.ckpt'.format(epoch))
+            train_ROC_AUC.reset_states()
+            train_PR_AUC.reset_states()
+
+            checkpoint_path = os.path.join(ckpt_dir, 'epoch')
             saved_path = checkpoint.save(checkpoint_path)
             tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
-            if tf.equal(epoch % 5, 0):
-                model.save('/home/calle/model_epoch_{}.h5'.format(epoch))
 
             #report time
             time_taken = time.time()-start_time
             tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
 
-        
-        model.save('/home/calle/model.h5')
+        checkpoint_path = os.path.join(ckpt_dir, 'trained')
+        checkpoint.save(checkpoint_path) 
 
 def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
@@ -259,6 +251,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
     num_filt = file['training_options']['n_filters']
 
     strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
+    num_output_neurons = 155 # TEMP
     
     print('Preparing Dataset')
     train_dataset, val_dataset = \
@@ -284,8 +277,9 @@ if __name__ == '__main__':
     #https://github.com/google/seq2seq/issues/336
    #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
 
-    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
-    tags = fm.popularity().tag.to_list()[:50]
-    with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/', split=(80, 10, 10), shuffle=True, batch_size=128, buffer_size=1000, 
-             with_tags=with_tags, num_epochs=20)
+    # fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
+    # tags = fm.popularity().tag.to_list()[:50]
+    # with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
+    CONFIG_FOLDER = 'home/calle/'
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(2, 1, 0), shuffle=True, batch_size=128, buffer_size=1000,
+             with_tags=None, num_epochs=5)
