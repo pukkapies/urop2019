@@ -138,7 +138,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                     with train_summary_writer.as_default():
                         tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=optimizer.iterations)
                         tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=optimizer.iterations)
-                        tf.summary.scalar('Loss', train_PR_AUC.result(), step=optimizer.iterations)
+                        tf.summary.scalar('Loss', loss, step=optimizer.iterations)
                         train_summary_writer.flush()
 
             train_loss = total_loss / num_batches
