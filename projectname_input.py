@@ -230,7 +230,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
     Parameters:
     ----------
     tfrecords: str, list
-        List of .tfrecord files.
+        List of .tfrecord files paths.
 
     audio_format: {'waveform', 'log-mel-spectrogram'}
         Specifies the feature audio format.
@@ -289,7 +289,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
 
     if split is not None:
-        assert len(tfrecords) >= len(split) , 'too few .tfrecord files to apply split'
+        assert len(tfrecords) >= sum(split) , 'too few .tfrecord files to apply split'
         split = np.cumsum(split)
         tfrecords_split = np.split(tfrecords, split)
         tfrecords_split = tfrecords_split[:-1] # discard last 'empty' split
@@ -324,7 +324,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
         dataset = dataset.map(lambda x: _window(x, audio_format, sample_rate, window_size, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         # batch
-        dataset = dataset.batch(batch_size)
+        dataset = dataset.batch(batch_size, drop_remainder=True)
 
         # normalize data
         dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
