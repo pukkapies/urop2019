@@ -17,9 +17,11 @@ import projectname as Model
 import train_cpu
 
 
+
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
-          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model'):
+          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/home/aden/urop2019/model',
+          analyse_trace=False):
     '''Trains model, see doc on main() for more details.'''
     
     
@@ -58,8 +60,9 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         train_log_dir = log_dir + current_time + '/train'
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         
-        prof_log_dir = log_dir + current_time + '/prof'
-        prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
+        if analyse_trace:
+            prof_log_dir = log_dir + current_time + '/prof'
+            prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
 
         if validation:
             val_log_dir = log_dir + current_time + '/val'
@@ -139,21 +142,17 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_loss = total_loss / num_batches
             # print progress
             tf.print('Epoch', epoch,  ': loss', train_loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
-            # log to tensorboard
-            #with train_summary_writer.as_default():
-            #    tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=epoch)
-            #    tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=epoch)
-            #    tf.summary.scalar('Loss', loss, step=epoch)
-            #    train_summary_writer.flush()
+
 
             #print progress
             tf.print('Epoch {} --training done'.format(epoch))
 
             # tensorboard export profiling and record train AUC and loss
-            with prof_summary_writer.as_default():   
-                tf.summary.trace_export(
-                        name="trace", 
-                        step=epoch, profiler_outdir=os.path.normpath(prof_log_dir)) 
+            if analyse_trace:
+                with prof_summary_writer.as_default():   
+                    tf.summary.trace_export(name="trace", 
+                                            step=epoch, 
+                                            profiler_outdir=os.path.normpath(prof_log_dir)) 
 
             train_ROC_AUC.reset_states()
             train_PR_AUC.reset_states()
@@ -274,4 +273,4 @@ if __name__ == '__main__':
     #https://github.com/google/seq2seq/issues/336
    #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
 
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/config.json', train_val_test_split=(50, 1, 0), shuffle=True, batch_size=128, buffer_size=1000, num_epochs=2)
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/aden/urop2019/config.json', train_val_test_split=(2, 1, 0), shuffle=True, batch_size=128, buffer_size=1000, num_epochs=5)
