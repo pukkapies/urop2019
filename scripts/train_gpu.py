@@ -23,8 +23,9 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
           analyse_trace=False):
     '''Trains model, see doc on main() for more details.'''
-    
-    
+
+    ckpt_dir = os.path.join(model_dir, frontend_mode)
+        
     with strategy.scope():
         #import model
         print('Building Model')
@@ -110,14 +111,15 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         # setting up checkpoints
         print('Setting Up Checkpoints')
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
-        latest_checkpoint_file = tf.train.latest_checkpoint(model_dir)
+        latest_checkpoint_file = tf.train.latest_checkpoint(ckpt_dir)
         if latest_checkpoint_file:
             tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
             checkpoint.restore(latest_checkpoint_file)
             tf.print('Loading from checkpoint file completed')
+            prev_epoch = latest_checkpoint_file.split('_')[1][0]
 
         #epoch loop
-        for epoch in range(num_epochs):
+        for epoch in range(prev_epoch+1, num_epochs):
             start_time = time.time()
             tf.print('Epoch {}'.format(epoch))
 
@@ -175,7 +177,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 val_ROC_AUC.reset_states()
                 val_PR_AUC.reset_states()
 
-            checkpoint_path = os.path.join(model_dir, 'epoch_{}.ckpt'.format(epoch))
+            checkpoint_path = os.path.join(ckpt_dir, 'epoch_{}.ckpt'.format(epoch))
             saved_path = checkpoint.save(checkpoint_path)
             tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
 
@@ -186,7 +188,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
          window_length=15, random=False, with_tags=None, merge_tags=None,
-         log_dir = 'logs/trial1/', with_tids=None, num_epochs=5):
+         log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model', with_tids=None, num_epochs=5):
    
     '''Combines data input pipeline, networks, train and validation loops to 
         perform model training.
@@ -265,7 +267,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
           strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
           num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
           y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size,
-          lr=lr, log_dir=log_dir)
+          lr=lr, log_dir=log_dir, model_dir=model_dir)
 
 if __name__ == '__main__':
     #solve the warning--Could not dlopen library 'libcupti.so.10.0' warning
