@@ -14,7 +14,8 @@ from datetime import datetime
 import tensorflow as tf
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 import projectname as Model
-import train_cpu
+import projectname_input
+import modules.query_lastfm as q_fm
 
 
 
@@ -71,7 +72,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         # fucntions needs to be defined within the strategy scope
         def train_step(entry):
-            audio_batch, label_batch = entry['audio'], entry['tags']
+            audio_batch, label_batch = entry[0], entry[1]
 
             with tf.GradientTape() as tape:
                 logits = model(audio_batch) # TODO: training=True????
@@ -86,7 +87,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
 
         def val_step(entry):
-            audio_batch, label_batch = entry['audio'], entry['tags']
+            audio_batch, label_batch = entry[0], entry[1]
             logits = model(audio_batch)
             # TODO: record loss for val dataset?
             # loss_value = loss(label_batch, logits)
@@ -112,6 +113,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         print('Setting Up Checkpoints')
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
         latest_checkpoint_file = tf.train.latest_checkpoint(ckpt_dir)
+        prev_epoch = -1
         if latest_checkpoint_file:
             tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
             checkpoint.restore(latest_checkpoint_file)
@@ -180,14 +182,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             checkpoint_path = os.path.join(ckpt_dir, 'epoch_{}.ckpt'.format(epoch))
             saved_path = checkpoint.save(checkpoint_path)
             tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
+            if tf.equal(epoch % 5, 0):
+                model.save('/home/calle/model_epoch_{}.h5'.format(epoch))
 
             #report time
             time_taken = time.time()-start_time
             tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
 
-def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 20),
+        
+        model.save('/home/calle/model.h5')
+
+def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
-         window_length=15, random=False, with_tags=None, merge_tags=None,
+         window_size=15, random=False, with_tags=None, merge_tags=None,
          log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model', with_tids=None, num_epochs=5):
    
     '''Combines data input pipeline, networks, train and validation loops to 
@@ -251,13 +258,12 @@ def main(tfrecord_dir, frontend_mode, config_dir, train_val_test_split=(70, 10, 
     
     print('Preparing Dataset')
     train_dataset, val_dataset = \
-    train_cpu.generate_datasets(tfrecord_dir=tfrecord_dir, audio_format=frontend_mode, 
-                      train_val_test_split=train_val_test_split, 
-                      which = [True, True, False],
+    projectname_input.generate_datasets_from_dir(tfrecord_dir, frontend_mode, 
+                      split=split, 
                       batch_size=batch_size, shuffle=shuffle, 
-                      buffer_size=buffer_size, window_length=window_length, 
+                      buffer_size=buffer_size, window_size=window_size, 
                       random=random, with_tags=with_tags, merge_tags=merge_tags,
-                      with_tids=with_tids, num_epochs=1)
+                      with_tids=with_tids, num_epochs=1)[:2]
 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
@@ -274,4 +280,8 @@ if __name__ == '__main__':
     #https://github.com/google/seq2seq/issues/336
    #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
 
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/', train_val_test_split=(80, 10, 10), shuffle=True, batch_size=128, buffer_size=1000, num_epochs=5)
+    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
+    tags = fm.popularity().tag.to_list()[:50]
+    with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/', split=(80, 10, 10), shuffle=True, batch_size=128, buffer_size=1000, 
+             with_tags=with_tags, num_epochs=20)
