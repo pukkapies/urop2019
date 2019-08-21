@@ -31,9 +31,12 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                                   y_input=y_input, num_units=num_units, 
                                   num_filt=num_filt)
         
+        #s = 20 * 3000 // global_batch_size
+        
         #initialise loss, optimizer, metric
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
-
+        #learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(0.01, s, 0.1)
+        #optimizer = tf.keras.optimizers.Adam(learning_rate = learning_rate)
         train_ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='train_ROC_AUC', dtype=tf.float32)
         train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
 
@@ -130,16 +133,22 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
                 if tf.equal(num_batches % 10, 0):
                     tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', loss, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
+                    
+                    with train_summary_writer.as_default():
+                        tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=optimizer.iterations)
+                        tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=optimizer.iterations)
+                        tf.summary.scalar('Loss', train_PR_AUC.result(), step=optimizer.iterations)
+                        train_summary_writer.flush()
 
             train_loss = total_loss / num_batches
             # print progress
             tf.print('Epoch', epoch,  ': loss', train_loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
             # log to tensorboard
-            with train_summary_writer.as_default():
-                tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=epoch)
-                tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=epoch)
-                tf.summary.scalar('Loss', loss, step=epoch)
-                train_summary_writer.flush()
+            #with train_summary_writer.as_default():
+            #    tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=epoch)
+            #    tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=epoch)
+            #    tf.summary.scalar('Loss', loss, step=epoch)
+            #    train_summary_writer.flush()
 
             #print progress
             tf.print('Epoch {} --training done'.format(epoch))
@@ -269,4 +278,4 @@ if __name__ == '__main__':
     #https://github.com/google/seq2seq/issues/336
    #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
 
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/config.json', train_val_test_split=(70, 10, 0), shuffle=True, batch_size=64, buffer_size=1000, num_epochs=2)
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/config.json', train_val_test_split=(50, 1, 0), shuffle=True, batch_size=128, buffer_size=1000, num_epochs=2)
