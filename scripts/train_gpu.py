@@ -128,21 +128,25 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             tf.summary.trace_on(graph=False, profiler=True)
 
             total_loss = 0.0
+            temp_loss = 0.0
             num_batches = 0
             for entry in train_dist_dataset:
                 loss = distributed_train_body(entry)            
-                total_loss += loss
+                temp_loss += loss
                 num_batches += 1
 
                 if tf.equal(num_batches % 10, 0):
-                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', loss, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
+                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', temp_loss/10, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
                     
                     with train_summary_writer.as_default():
                         tf.summary.scalar('ROC_AUC', train_ROC_AUC.result(), step=optimizer.iterations)
                         tf.summary.scalar('PR_AUC', train_PR_AUC.result(), step=optimizer.iterations)
-                        tf.summary.scalar('Loss', loss, step=optimizer.iterations)
+                        tf.summary.scalar('Loss', temp_loss/10, step=optimizer.iterations)
                         train_summary_writer.flush()
 
+                    total_loss += temp_loss
+                    temp_loss = 0.0
+            total_loss += temp_loss
             train_loss = total_loss / num_batches
             # print progress
             tf.print('Epoch', epoch,  ': loss', train_loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
