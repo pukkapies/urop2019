@@ -19,7 +19,7 @@ def build_compiled_model(audio_format, n_output_neurons, y_input, n_units, n_fil
     model.compile(optimizer=OPTIMIZER, loss=LOSS, metrics=METRICS)
     return model
 
-def train(model, train_dataset, valid_dataset=None, num_epochs=5, num_steps_per_epoch=None),:
+def train(model, train_dataset, valid_dataset=None, num_epochs=5, num_steps_per_epoch=None):
 
     log_dir="logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M")
 
