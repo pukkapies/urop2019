@@ -37,6 +37,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
         #learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(0.01, s, 0.1)
         #optimizer = tf.keras.optimizers.Adam(learning_rate = learning_rate)
+        loss_obj = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
         train_ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='train_ROC_AUC', dtype=tf.float32)
         train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
 
@@ -64,18 +65,13 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             val_log_dir = log_dir + current_time + '/val'
             val_summary_writer = tf.summary.create_file_writer(val_log_dir)
 
-        def compute_loss(labels, logits):
-            per_example_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels, logits)
-            return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
-
-        
         # fucntions needs to be defined within the strategy scope
         def train_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
 
             with tf.GradientTape() as tape:
                 logits = model(audio_batch) # TODO: training=True????
-                loss = compute_loss(label_batch, logits)
+                loss = tf.nn.compute_average_loss(loss_obj(label_batch, logits), global_batch_size=global_batch_size)
 
             grads = tape.gradient(loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
