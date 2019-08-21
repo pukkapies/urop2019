@@ -19,7 +19,10 @@ def build_compiled_model(audio_format, n_output_neurons, y_input, n_units, n_fil
     model.compile(optimizer=OPTIMIZER, loss=LOSS, metrics=METRICS)
     return model
 
-def train(model, train_dataset, valid_dataset=None):
+def train(model, train_dataset, valid_dataset=None, num_epochs=5, num_steps_per_epoch=None),:
+
+    log_dir="logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M")
+
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
             filepath='mymodel_{epoch}.h5',
@@ -30,8 +33,6 @@ def train(model, train_dataset, valid_dataset=None):
             log_dir=log_dir, 
             histogram_freq=1),
         ]
-    
-    log_dir="logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M")
 
     history = model.fit(train_dataset, epochs=num_epochs, steps_per_epoch=num_steps_per_epoch, callbacks=callbacks, validation_data=valid_dataset)
 
