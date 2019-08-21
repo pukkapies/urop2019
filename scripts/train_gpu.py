@@ -20,7 +20,7 @@ import train_cpu
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
-          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/home/aden/urop2019/model',
+          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
           analyse_trace=False):
     '''Trains model, see doc on main() for more details.'''
     
@@ -39,7 +39,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
         #learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(0.01, s, 0.1)
         #optimizer = tf.keras.optimizers.Adam(learning_rate = learning_rate)
-        loss_obj = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
+        loss_obj = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
         train_ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='train_ROC_AUC', dtype=tf.float32)
         train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
 
@@ -74,7 +74,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
             with tf.GradientTape() as tape:
                 logits = model(audio_batch) # TODO: training=True????
-                loss = tf.nn.compute_average_loss(loss_obj(label_batch, logits), global_batch_size=global_batch_size)
+                loss = loss_obj(label_batch, logits)
 
             grads = tape.gradient(loss, model.trainable_weights)
             optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -158,12 +158,11 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             train_PR_AUC.reset_states()
 
             if validation:
-                tf.print('IN VAL')
+                tf.print('Validation')
                 num_batches = 0
                 for entry in val_dist_dataset:
                     distributed_val_body(entry) 
                     num_batches += 1
-                    tf.print('STEP: ', num_batches)
 
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC', val_ROC_AUC.result(), step=epoch)
@@ -273,4 +272,4 @@ if __name__ == '__main__':
     #https://github.com/google/seq2seq/issues/336
    #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
 
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/aden/urop2019/config.json', train_val_test_split=(2, 1, 0), shuffle=True, batch_size=128, buffer_size=1000, num_epochs=5)
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', '/home/calle/', train_val_test_split=(80, 10, 10), shuffle=True, batch_size=128, buffer_size=1000, num_epochs=5)
