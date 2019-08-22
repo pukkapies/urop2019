@@ -15,7 +15,6 @@ import tensorflow as tf
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 import projectname as Model
 import projectname_input
-import modules.query_lastfm as q_fm
 
 
 
@@ -69,14 +68,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         if validation:
             val_log_dir = log_dir + current_time + '/val'
             val_summary_writer = tf.summary.create_file_writer(val_log_dir)
-
+        
+        #rescale loss
+        def compute_loss(labels, predictions):
+            per_example_loss = loss_obj(labels, predictions)
+            return per_example_loss/global_batch_size
+        
         # fucntions needs to be defined within the strategy scope
         def train_step(entry):
             audio_batch, label_batch = entry[0], entry[1]
 
             with tf.GradientTape() as tape:
                 logits = model(audio_batch) # TODO: training=True????
-                loss = loss_obj(label_batch, logits)
+                loss = compute_loss(label_batch, logits)
             variables = model.trainable_variables
             grads = tape.gradient(loss, variables)
             optimizer.apply_gradients(zip(grads, variables))
@@ -189,9 +193,11 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         checkpoint.save(checkpoint_path) 
 
 def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
-         batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
-         window_size=15, random=False, with_tags=None, merge_tags=None,
-         log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model', with_tids=None, num_epochs=5):
+         num_epochs=5, sample_rate=16000, batch_size=32, cycle_length=2, 
+         validation=True, shuffle=True, buffer_size=10000, window_size=15, 
+         random=False, with_tags=None, merge_tags=None, num_tags=155,
+         log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model', 
+         with_tids=None, analyse_trace=False):
    
     '''Combines data input pipeline, networks, train and validation loops to 
         perform model training.
@@ -255,22 +261,42 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
     
     print('Preparing Dataset')
     train_dataset, val_dataset = \
-    projectname_input.generate_datasets_from_dir(tfrecord_dir, frontend_mode, 
-                      split=split, 
-                      batch_size=batch_size, shuffle=shuffle, 
-                      buffer_size=buffer_size, window_size=window_size, 
-                      random=random, with_tags=with_tags, merge_tags=merge_tags,
-                      with_tids=with_tids, num_epochs=1)[:2]
+    projectname_input.generate_datasets_from_dir(tfrecord_dir=tfrecord_dir,
+                                                 audio_format=frontend_mode, 
+                                                 split=split, 
+                                                 sample_rate=sample_rate,
+                                                 batch_size=batch_size,
+                                                 cycle_length=cycle_length,
+                                                 shuffle=shuffle,
+                                                 buffer_size=buffer_size, 
+                                                 window_size=window_size, 
+                                                 random=random,
+                                                 with_tags=with_tags, 
+                                                 merge_tags=merge_tags,
+                                                 with_tids=with_tids, 
+                                                 num_tags=num_tags,
+                                                 num_epochs=1,
+                                                 as_tuple=False)[:2]
 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
     
     print('Train Begin')
-    train(frontend_mode=frontend_mode, train_dist_dataset=train_dist_dataset, 
-          strategy=strategy, val_dist_dataset=val_dist_dataset, validation=validation,  
-          num_epochs=num_epochs, num_output_neurons=num_output_neurons, 
-          y_input=y_input, num_units=num_units, num_filt=num_filt, global_batch_size=batch_size,
-          lr=lr, log_dir=log_dir, model_dir=model_dir)
+    train(frontend_mode=frontend_mode, 
+          train_dist_dataset=train_dist_dataset, 
+          strategy=strategy, 
+          val_dist_dataset=val_dist_dataset, 
+          validation=validation,  
+          num_epochs=num_epochs, 
+          num_output_neurons=num_output_neurons, 
+          y_input=y_input, 
+          num_units=num_units, 
+          num_filt=num_filt, 
+          global_batch_size=batch_size,
+          lr=lr, 
+          log_dir=log_dir, 
+          model_dir=model_dir,
+          analyse_trace=analyse_trace)
 
 if __name__ == '__main__':
     #solve the warning--Could not dlopen library 'libcupti.so.10.0' warning
