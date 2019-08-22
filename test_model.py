@@ -57,20 +57,32 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
 
     print('ROC_AUC: ', ROC_AUC.result(), '; PR_AUC: ', PR_AUC.result())
 
-def predict(model, audio, with_tags, cutoff, db_path='/srv/data/urop/lastfm_clean.db'):
+def get_slices(audio, audio_format, sample_rate, window_size=15):
+    
+    if audio_format == 'waveform':
+        slice_length = window_size*sample_rate
+        n_slices = len(audio)//slice_length
+        return np.array([audio[i*slice_length:(i+1)*slice_length] for i in range(n_slices)].append(:-audio[slices*slice_length]))
+
+    elif audio_format == 'log-mel-spectrogram':
+        slice_length = window_size*sample_rate//512
+        n_slices = len(audio.shape[1])
+        return np.array([audio[:,i*slice_length:(i+1)*slice_length] for i in range(n_slices)].append(audio[:,:-slices*slice_length]))
+
+def predict(model, audio, audio_format, with_tags, cutoff=0.5, window_length=15, db_path='c/srv/data/urop/lastfm_clean.db'):
     ''' Predicts tags given audio for one track '''
 
-    logits = model(audio)
     fm = q_fm.LastFm(db_path)
 
-    tags = []
+    # compute average by using a moving window
+    slices = get_slices(audio, audio_format, sample_rate, window_size)
+    logits = numpy.average(model(slices), axis=0)
     
-    # if there is only one array
+    # get tags
     tags = []
-
-    for idx, probability in enumerate(logits):
-        if probability > 0.5:
-            tags.append((fm.tag_num_to_tag(with_tags[idx-1]), probability))
+    for idx, val in enumerate(logits):
+        if val >= cutoff:
+            tags.append((fm.tag_num_to_tag(with_tags[idx-1]), val))
 
     return tags
 
