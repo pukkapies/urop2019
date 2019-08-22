@@ -41,7 +41,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
     dataset = projectname_input.generate_datasets_from_dir(tfrecords_dir, audio_format, split=split, 
                                                             batch_size=batch_size, shuffle=False, window_size=window_size,
                                                             random=random, with_tags=with_tags, with_tids=with_tids,
-                                                            merge_tags=merge_tags, num_tags=155, num_epochs=2)[-1]
+                                                            merge_tags=merge_tags, num_tags=155, num_epochs=1)[-1]
 
     ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='ROC_AUC',  dtype=tf.float32)
     PR_AUC = tf.keras.metrics.AUC(curve='PR', name='PR_AUC', dtype=tf.float32)
