@@ -1,30 +1,36 @@
 import modules.query_lastfm as q_fm
-import scripts.train as train
+import projectname_input
 
-def test(model, tfrecord_dir, audio_format, train_val_test_split, batch_size, window_length, random, with_tags, with_tids):
+def test(model, tfrecord_dir, audio_format, config_dir, split, batch_size=64, window_length=15, random=False, with_tags=None, with_tids=None, merge_tags=None, num_tags=155):
     ''' Tests model '''
 
+    if not os.path.isfile(config_dir):
+        config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
+
+    with open(config_dir) as f:
+        file = json.load(f)
+
+    num_tags = file['dataset_specs']['n_tags']
+
     test_datasets = \ 
-    train.generate_datasets(tfrecord_dir=tfrecord_dir, 
-                      train_val_test_split=train_val_test_split, 
-                      which = [False, False, True],
-                      batch_size=batch_size, shuffle=shuffle, 
-                      buffer_size=buffer_size, window_length=window_length, 
-                      random=random, with_tags=with_tags, with_tids=with_tids, 
-                      num_epochs=1)
+    projectname_input.generate_datasets_from_dir(tfrecord_dir, audio_fromat, split=split, 
+                      batch_size=batch_size, shuffle=False, window_size=window_size,
+                      random=random, with_tags=with_tags, with_tids=with_tids,
+                      merge_tags=merge_tags, num_tags=num_tags, num_epochs=1)[-1]
 
-    AUC = tf.keras.metrics.AUC(name='AUC', dtype=tf.float32)
+    ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='ROC_AUC',  dtype=tf.float32)
+    PR_AUC = tf.keras.metrics.AUC(curve='PR', name='PR_AUC', dtype=tf.float32)
 
-    for dataset in train_datasets:
-        for entry in dataset:
+    for entry in dataset:
 
-            x_batch, y_batch = entry['audio'], entry['tags']
+        audio_batch, label_batch = entry[0], entry[1]
 
-            logits = model(x_batch)
+        logits = model(audio_batch)
 
-            AUC(y_batch, logits)
+        ROC_AUC.update_state(label_batch, logits)
+        PR_AUC.update_state(label_batch, logits)
 
-    print('Test set AUC: ', AUC.result())
+    print('ROC_AUC: ', ROC_AUC.result(), '; PR_AUC: ', PR_AUC.result())
 
 def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db')
     ''' Predicts tags given audio for one track '''
@@ -55,3 +61,7 @@ def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db')
             track_tags.append(tags)
 
         return track_tags
+
+if __name__ == '__main__':
+    CONFIG_FOLDER  = '/home/calle'
+    main('', '',)
