@@ -21,8 +21,8 @@ import modules.query_lastfm as q_fm
 
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
-          num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
-          analyse_trace=False):
+          num_filt=32, lr=0.001, log_dir = '/srv/data/urop/model/logs/', model_dir='/srv/data/urop/model',
+          analyse_trace=True):
     '''Trains model, see doc on main() for more details.'''
 
     ckpt_dir = os.path.join(model_dir, frontend_mode)
@@ -191,7 +191,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
          batch_size=32, validation=True, shuffle=True, buffer_size=10000, 
          window_size=15, random=False, with_tags=None, merge_tags=None,
-         log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model', with_tids=None, num_epochs=5):
+         log_dir = '/srv/data/urop/model/logs/', model_dir='/srv/data/urop/model', with_tids=None, num_epochs=5):
    
     '''Combines data input pipeline, networks, train and validation loops to 
         perform model training.
@@ -251,7 +251,6 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
     num_filt = file['training_options']['n_filters']
 
     strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
-    num_output_neurons = 155 # TEMP
     
     print('Preparing Dataset')
     train_dataset, val_dataset = \
@@ -275,11 +274,11 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
 if __name__ == '__main__':
     #solve the warning--Could not dlopen library 'libcupti.so.10.0' warning
     #https://github.com/google/seq2seq/issues/336
-   #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
+    os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
 
-    # fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
-    # tags = fm.popularity().tag.to_list()[:50]
-    # with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
-    CONFIG_FOLDER = 'home/calle/'
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(2, 1, 0), shuffle=True, batch_size=128, buffer_size=1000,
-             with_tags=None, num_epochs=5)
+    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
+    tags = fm.popularity().tag.to_list()[:50]
+    with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
+    CONFIG_FOLDER = '/home/calle/'
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(80, 10, 10), shuffle=True, batch_size=128, buffer_size=1000,
+             with_tags=with_tags, num_epochs=10)
