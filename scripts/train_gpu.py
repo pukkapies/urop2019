@@ -1,6 +1,22 @@
 '''
 Notes
 -----
+The module contains the ultimate function, main() for performing model 
+training. It combines the data input pipeline in projectName_input.py (which 
+uses the pre-generated tfrecords file by audio_processing.py), the
+network proposed by Pon et. al (2018) in projectname.py, and a customised 
+training loop (with validation) with Mirrored Strategy integrated for multiple-
+GPU training.
+
+The customised training loop uses the Adam optimizer to minimise losses 
+computed by BinaryCrossentropy. The PR AUC and ROC AUC are used as metrics to 
+monitor the training progress. Tensorboard is automatically logging the metrics
+per 10 batches, and can return profiling information if analyse_trace is set 
+True. Finally, a Checkpoint is created and saved in the designated directory
+at the end of each epoch. By recovering CheckPoint, the training will resume 
+from the latest completed epoch.
+
+IMPORTANT: The codes are written in tensorflow 2.0.0-beta version.
 
 Functions
 ---------
