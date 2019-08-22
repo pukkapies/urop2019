@@ -15,6 +15,7 @@ import tensorflow as tf
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 import projectname as Model
 import projectname_input
+#import query_lastfm as q_fm
 
 
 
@@ -62,6 +63,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         
         if analyse_trace:
+            print('TIPS: To ensure the profiler works correctly, make sure the LD_LIBRARY_PATH is set correctly. \
+                  For Boden, set--- export LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64" before Python is initialised.')
             prof_log_dir = log_dir + current_time + '/prof'
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
 
@@ -304,9 +307,6 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
           analyse_trace=analyse_trace)
 
 if __name__ == '__main__':
-    #solve the warning--Could not dlopen library 'libcupti.so.10.0' warning
-    #https://github.com/google/seq2seq/issues/336
-   #os.environ['LD_LIBRARY_PATH'] = "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
 
     # fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
     # tags = fm.popularity().tag.to_list()[:50]
