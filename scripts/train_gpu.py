@@ -281,6 +281,11 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
     
+    if with_tags:
+        num_output_neurons = len(with_tags)
+        if merge_tags:
+            num_output_neurons = num_output_neurons - len(merge_tags)
+    
     print('Train Begin')
     train(frontend_mode=frontend_mode, 
           train_dist_dataset=train_dist_dataset, 
