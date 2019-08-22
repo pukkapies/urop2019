@@ -1,8 +1,18 @@
 '''
-TODO LIST:
-- add printing
-- fix tensorboard and make it run on Boden (create graph, profile)
-- evaluation method (include test phase and convert tag_num to tag)
+Notes
+-----
+
+Functions
+---------
+- train
+    Compile model with optimisers, loss, and train with customed training loops 
+    and validation loops.
+    
+- main
+    Combine data input pipeline, networks, train and validation loops to 
+    perform model training.
+    
+    
 '''
 
 import sys
@@ -155,7 +165,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
 
             #print progress
-            tf.print('Epoch {} --training done'.format(epoch))
+            tf.print('Epoch {} --training done\n'.format(epoch))
 
             # tensorboard export profiling and record train AUC and loss
             if analyse_trace:
@@ -207,6 +217,8 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
 
     Parameters
     ----------
+    tfrecord_dir: str
+        The directory of where the tfrecord files are stored.
         
     frontend_mode: str
         'waveform' or 'log-mel-spectrogram', indicating the format of the
@@ -217,12 +229,22 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
         training and dataset configuration info) created in projectname.py 
         is stored.
 
-    train_val_test_split: tuple (a tuple of three integers)
+    split: tuple (a tuple of three integers)
         Specifies the train/validation/test percentage to use when selecting 
         the .tfrecord files.
+        
+    num_epochs: int
+        Number of epochs.
+        
+    sample_rate: int
+        The sampling rate of the audio data, this should be consistent with
+        the rate used to generate the tfrecord files.
 
     batch_size: int
         Specifies the dataset batch_size.
+        
+    cycle_length: int
+        Controls the number of input elements that are processed concurrently.
 
     validation: bool
         If True, validation is performed within each epoch.
@@ -233,17 +255,39 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
     buffer_size: int
         If shuffle is True, sets the shuffle buffer size.
 
-    window_length: list, int
-        Specifies the desired window length (in seconds) for the various datasets.
+    window_size: int
+        Specifies the desired window length (in seconds) for the audio data
+        in the datasets.
 
     random: bool
-        Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+        Specifies how the window is to be extracted. If True, slices 
+        the window randomly (default is pick from the middle).
 
     with_tags: list
         If not None, contains the tags to use.
 
     merge_tags: list
-        If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
+        If not None, contains the lists of tags to be merged together 
+        (only applies if with_tags is specified).
+        
+    num_tags: int
+        The number of tags contained in the tfrecord files.
+        
+    log_dir: str
+        The directory where the tensorboard data (profiling, PR_AUC, ROC_AUC, 
+        loss logging) are stored.
+        
+    model_dir: str
+        The directory where the Checkpoints files from each epoch will be 
+        stored. Note that the actual files will be stored under a subfolder
+        based on the frontend_mode.
+        
+    with_tids: str
+        If not None, contains the tids to be trained on.
+        
+    analyse_trace: bool
+        If True, the trace information (profiling in tensorboard) is stored
+        for each epoch.
     '''
     
     #initialise configuration
