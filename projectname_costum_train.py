@@ -221,7 +221,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         checkpoint_path = os.path.join(ckpt_dir, 'trained')
         checkpoint.save(checkpoint_path) 
 
-def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
+def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
          num_epochs=5, sample_rate=16000, batch_size=32, cycle_length=2, 
          validation=True, shuffle=True, buffer_size=10000, window_size=15, 
          random=False, with_tags=None, merge_tags=None, num_tags=155,
@@ -233,7 +233,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
 
     Parameters
     ----------
-    tfrecord_dir: str
+    tfrecords_dir: str
         The directory of where the tfrecord files are stored.
         
     frontend_mode: str
@@ -323,7 +323,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
     
     print('Preparing Dataset')
     train_dataset, val_dataset = \
-    projectname_input.generate_datasets_from_dir(tfrecord_dir=tfrecord_dir,
+    projectname_input.generate_datasets_from_dir(tfrecords_dir=tfrecords_dir,
                                                  audio_format=frontend_mode, 
                                                  split=split, 
                                                  sample_rate=sample_rate,
@@ -338,7 +338,7 @@ def main(tfrecord_dir, frontend_mode, config_dir, split=(70, 10, 20),
                                                  with_tids=with_tids, 
                                                  num_tags=num_tags,
                                                  num_epochs=1,
-                                                 as_tuple=False)[:2]
+                                                 as_tuple=True)[:2]
 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)

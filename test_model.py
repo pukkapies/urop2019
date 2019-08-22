@@ -1,9 +1,15 @@
+import os
+import json
+
+import tensorflow as tf
+
 import modules.query_lastfm as q_fm
 import projectname_input
+import projectname as Model
 
-def test(model, tfrecord_dir, audio_format, config_dir, split, batch_size=64, window_length=15, random=False, with_tags=None, with_tids=None, merge_tags=None, num_tags=155):
+def test(checkpoint_dir, tfrecords_dir, audio_format, config_dir, split, batch_size=64, window_size=15, random=False, with_tags=None, with_tids=None, merge_tags=None):
     ''' Tests model '''
-
+    # getting config settings
     if not os.path.isfile(config_dir):
         config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
 
@@ -11,12 +17,25 @@ def test(model, tfrecord_dir, audio_format, config_dir, split, batch_size=64, wi
         file = json.load(f)
 
     num_tags = file['dataset_specs']['n_tags']
+    y_input = file['dataset_specs']['n_mels']
+    num_units = file['training_options']['n_dense_units']
+    num_filt = file['training_options']['n_filters']
 
-    test_datasets = \ 
-    projectname_input.generate_datasets_from_dir(tfrecord_dir, audio_fromat, split=split, 
-                      batch_size=batch_size, shuffle=False, window_size=window_size,
-                      random=random, with_tags=with_tags, with_tids=with_tids,
-                      merge_tags=merge_tags, num_tags=num_tags, num_epochs=1)[-1]
+    # loading test dataset
+    dataset = projectname_input.generate_datasets_from_dir('/srv/data/urop/tfrecords-log-mel-spectrogram/', audio_format, split=split, 
+                                                            batch_size=batch_size, shuffle=False, window_size=window_size,
+                                                            random=random, with_tags=with_tags, with_tids=with_tids,
+                                                            merge_tags=merge_tags, num_tags=155, num_epochs=2)[-1]
+    # loading model
+    model = Model.build_model(frontend_mode=audio_format, 
+                                num_output_neurons=num_tags, y_input=y_input,
+                                num_units=num_units, num_filt=num_filt)
+    # loading latest training checkpoint 
+    checkpoint = tf.train.Checkpoint(model=model)
+    latest = tf.train.latest_checkpoint(checkpoint_dir)
+    print('Loadind from {}'.format(latest))
+    checkpoint.restore(latest)
+    print(dataset)
 
     ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='ROC_AUC',  dtype=tf.float32)
     PR_AUC = tf.keras.metrics.AUC(curve='PR', name='PR_AUC', dtype=tf.float32)
@@ -32,7 +51,7 @@ def test(model, tfrecord_dir, audio_format, config_dir, split, batch_size=64, wi
 
     print('ROC_AUC: ', ROC_AUC.result(), '; PR_AUC: ', PR_AUC.result())
 
-def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db')
+def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db'):
     ''' Predicts tags given audio for one track '''
 
     logits = model(audio)
@@ -63,5 +82,12 @@ def predict(model, audio, with_tags, db_path='/srv/data/urop/lastfm_clean.db')
         return track_tags
 
 if __name__ == '__main__':
-    CONFIG_FOLDER  = '/home/calle'
-    main('', '',)
+    # getting tags
+    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
+    tags = fm.popularity().tag.to_list()[:50]
+    with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
+    print(with_tags)
+    CONFIG_DIR  = '/home/calle'
+    
+    # loading model
+    test('/srv/data/urop/model/log-mel-spectrogram', '/srv/data/urop/tfrecords-log-mel-spectrogram/', 'log-mel-spectrogram', CONFIG_DIR, (80, 10, 10), batch_size=128, with_tags=with_tags)
