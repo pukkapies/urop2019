@@ -80,6 +80,10 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         train_log_dir = log_dir + current_time + '/train'
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         
+        if validation:
+            val_log_dir = log_dir + current_time + '/val'
+            val_summary_writer = tf.summary.create_file_writer(val_log_dir)
+        
         if analyse_trace:
             print('TIPS: To ensure the profiler works correctly, make sure the LD_LIBRARY_PATH is set correctly. \
                   For Boden, set--- export LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64" before Python is initialised.')
@@ -198,9 +202,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
             if validation:
                 tf.print('Validation')
-                
-                val_log_dir = log_dir + current_time + '/val'
-                val_summary_writer = tf.summary.create_file_writer(val_log_dir)
                 
                 val_ROC_AUC = tf.keras.metrics.AUC(curve = 'ROC', name='val_ROC_AUC', dtype=tf.float32)
                 val_PR_AUC = tf.keras.metrics.AUC(curve = 'PR', name='val_PR_AUC', dtype=tf.float32)
