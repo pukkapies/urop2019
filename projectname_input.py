@@ -212,6 +212,12 @@ def _window(features_dict, audio_format, sample_rate, window_size=15, random=Fal
     
     return features_dict
 
+def _spectrogram_normalization(features_dict):
+    mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2])
+    if tf.equal(variance, 0):
+        variance = 0.000001
+    return tf.divide(tf.subtract(features_dict['audio'], mean), variance)
+
 def _batch_normalization(features_dict):
     ''' Normalizes a batch to ensure zero mean and unit variance. '''
 
@@ -327,7 +333,10 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
         dataset = dataset.batch(batch_size, drop_remainder=True)
 
         # normalize data
-        dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        if audio_format == 'log-mel-spectrogram':
+            dataset = dataset.map(_spectrogram_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        else:
+            dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         # convert features from dict into tuple
         if as_tuple:
