@@ -144,6 +144,9 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             print(latest_checkpoint_file)
             prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
 
+        # for early stopping
+        max_PR_AUC = -1
+
         #epoch loop
         for epoch in range(prev_epoch+1, num_epochs):
             start_time = time.time()
@@ -228,7 +231,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 #early stopping
                 if (early_stopping_min_delta) or (early_stopping_patience):
                     tf.print('Early Stopping Enabled')
-                    max_PR_AUC = -1
                     
                     if not early_stopping_min_delta:
                         early_stopping_min_delta = 0.
@@ -414,9 +416,9 @@ def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
 
 if __name__ == '__main__':
 
-    # fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
-    # tags = fm.popularity().tag.to_list()[:50]
-    # with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
+    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
+    tags = fm.popularity().tag.to_list()[:50]
+    with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
     CONFIG_FOLDER = '/home/calle'
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(2, 1, 0), shuffle=True, batch_size=128, buffer_size=1000,
-             with_tags=None, num_epochs=5)
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(80, 10, 10), shuffle=True, batch_size=64, buffer_size=1000,
+             with_tags=with_tags, num_epochs=10)
