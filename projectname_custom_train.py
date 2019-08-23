@@ -41,18 +41,19 @@ import tensorflow as tf
 
 import projectname as Model
 import projectname_input
-#import query_lastfm as q_fm
+import query_lastfm as q_fm
 
 
 
-def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
+def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
           analyse_trace=False, early_stopping_min_delta=None, early_stopping_patience=None):
     '''Trains model, see doc on main() for more details.'''
 
-    ckpt_dir = os.path.join(model_dir, frontend_mode)
-        
+    current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
+    ckpt_dir = os.path.join(model_dir, frontend_mode+'_'+current_time)
+    
     with strategy.scope():
         #import model
         print('Building Model')
@@ -75,8 +76,6 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         tf.summary.trace_off()
         
         # setting up summary writers
-        current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
-
         train_log_dir = log_dir + current_time + '/train'
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         
@@ -138,14 +137,20 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         # setting up checkpoints
         print('Setting Up Checkpoints')
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
-        latest_checkpoint_file = tf.train.latest_checkpoint(ckpt_dir)
-        prev_epoch = -1
-        if latest_checkpoint_file:
-            tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
-            checkpoint.restore(latest_checkpoint_file)
-            tf.print('Loading from checkpoint file completed')
-            print(latest_checkpoint_file)
-            prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
+        
+        #resume
+        if resume_time:
+            ckpt_dir = os.path.join(model_dir, frontend_mode+'_'+resume_time)
+            
+            latest_checkpoint_file = tf.train.latest_checkpoint(ckpt_dir)
+            prev_epoch = -1
+            if latest_checkpoint_file:
+                tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
+                checkpoint.restore(latest_checkpoint_file)
+                tf.print('Loading from checkpoint file completed')
+                print(latest_checkpoint_file)
+                prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
+            
 
         # for early stopping
         max_PR_AUC = -1
@@ -261,7 +266,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         checkpoint_path = os.path.join(ckpt_dir, 'trained')
         checkpoint.save(checkpoint_path) 
 
-def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
+def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 10, 20),
          num_epochs=5, sample_rate=16000, batch_size=32, cycle_length=2, 
          validation=True, shuffle=True, buffer_size=10000, window_size=15, 
          random=False, with_tags=None, merge_tags=None, num_tags=155,
@@ -285,6 +290,12 @@ def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
         The directory (config.json) or path of where the json file (contains 
         training and dataset configuration info) created in projectname.py 
         is stored.
+        
+    resume_time: str
+        The time denoted in the latest checkpoint file of format 'YYMMDD-hhmmss'.
+        You may find out the time by viewing the folder name stored under the 
+        model_dir, e.g. log-mel-spectrogram_20190823-000120, then resume_time
+        should be equal to '20190823-000120'.
 
     split: tuple (a tuple of three integers)
         Specifies the train/validation/test percentage to use when selecting 
@@ -398,6 +409,7 @@ def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
     train(frontend_mode=frontend_mode, 
           train_dist_dataset=train_dist_dataset, 
           strategy=strategy, 
+          resume_time=resume_time
           val_dist_dataset=val_dist_dataset, 
           validation=validation,  
           num_epochs=num_epochs, 
