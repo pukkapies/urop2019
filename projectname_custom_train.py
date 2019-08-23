@@ -44,13 +44,20 @@ import tensorflow as tf
 import projectname as Model
 import projectname_input
 import query_lastfm as q_fm
+from pretty_print import MyEncoder, NoIndent
 
 
-
+def write_input_params(ckpt_dir, epoch):
+    'save main() input parameters'
+    with open(os.path.join(ckpt_dir, 'input_params.txt'), 'w') as f:
+        d = dict()
+        d[str(epoch)] = input_params
+        json.dumps(d, cls=MyEncoder, indent=2)
+                
 def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
-          analyse_trace=False, early_stopping_min_delta=None, early_stopping_patience=None):
+          analyse_trace=False, early_stopping_min_delta=None, early_stopping_patience=None, input_params=None):
     '''Trains model, see doc on main() for more details.'''
 
     current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -139,21 +146,29 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         # setting up checkpoints
         print('Setting Up Checkpoints')
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+        prev_epoch = -1
         
         #resume
-        if resume_time:
-            ckpt_dir = os.path.join(model_dir, frontend_mode+'_'+resume_time)
+        if resume_time is None:
+            write_input_params(ckpt_dir, 0)
             
+        else:
+            ckpt_dir = os.path.join(model_dir, frontend_mode+'_'+resume_time)
             latest_checkpoint_file = tf.train.latest_checkpoint(ckpt_dir)
-            prev_epoch = -1
             if latest_checkpoint_file:
                 tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
                 checkpoint.restore(latest_checkpoint_file)
                 tf.print('Loading from checkpoint file completed')
                 print(latest_checkpoint_file)
                 prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
+                
+                write_input_params(ckpt_dir, prev_epoch+1)
             
-
+            else:
+                print('Checkpoints not found, please use resume_time=False instead')
+                return
+                
+            
         # for early stopping
         max_PR_AUC = -200
 
@@ -244,7 +259,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                         early_stopping_patience = 1
                     
                     if os.path.isfile(os.path.join(ckpt_dir, 'early_stopping.npy')):
-                        error_accum = np.load(os.path.join(ckpt_dir, 'early_stopping.npy'))
+                        error_accum = int(np.load(os.path.join(ckpt_dir, 'early_stopping.npy')))
                     
                     if val_PR_AUC > (max_PR_AUC + early_stopping_min_delta):
                         max_PR_AUC = val_PR_AUC
@@ -369,6 +384,10 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
     early_stopping_patience: int
     
     '''
+    #save all parameters used
+    frame = inspect.currentframe()
+    _, _, _, values = inspect.getargvalues(frame)
+    input_params = values.pop('frame')
     
     #initialise configuration
     if not os.path.isfile(config_dir):
@@ -430,13 +449,9 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
           model_dir=model_dir,
           analyse_trace=analyse_trace,
           early_stopping_min_delta=early_stopping_min_delta,
-          early_stopping_patience=early_stopping_patience)
-
-
-def fn(1,2,3):
-    frame = inspect.currentframe()
-    _, _, _, values = inspect.getargvalues(frame)
-    values.pop('frame')
+          early_stopping_patience=early_stopping_patience,
+          input_params=input_params)
+    
     
     
 if __name__ == '__main__':
