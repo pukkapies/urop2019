@@ -44,16 +44,22 @@ import tensorflow as tf
 import projectname as Model
 import projectname_input
 import query_lastfm as q_fm
-from pretty_print import MyEncoder, NoIndent
+from pretty_print import MyEncoder
 
 
 def write_input_params(ckpt_dir, epoch, input_params):
     'save main() input parameters'
-    with open(os.path.join(ckpt_dir, 'input_params.txt'), 'w') as f:
-        d = dict()
+    txt_path = os.path.join(ckpt_dir, 'input_params.txt')
+    d = dict()
+    if os.path.isfile(txt_path):
+        with open(txt_path) as f:
+            d = json.load(f)
+            
+    with open(txt_path, 'w') as f:
         d[str(epoch)] = input_params
         s = json.dumps(d, cls=MyEncoder, indent=2)
         f.write(s)
+
                 
 def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
