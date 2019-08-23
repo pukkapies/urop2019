@@ -86,17 +86,49 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
         #train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
 
+            
+        # setting up checkpoints
+        print('Setting Up Checkpoints')
+        checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+        prev_epoch = -1
+        
+        #resume
+        if resume_time is None:
+            if not os.path.isdir(ckpt_dir):
+                os.makedirs(ckpt_dir)
+            write_input_params(ckpt_dir, 0, input_params)
+            log_time = current_time
+            
+        else:
+            ckpt_dir = os.path.join(model_dir, frontend_mode+'_'+resume_time)
+            latest_checkpoint_file = tf.train.latest_checkpoint(ckpt_dir)
+            if latest_checkpoint_file:
+                tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
+                checkpoint.restore(latest_checkpoint_file)
+                tf.print('Loading from checkpoint file completed')
+                print(latest_checkpoint_file)
+                prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
+                log_time = resume_time
+                
+                write_input_params(ckpt_dir, prev_epoch+1, input_params)
+            
+            else:
+                print('Checkpoints not found, please use resume_time=False instead')
+                return
+            
+        # for early stopping
+        max_PR_AUC = -200
         
         print('Setting Up Tensorboard')
         #in case of keyboard interrupt during previous training
         tf.summary.trace_off()
         
         # setting up summary writers
-        train_log_dir = log_dir + current_time + '/train'
+        train_log_dir = log_dir + resume_time + '/train'
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         
         if validation:
-            val_log_dir = log_dir + current_time + '/val'
+            val_log_dir = log_dir + resume_time + '/val'
             val_summary_writer = tf.summary.create_file_writer(val_log_dir)
             val_ROC_AUC = tf.keras.metrics.AUC(curve = 'ROC', name='val_ROC_AUC', dtype=tf.float32)
             val_PR_AUC = tf.keras.metrics.AUC(curve = 'PR', name='val_PR_AUC', dtype=tf.float32)
@@ -105,9 +137,8 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         if analyse_trace:
             print('TIPS: To ensure the profiler works correctly, make sure the LD_LIBRARY_PATH is set correctly. \
                   For Boden, set--- export LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64" before Python is initialised.')
-            prof_log_dir = log_dir + current_time + '/prof'
+            prof_log_dir = log_dir + resume_time + '/prof'
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
-            
         
         #rescale loss
         def compute_loss(labels, predictions):
@@ -149,37 +180,6 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         def distributed_val_body(entry):
             return strategy.experimental_run_v2(val_step, args=(entry,))
 
-
-        # setting up checkpoints
-        print('Setting Up Checkpoints')
-        checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
-        prev_epoch = -1
-        
-        #resume
-        if resume_time is None:
-            if not os.path.isdir(ckpt_dir):
-                os.makedirs(ckpt_dir)
-            write_input_params(ckpt_dir, 0, input_params)
-            
-        else:
-            ckpt_dir = os.path.join(model_dir, frontend_mode+'_'+resume_time)
-            latest_checkpoint_file = tf.train.latest_checkpoint(ckpt_dir)
-            if latest_checkpoint_file:
-                tf.print('Checkpoint file {} found, restoring'.format(latest_checkpoint_file))
-                checkpoint.restore(latest_checkpoint_file)
-                tf.print('Loading from checkpoint file completed')
-                print(latest_checkpoint_file)
-                prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
-                
-                write_input_params(ckpt_dir, prev_epoch+1, input_params)
-            
-            else:
-                print('Checkpoints not found, please use resume_time=False instead')
-                return
-                
-            
-        # for early stopping
-        max_PR_AUC = -200
 
         #epoch loop
         for epoch in range(prev_epoch+1, num_epochs):
