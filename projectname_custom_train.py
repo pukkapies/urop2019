@@ -67,7 +67,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
         
         train_ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='train_ROC_AUC', dtype=tf.float32)
         train_PR_AUC = tf.keras.metrics.AUC(curve='PR', name='train_PR_AUC', dtype=tf.float32)
-        train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
+        #train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
 
         
         print('Setting Up Tensorboard')
@@ -79,6 +79,10 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
 
         train_log_dir = log_dir + current_time + '/train'
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        
+        if validation:
+            val_log_dir = log_dir + current_time + '/val'
+            val_summary_writer = tf.summary.create_file_writer(val_log_dir)
         
         if analyse_trace:
             print('TIPS: To ensure the profiler works correctly, make sure the LD_LIBRARY_PATH is set correctly. \
@@ -154,7 +158,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 loss = distributed_train_body(entry)            
                 temp_loss += loss
                 num_batches += 1
-                train_mean_loss.update_state(loss)
+                #train_mean_loss.update_state(loss.numpy())
 
                 if tf.equal(num_batches % 10, 0):
                     tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', temp_loss/10, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
@@ -171,8 +175,8 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             # tensorboard per epoch
             with train_summary_writer.as_default():
                 tf.summary.scalar('ROC_AUC_epoch', train_ROC_AUC.result(), step=epoch)
-                tf.symmary.scalar('PR_AUC_epoch', train_PR_AUC.result(), step=epoch)
-                tf.summary.scalar('mean_loss_epoch', train_mean_loss.result(), step=epoch)
+                tf.summary.scalar('PR_AUC_epoch', train_PR_AUC.result(), step=epoch)
+                #tf.summary.scalar('mean_loss_epoch', train_mean_loss.result(), step=epoch)
                 train_summary_writer.flush()
                 
             total_loss += temp_loss
@@ -186,7 +190,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             
             train_ROC_AUC.reset_states()
             train_PR_AUC.reset_states()
-            train_mean_loss.reset_states()
+            #train_mean_loss.reset_states()
 
             # tensorboard export profiling and record train AUC and loss
             if analyse_trace:
@@ -199,22 +203,19 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
             if validation:
                 tf.print('Validation')
                 
-                val_log_dir = log_dir + current_time + '/val'
-                val_summary_writer = tf.summary.create_file_writer(val_log_dir)
-                
                 val_ROC_AUC = tf.keras.metrics.AUC(curve = 'ROC', name='val_ROC_AUC', dtype=tf.float32)
                 val_PR_AUC = tf.keras.metrics.AUC(curve = 'PR', name='val_PR_AUC', dtype=tf.float32)
-                val_mean_loss = tf.keras.metrics.Mean(name='val_mean_loss', dtype=tf.float32)
+                #val_mean_loss = tf.keras.metrics.Mean(name='val_mean_loss', dtype=tf.float32)
                 
                 for entry in val_dist_dataset:
                     loss = distributed_val_body(entry)
-                    val_mean_loss.update_state(loss)
+                    #val_mean_loss.update_state(loss)
                     
 
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC_epoch', val_ROC_AUC.result(), step=epoch)
                     tf.summary.scalar('PR_AUC_epoch', val_PR_AUC.result(), step=epoch)
-                    tf.summary.scalar('mean_loss_epoch', val_mean_loss.result(), step=epoch)
+                    #tf.summary.scalar('mean_loss_epoch', val_mean_loss.result(), step=epoch)
                     val_summary_writer.flush()
 
                 tf.print('Val- Epoch', epoch, ': ROC_AUC', val_ROC_AUC.result(), '; PR_AUC', val_PR_AUC.result())
@@ -222,7 +223,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 # reset val metric per epoch
                 val_ROC_AUC.reset_states()
                 val_PR_AUC.reset_states()
-                val_mean_loss.reset_states()
+                #val_mean_loss.reset_states()
                 
                 #early stopping
                 if (early_stopping_min_delta) or (early_stopping_patience):
@@ -244,6 +245,7 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                             tf.print('Early Stopping Criteria Satisfied.')
                             break
                     #TODO: record early stopping progress in case crushes
+                    
             elif (early_stopping_min_delta) or (early_stopping_patience):
                 tf.print('Need to enable validation in order to use Early Stopping')
 
@@ -415,6 +417,6 @@ if __name__ == '__main__':
     # fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
     # tags = fm.popularity().tag.to_list()[:50]
     # with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
-    CONFIG_FOLDER = '/home/calle/'
+    CONFIG_FOLDER = '/home/calle'
     main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(2, 1, 0), shuffle=True, batch_size=128, buffer_size=1000,
              with_tags=None, num_epochs=5)
