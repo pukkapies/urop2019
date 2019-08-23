@@ -48,7 +48,7 @@ import projectname_input
 def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
-          analyse_trace=False):
+          analyse_trace=False, early_stopping_min_delta=None, early_stopping_patience=None):
     '''Trains model, see doc on main() for more details.'''
 
     ckpt_dir = os.path.join(model_dir, frontend_mode)
@@ -206,6 +206,27 @@ def train(frontend_mode, train_dist_dataset, strategy, val_dist_dataset=None, va
                 # reset val metric per epoch
                 val_ROC_AUC.reset_states()
                 val_PR_AUC.reset_states()
+                
+                #early stopping
+                if (early_stopping_min_delta) or (early_stopping_patience):
+                    tf.print('Early Stopping Enabled')
+                    max_PR_AUC = -1
+                    
+                    if not early_stopping_min_delta:
+                        early_stopping_min_delta = 0.
+                    if not early_stopping_patience:
+                        early_stopping_patience = 1
+                    
+                    if val_PR_AUC > (max_PR_AUC + early_stopping_min_delta):
+                        max_PR_AUC = val_PR_AUC
+                        error_accum = 0
+                    else:
+                        error_accum += 1
+                        tf.print('Early Stopping - No Improvement - {}/{} satisfied'.format(error_accum, early_stopping_patience))
+                        if error_accum == early_stopping_patience:
+                            tf.print('Early Stopping Criteria Satisfied.')
+                            break
+                    #TODO: record early stopping progress in case crushes
 
             train_ROC_AUC.reset_states()
             train_PR_AUC.reset_states()
@@ -226,7 +247,8 @@ def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
          validation=True, shuffle=True, buffer_size=10000, window_size=15, 
          random=False, with_tags=None, merge_tags=None, num_tags=155,
          log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model', 
-         with_tids=None, analyse_trace=False):
+         with_tids=None, analyse_trace=False, early_stopping_min_delta=None,
+         early_stopping_patience=None):
    
     '''Combines data input pipeline, networks, train and validation loops to 
         perform model training.
@@ -304,6 +326,11 @@ def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
     analyse_trace: bool
         If True, the trace information (profiling in tensorboard) is stored
         for each epoch.
+        
+    early_stopping_min_delta: float
+    
+    early_stopping_patience: int
+    
     '''
     
     #initialise configuration
@@ -363,7 +390,9 @@ def main(tfrecords_dir, frontend_mode, config_dir, split=(70, 10, 20),
           lr=lr, 
           log_dir=log_dir, 
           model_dir=model_dir,
-          analyse_trace=analyse_trace)
+          analyse_trace=analyse_trace,
+          early_stopping_min_delta=early_stopping_min_delta,
+          early_stopping_patience=early_stopping_patience)
 
 if __name__ == '__main__':
 
