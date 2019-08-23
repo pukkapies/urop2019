@@ -214,9 +214,7 @@ def _window(features_dict, audio_format, sample_rate, window_size=15, random=Fal
 
 def _spectrogram_normalization(features_dict):
     mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2])
-    if tf.equal(variance, 0):
-        variance = 0.000001
-    return tf.divide(tf.subtract(features_dict['audio'], mean), variance)
+    return tf.divide(tf.subtract(features_dict['audio'], mean), tf.sqrt(variance+0.000001))
 
 def _batch_normalization(features_dict):
     ''' Normalizes a batch to ensure zero mean and unit variance. '''
