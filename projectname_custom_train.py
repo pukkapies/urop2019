@@ -124,11 +124,11 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         tf.summary.trace_off()
         
         # setting up summary writers
-        train_log_dir = log_dir + resume_time + '/train'
+        train_log_dir = log_dir + log_time + '/train'
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         
         if validation:
-            val_log_dir = log_dir + resume_time + '/val'
+            val_log_dir = log_dir + log_time + '/val'
             val_summary_writer = tf.summary.create_file_writer(val_log_dir)
             val_ROC_AUC = tf.keras.metrics.AUC(curve = 'ROC', name='val_ROC_AUC', dtype=tf.float32)
             val_PR_AUC = tf.keras.metrics.AUC(curve = 'PR', name='val_PR_AUC', dtype=tf.float32)
@@ -137,7 +137,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         if analyse_trace:
             print('TIPS: To ensure the profiler works correctly, make sure the LD_LIBRARY_PATH is set correctly. \
                   For Boden, set--- export LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64" before Python is initialised.')
-            prof_log_dir = log_dir + resume_time + '/prof'
+            prof_log_dir = log_dir + log_time + '/prof'
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
         
         #rescale loss
@@ -301,7 +301,7 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
          num_epochs=5, sample_rate=16000, batch_size=32, cycle_length=2, 
          validation=True, shuffle=True, buffer_size=10000, window_size=15, 
          random=False, with_tags=None, merge_tags=None, num_tags=155,
-         log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model', 
+         log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
          with_tids=None, analyse_trace=False, early_stopping_min_delta=None,
          early_stopping_patience=None):
    
@@ -471,4 +471,4 @@ if __name__ == '__main__':
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
     CONFIG_FOLDER = '/home/calle'
     main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(2, 1, 0), shuffle=True, batch_size=64, buffer_size=1000, random=True,
-             with_tags=with_tags, num_epochs=10)
+         with_tags=with_tags, num_epochs=10)
