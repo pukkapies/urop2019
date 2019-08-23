@@ -47,12 +47,13 @@ import query_lastfm as q_fm
 from pretty_print import MyEncoder, NoIndent
 
 
-def write_input_params(ckpt_dir, epoch):
+def write_input_params(ckpt_dir, epoch, input_params):
     'save main() input parameters'
     with open(os.path.join(ckpt_dir, 'input_params.txt'), 'w') as f:
         d = dict()
         d[str(epoch)] = input_params
-        json.dumps(d, cls=MyEncoder, indent=2)
+        s = json.dumps(d, cls=MyEncoder, indent=2)
+        f.write(s)
                 
 def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
@@ -150,7 +151,9 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         
         #resume
         if resume_time is None:
-            write_input_params(ckpt_dir, 0)
+            if not os.path.isdir(ckpt_dir):
+                os.makedirs(ckpt_dir)
+            write_input_params(ckpt_dir, 0, input_params)
             
         else:
             ckpt_dir = os.path.join(model_dir, frontend_mode+'_'+resume_time)
@@ -162,7 +165,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                 print(latest_checkpoint_file)
                 prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
                 
-                write_input_params(ckpt_dir, prev_epoch+1)
+                write_input_params(ckpt_dir, prev_epoch+1, input_params)
             
             else:
                 print('Checkpoints not found, please use resume_time=False instead')
@@ -387,7 +390,8 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
     #save all parameters used
     frame = inspect.currentframe()
     _, _, _, values = inspect.getargvalues(frame)
-    input_params = values.pop('frame')
+    values.pop('frame')
+    input_params = values
     
     #initialise configuration
     if not os.path.isfile(config_dir):
@@ -460,5 +464,5 @@ if __name__ == '__main__':
     tags = fm.popularity().tag.to_list()[:50]
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
     CONFIG_FOLDER = '/home/calle'
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(80, 10, 10), shuffle=True, batch_size=64, buffer_size=1000, random=True
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(2, 1, 0), shuffle=True, batch_size=64, buffer_size=1000, random=True,
              with_tags=with_tags, num_epochs=10)
