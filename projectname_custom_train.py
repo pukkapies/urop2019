@@ -35,8 +35,10 @@ import sys
 import os
 import time
 import json
+import inspect
 from datetime import datetime
 
+import numpy as np
 import tensorflow as tf
 
 import projectname as Model
@@ -153,7 +155,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
             
 
         # for early stopping
-        max_PR_AUC = -1
+        max_PR_AUC = -200
 
         #epoch loop
         for epoch in range(prev_epoch+1, num_epochs):
@@ -241,12 +243,17 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                     if not early_stopping_patience:
                         early_stopping_patience = 1
                     
+                    if os.path.isfile(os.path.join(ckpt_dir, 'early_stopping.npy')):
+                        error_accum = np.load(os.path.join(ckpt_dir, 'early_stopping.npy'))
+                    
                     if val_PR_AUC > (max_PR_AUC + early_stopping_min_delta):
                         max_PR_AUC = val_PR_AUC
                         error_accum = 0
+                        np.save(os.path.join(ckpt_dir, 'early_stopping.npy'), error_accum)
                     else:
                         error_accum += 1
                         tf.print('Early Stopping - No Improvement - {}/{} satisfied'.format(error_accum, early_stopping_patience))
+                        np.save(os.path.join(ckpt_dir, 'early_stopping.npy'), error_accum)
                         if error_accum == early_stopping_patience:
                             tf.print('Early Stopping Criteria Satisfied.')
                             break
@@ -264,7 +271,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
             tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
 
         checkpoint_path = os.path.join(ckpt_dir, 'trained')
-        checkpoint.save(checkpoint_path) 
+        checkpoint.save(checkpoint_path)
 
 def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 10, 20),
          num_epochs=5, sample_rate=16000, batch_size=32, cycle_length=2, 
@@ -409,7 +416,7 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
     train(frontend_mode=frontend_mode, 
           train_dist_dataset=train_dist_dataset, 
           strategy=strategy, 
-          resume_time=resume_time
+          resume_time=resume_time,
           val_dist_dataset=val_dist_dataset, 
           validation=validation,  
           num_epochs=num_epochs, 
@@ -425,15 +432,18 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
           early_stopping_min_delta=early_stopping_min_delta,
           early_stopping_patience=early_stopping_patience)
 
+
+def fn(1,2,3):
+    frame = inspect.currentframe()
+    _, _, _, values = inspect.getargvalues(frame)
+    values.pop('frame')
+    
+    
 if __name__ == '__main__':
 
     fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
     tags = fm.popularity().tag.to_list()[:50]
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
-
     CONFIG_FOLDER = '/home/calle'
-
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', 
-                CONFIG_FOLDER, split=(80, 10, 10),  shuffle=True, 
-                batch_size=64, buffer_size=1000, random=True, 
-                with_tags=with_tags, num_epochs=10)
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(80, 10, 10), shuffle=True, batch_size=64, buffer_size=1000, random=True
+             with_tags=with_tags, num_epochs=10)
