@@ -13,8 +13,19 @@ computed by BinaryCrossentropy. The PR AUC and ROC AUC are used as metrics to
 monitor the training progress. Tensorboard is automatically logging the metrics
 per 10 batches, and can return profiling information if analyse_trace is set 
 True. Finally, a Checkpoint is created and saved in the designated directory
-at the end of each epoch. By recovering CheckPoint, the training will resume 
-from the latest completed epoch.
+at the end of each epoch. By recovering CheckPoint using resume_time, the 
+training will resume from the latest completed epoch. 
+
+A input_params.txt is also automatically saved, which stores all the input 
+parameters used when main() is runEarly stopping is enabled if specified.
+Input_params will contain a dictionary which contains multiple dictionaries
+generated whenever the script is run for the first time or is resumed from
+Checkpoint respectively. The key of these smaller dictionaries is the epoch 
+number.
+
+Early stopping is enabled if specified, and a npy file will be generated to
+store the early stopping progress in case the script is stopped and resumed
+later.
 
 IMPORTANT: The codes are written in tensorflow 2.0.0-beta version.
 
@@ -389,8 +400,16 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
         for each epoch.
         
     early_stopping_min_delta: float
+        The validation PR-AUC in an epoch is greater than the sum of max 
+        validation PR-AUC and early_stopping_min_delta (when 
+        early_stopping_patience=0) if and only if the validation is counted 
+        as an improvement. If this is not None, early stopping will be 
+        automatically enabled wih default early_stopping_patience=1
     
     early_stopping_patience: int
+        The number of consecutive 'no improvement' epochs to trigger early
+        stopping to stop the training. If this is not None, early stopping
+        will be automatically enabled with default early_stopping_min_delta=0.
     
     '''
     #save all parameters used
