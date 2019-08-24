@@ -450,7 +450,7 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
                                                  with_tids=with_tids, 
                                                  num_tags=num_tags,
                                                  num_epochs=1,
-                                                 as_tuple=False)[:2]
+                                                 as_tuple=True)[:2]
 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
@@ -489,5 +489,5 @@ if __name__ == '__main__':
     tags = fm.popularity().tag.to_list()[:50]
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
     CONFIG_FOLDER = '/home/calle'
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(80, 10, 10), shuffle=True, batch_size=64, buffer_size=1000, random=True,
-         with_tags=with_tags, num_epochs=20)
+    main('/srv/data/urop/tfrecords-waveform', 'waveform', CONFIG_FOLDER, split=(2, 1, 0), shuffle=True, batch_size=64, buffer_size=1000, random=True,
+         with_tags=with_tags, num_epochs=5)
