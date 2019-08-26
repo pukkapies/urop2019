@@ -41,7 +41,7 @@ import tensorflow as tf
 
 import projectname as Model
 import projectname_input
-#import query_lastfm as q_fm
+import modules.query_lastfm as q_fm
 
 
 
@@ -422,6 +422,7 @@ if __name__ == '__main__':
     CONFIG_FOLDER = '/home/calle'
 
     main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', 
-                CONFIG_FOLDER, split=(80, 10, 10),  shuffle=True, 
-                batch_size=64, buffer_size=1000, random=True, 
-                with_tags=with_tags, num_epochs=10)
+                CONFIG_FOLDER, split=(80, 10, 10),  shuffle=True, batch_size=64,
+                buffer_size=1000, random=True, log_dir='/srv/data/urop/model/logs/trial2',
+                with_tags=with_tags, num_epochs=10, early_stopping_min_delta=0.001,
+                early_stopping_patience=3, model_dir='/srv/data/urop/model/trial2')
