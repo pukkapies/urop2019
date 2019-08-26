@@ -48,6 +48,7 @@ import time
 import json
 import inspect
 from datetime import datetime
+import gc
 
 import numpy as np
 import tensorflow as tf
@@ -118,7 +119,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                 checkpoint.restore(latest_checkpoint_file)
                 tf.print('Loading from checkpoint file completed')
                 print(latest_checkpoint_file)
-                prev_epoch = int(latest_checkpoint_file.split('-')[-1][0])
+                prev_epoch = int(latest_checkpoint_file.split('-')[-1])-1
                 log_time = resume_time
                 
                 write_input_params(ckpt_dir, prev_epoch+1, input_params)
@@ -185,31 +186,18 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
             
 
         @tf.function 
-        def distributed_train_body(entry):
-            per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
-            return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
-
-        @tf.function
-        def distributed_val_body(entry):
-            return strategy.experimental_run_v2(val_step, args=(entry,))
-
-
-        #epoch loop
-        for epoch in range(prev_epoch+1, num_epochs):
-            start_time = time.time()
-            tf.print('Epoch {}'.format(epoch))
-
-            tf.summary.trace_on(graph=False, profiler=True)
-
+        def distributed_train_body(entry, epoch):
             total_loss = 0.0
             temp_loss = 0.0
             num_batches = 0
+            
             for entry in train_dist_dataset:
-                loss = distributed_train_body(entry)            
+                per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
+                loss = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+                
                 temp_loss += loss
                 num_batches += 1
                 
-
                 if tf.equal(num_batches % 10, 0):
                     tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', temp_loss/10, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
                     
@@ -218,9 +206,27 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                         tf.summary.scalar('PR_AUC_itr', train_PR_AUC.result(), step=optimizer.iterations)
                         tf.summary.scalar('Loss_itr', temp_loss/10, step=optimizer.iterations)
                         train_summary_writer.flush()
-
+                        
                     total_loss += temp_loss
                     temp_loss = 0.0
+            
+            total_loss += temp_loss
+            return total_loss / tf.cast(num_batches, tf.float32)
+
+        @tf.function
+        def distributed_val_body(entry):
+            for entry in val_dist_dataset:
+                strategy.experimental_run_v2(val_step, args=(entry, ))
+
+
+        #epoch loop
+        for epoch in tf.range(prev_epoch+1, num_epochs, dtype=tf.int64):
+            start_time = time.time()
+            tf.print('Epoch {}'.format(epoch))
+
+            tf.summary.trace_on(graph=False, profiler=True)
+            
+            train_loss = distributed_train_body(train_dist_dataset, epoch)
             
             # tensorboard per epoch
             with train_summary_writer.as_default():
@@ -229,8 +235,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                 tf.summary.scalar('mean_loss_epoch', train_mean_loss.result(), step=epoch)
                 train_summary_writer.flush()
                 
-            total_loss += temp_loss
-            train_loss = total_loss / num_batches
+
             # print progress
             tf.print('Epoch', epoch,  ': loss', train_loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
 
@@ -249,15 +254,11 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                                             step=epoch, 
                                             profiler_outdir=os.path.normpath(prof_log_dir)) 
 
-
             if validation:
                 tf.print('Validation')
                 
-                for entry in val_dist_dataset:
-                    loss = distributed_val_body(entry)
-                    
-                    
-
+                distributed_val_body(val_dist_dataset)
+                
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC_epoch', val_ROC_AUC.result(), step=epoch)
                     tf.summary.scalar('PR_AUC_epoch', val_PR_AUC.result(), step=epoch)
@@ -306,6 +307,9 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
             #report time
             time_taken = time.time()-start_time
             tf.print('Time taken for epoch {}: {}s'.format(epoch, time_taken))
+            
+            tf.keras.backend.clear_session()
+            gc.collect()
 
         checkpoint_path = os.path.join(ckpt_dir, 'trained')
         checkpoint.save(checkpoint_path)
@@ -491,5 +495,5 @@ if __name__ == '__main__':
     tags = fm.popularity().tag.to_list()[:50]
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
     CONFIG_FOLDER = '/home/aden/urop2019'
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(80, 10, 10), shuffle=True, batch_size=64, buffer_size=1000, random=True,
+    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(2, 1, 0), shuffle=False, batch_size=32, buffer_size=None, random=True,
          with_tags=with_tags, num_epochs=20)
