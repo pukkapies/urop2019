@@ -316,7 +316,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
         if with_tags is not None:
             if merge_tags is not None:
                 dataset = dataset.map(lambda x: _merge(x, merge_tags))
-            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
+            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda y: _tag_filter_hotenc_mask(y, with_tags))
         if with_tids is not None:
             dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
         
