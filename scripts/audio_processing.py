@@ -19,16 +19,17 @@ START and STOP are integers. This is useful for splitting up the workload betwee
 If using this script elsewhere than on Boden following arguments will need to be set:
     --root-dir to set root directory of where the .npz files are stored
     --tag-path to set path to clean_lastfm.db, the database containing the cleaned tags
-    --csv-path to set path to ultimate.csv, the csv file containing tids that will be used and paths to their mp3 files
+    --csv-path to set path to ultimate.csv, the csv file containing tids that will be used and paths to their .mp3 files
     --output-dir to set what directory the .tfrecord files should be saved to
+
 
 Functions
 ---------
 - process_array             
-    Processesing array and applying desired audio format.
+    Takes a audio array and applies the desired transformations (resample, convert to desired audio format).
 
 - get_encoded_tags
-    Gets tags for a tid and encodes them with a one-hot vector.      
+    Gets tags for a tid and encodes them in a one-hot vector.      
 
 - _bytes_feature
     Creates a BytesList feature.
@@ -42,7 +43,7 @@ Functions
 - get_example
     Gets a tf.train.Example object with features containing the array, tid and the encoded tags.
 
--save_examples_to_tffile
+- save_example_to_tfrecord
     Creates and saves a TFRecord file.
 '''
 
@@ -56,10 +57,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
-
-from query_lastfm import LastFm
-from query_lastfm import LastFm2Pandas
+from modules.query_lastfm import LastFm
+from modules.query_lastfm import LastFm2Pandas
 
 def process_array(array, audio_format, sr_in, sr_out = 16000):
     ''' Processesing array and applying desired audio format 
