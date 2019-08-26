@@ -55,12 +55,8 @@ import tensorflow as tf
 
 import projectname as Model
 import projectname_input
-<<<<<<< HEAD
-import modules.query_lastfm as q_fm
-=======
 import query_lastfm as q_fm
 from pretty_print import MyEncoder
->>>>>>> 7be67a9db35a8af6f9f0e4dde2ef58d6e038bae5
 
 
 def write_input_params(ckpt_dir, epoch, input_params):
