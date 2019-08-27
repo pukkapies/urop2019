@@ -330,7 +330,7 @@ if __name__ == '__main__':
         df3 = df[split[1]:]
 
         # create + save the three .tfrecord files
-        ending = str(args.split[0])+'-'+str(args.split[1])+'-'+str(args.split[2])+".tfrecord" 
+        ending = str(args.split[0]) + '-'+str(args.split[1]) + '-'+str(args.split[2]) + ".tfrecord" 
         save_example_to_tfrecord(df1, base_name + "train_" + ending, args.format, args.root_dir, args.tag_path, args.sr, args.verbose)
         save_example_to_tfrecord(df2, base_name + "test_" + ending, args.format, args.root_dir, args.tag_path, args.sr, args.verbose)
         save_example_to_tfrecord(df3, base_name + "valid_" + ending, args.format, args.root_dir, args.tag_path, args.sr, args.verbose)
