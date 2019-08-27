@@ -292,7 +292,7 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose", action="store_true")
     
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("-s", "--split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL TEST", type=float, nargs=3)
+    mode.add_argument("-s", "--split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL TEST", type=int, nargs=3)
     mode.add_argument("-i", "--start-stop", help="specify which interval of files to process (inclusive, starts from 1), use in combination with --n-tfrecords, supply as START STOP", type=int, nargs=2)
 
     args = parser.parse_args()
