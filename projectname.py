@@ -204,8 +204,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv1_spec')(input_pad_7)    
     bn_conv1 = tf.keras.layers.BatchNormalization(name='bn1_spec')(conv1)
-    pool1 = tf.keras.layers.MaxPool2D(pool_size=[conv1.shape[1], 1], 
-                      strides=[conv1.shape[1], 1], name='pool1_spec')(bn_conv1)
+    pool1 = tf.keras.layers.MaxPool2D(pool_size=[int(conv1.shape[1]), 1], 
+                      strides=[int(conv1.shape[1]), 1], name='pool1_spec')(bn_conv1)
     p1 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque1_spec')(pool1)
     
     # [TIMBRE] filter shape: 0.9y*3
@@ -214,8 +214,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv2_spec')(input_pad_3)
     bn_conv2 = tf.keras.layers.BatchNormalization(name='bn2_spec')(conv2)
-    pool2 = tf.keras.layers.MaxPool2D(pool_size=[conv2.shape[1], 1], 
-                      strides=[conv2.shape[1], 1], name='pool2_spec')(bn_conv2)
+    pool2 = tf.keras.layers.MaxPool2D(pool_size=[int(conv2.shape[1]), 1], 
+                      strides=[int(conv2.shape[1]), 1], name='pool2_spec')(bn_conv2)
     p2 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque2_spec')(pool2)
     
     # [TIMBRE] filter shape: 0.9y*1
@@ -224,8 +224,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv3_spec')(input)
     bn_conv3 = tf.keras.layers.BatchNormalization(name='bn3_spec')(conv3)
-    pool3 = tf.keras.layers.MaxPool2D(pool_size=[conv3.shape[1], 1], 
-                      strides=[conv3.shape[1], 1], name='pool3_spec')(bn_conv3)
+    pool3 = tf.keras.layers.MaxPool2D(pool_size=[int(conv3.shape[1]), 1], 
+                      strides=[int(conv3.shape[1]), 1], name='pool3_spec')(bn_conv3)
     p3 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque3_spec')(pool3)
 
     # [TIMBRE] filter shape: 0.4y*7
@@ -234,8 +234,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv4_spec')(input_pad_7)
     bn_conv4 = tf.keras.layers.BatchNormalization(name='bn4_spec')(conv4)
-    pool4 = tf.keras.layers.MaxPool2D(pool_size=[conv4.shape[1], 1], 
-                  strides=[conv4.shape[1], 1], name='pool4_spec')(bn_conv4)
+    pool4 = tf.keras.layers.MaxPool2D(pool_size=[int(conv4.shape[1]), 1], 
+                  strides=[int(conv4.shape[1]), 1], name='pool4_spec')(bn_conv4)
     p4 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque4_spec')(pool4)
 
     # [TIMBRE] filter shape: 0.4y*3
@@ -244,8 +244,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv5_spec')(input_pad_3)
     bn_conv5 = tf.keras.layers.BatchNormalization(name='bn5_spec')(conv5)
-    pool5 = tf.keras.layers.MaxPool2D(pool_size=[conv5.shape[1], 1], 
-                      strides=[conv5.shape[1], 1], name='pool5_spec')(bn_conv5)
+    pool5 = tf.keras.layers.MaxPool2D(pool_size=[int(conv5.shape[1]), 1], 
+                      strides=[int(conv5.shape[1]), 1], name='pool5_spec')(bn_conv5)
     p5 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque5_spec')(pool5)
 
     # [TIMBRE] filter shape: 0.4y*1
@@ -254,8 +254,8 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv6_spec')(input)
     bn_conv6 = tf.keras.layers.BatchNormalization(name='bn6_spec')(conv6)
-    pool6 = tf.keras.layers.MaxPool2D(pool_size=[conv6.shape[1], 1], 
-                  strides=[conv6.shape[1], 1], name='pool6_spec')(bn_conv6)
+    pool6 = tf.keras.layers.MaxPool2D(pool_size=[int(conv6.shape[1]), 1], 
+                  strides=[int(conv6.shape[1]), 1], name='pool6_spec')(bn_conv6)
     p6 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque6_spec')(pool6)
 
     # Avarage pooling frequency axis
@@ -298,14 +298,14 @@ def backend(input, num_output_neurons, num_units=1024):
     
     initializer = tf.keras.initializers.VarianceScaling()
     
-    conv1 = tf.keras.layers.Conv2D(filters=512, kernel_size=[7, input.shape[2]],
+    conv1 = tf.keras.layers.Conv2D(filters=512, kernel_size=[7, int(input.shape[2])],
                    padding='valid', activation='relu',
                    kernel_initializer=initializer, name='conv1_back')(input)
     bn_conv1 = tf.keras.layers.BatchNormalization(name='bn1_back')(conv1)
     bn_conv1_t = tf.keras.layers.Permute((1, 3, 2), name='perm1_back')(bn_conv1)
     
     bn_conv1_pad = tf.keras.layers.ZeroPadding2D(((3, 3), (0, 0)), name='pad3_1_back')(bn_conv1_t)
-    conv2 = tf.keras.layers.Conv2D(filters=512, kernel_size=[7, bn_conv1_pad.shape[2]],
+    conv2 = tf.keras.layers.Conv2D(filters=512, kernel_size=[7, int(bn_conv1_pad.shape[2])],
                    padding='valid', activation='relu',
                    kernel_initializer=initializer, name='conv2_back')(bn_conv1_pad)
     conv2_t = tf.keras.layers.Permute((1,3,2), name='perm2_back')(conv2)
@@ -315,7 +315,7 @@ def backend(input, num_output_neurons, num_units=1024):
     pool1 = tf.keras.layers.MaxPool2D(pool_size=[2, 1], strides=[2, 1], name='pool1_back')(res_conv2)
     
     pool1_pad = tf.keras.layers.ZeroPadding2D(((3, 3), (0, 0)), name='pad3_2_back')(pool1)
-    conv3 = tf.keras.layers.Conv2D(filters=512, kernel_size=[7, pool1_pad.shape[2]],
+    conv3 = tf.keras.layers.Conv2D(filters=512, kernel_size=[7, int(pool1_pad.shape[2])],
                    padding='valid', activation='relu',
                    kernel_initializer=initializer, name='conv3_back')(pool1_pad)
     conv3_t = tf.keras.layers.Permute((1, 3, 2), name='perm3_back')(conv3)
