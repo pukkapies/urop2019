@@ -29,7 +29,7 @@ def parse_config(path):
 
     # read top tags to use
     top = int(config['training_options']['top'])
-    top = set(lastfm.popularity()popularity['tag'][:top].tolist())
+    top = set(lastfm.popularity()['tag'][:top].tolist())
     
     tags = top.union(config['training_options']['with_tags'])
     for tag in ['training_options']['without_tags']:
