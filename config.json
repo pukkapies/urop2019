@@ -1,0 +1,30 @@
+{
+  "specs_architecture": {
+    "n_dense_units": 500,
+    "n_filters": 16
+  },
+  "specs_data": {
+    "n_tags": 155,
+    "n_mels": 96,
+    "sample_rate": 16000
+  },
+  "optimizer": {
+    "name": 'SGD',
+    "learning_rate": 0.01,
+    "momentum": 0.9,
+    "nesterov": true
+  },
+  "training_options": {
+    "top": 15,
+    "vocal": false,
+    "with_tags": null,
+    "without_tags": null,
+    "merge": null,
+    "window_len": 15,
+    "window_slice_random": false,
+    "shuffle": false,
+    "shuffle_buffer_size": 10000,
+    "batch_size": 32,
+    "log_dir": '~/logs/',
+  }
+}
