@@ -88,7 +88,7 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     tags = []
     for idx, val in enumerate(logits):
         if val >= cutoff:
-            tags.append((fm.tag_num_to_tag(with_tags[idx-1]), val.numpy()))
+            tags.append((fm.tag_num_to_tag(with_tags[idx]), val.numpy()))
     return tags
 
 if __name__ == '__main__':
@@ -111,8 +111,8 @@ if __name__ == '__main__':
     dataset = tf.data.TFRecordDataset('/srv/data/urop/tfrecords-log-mel-spectrogram/log-mel-spectrogram_1.tfrecord')
     dataset = dataset.map(lambda x: projectname_input._parse_features(x, AUDIO_FEATURES_DESCRIPTION, (96, -1)))
     i = 0 
-    for entry in dataset.take(2):
-        if i == 0:
+    for entry in dataset.take(3):
+        if i <= 1:
             i += 1
             continue
         tid = entry['tid'].numpy().decode('utf-8')

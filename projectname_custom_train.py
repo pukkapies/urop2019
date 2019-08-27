@@ -187,31 +187,21 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
 
         @tf.function 
         def distributed_train_body(entry, epoch):
-            total_loss = 0.0
-            temp_loss = 0.0
             num_batches = 0
             
             for entry in train_dist_dataset:
-                per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry,))
-                loss = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
+                strategy.experimental_run_v2(train_step, args=(entry,))
                 
-                temp_loss += loss
                 num_batches += 1
                 
                 if tf.equal(num_batches % 10, 0):
-                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', temp_loss/10, '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
+                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', train_mean_loss.result(), '; ROC_AUC', train_ROC_AUC.result(), ';PR_AUC', train_PR_AUC.result())
                     
                     with train_summary_writer.as_default():
                         tf.summary.scalar('ROC_AUC_itr', train_ROC_AUC.result(), step=optimizer.iterations)
                         tf.summary.scalar('PR_AUC_itr', train_PR_AUC.result(), step=optimizer.iterations)
-                        tf.summary.scalar('Loss_itr', temp_loss/10, step=optimizer.iterations)
+                        tf.summary.scalar('Loss_itr', train_mean_loss.result(), step=optimizer.iterations)
                         train_summary_writer.flush()
-                        
-                    total_loss += temp_loss
-                    temp_loss = 0.0
-            
-            total_loss += temp_loss
-            return total_loss / tf.cast(num_batches, tf.float32)
 
         @tf.function
         def distributed_val_body(entry):
@@ -226,7 +216,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
 
             tf.summary.trace_on(graph=False, profiler=True)
             
-            train_loss = distributed_train_body(train_dist_dataset, epoch)
+            distributed_train_body(train_dist_dataset, epoch)
             
             # tensorboard per epoch
             with train_summary_writer.as_default():
@@ -237,7 +227,7 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
                 
 
             # print progress
-            tf.print('Epoch', epoch,  ': loss', train_loss, '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
+            tf.print('Epoch', epoch,  ': loss', train_mean_loss.result(), '; ROC_AUC', train_ROC_AUC.result(), '; PR_AUC', train_PR_AUC.result())
 
 
             #print progress
@@ -314,10 +304,10 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         checkpoint_path = os.path.join(ckpt_dir, 'trained')
         checkpoint.save(checkpoint_path)
 
-def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 10, 20),
-         num_epochs=5, sample_rate=16000, batch_size=32, cycle_length=2, 
-         validation=True, shuffle=True, buffer_size=10000, window_size=15, 
-         random=False, with_tags=None, merge_tags=None, num_tags=155,
+def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None,
+         split=(70, 10, 20), num_epochs=5, sample_rate=16000, batch_size=32,
+         cycle_length=2, validation=True, shuffle=True, buffer_size=10000,
+         window_size=15, random=False, with_tags=None, merge_tags=None,
          log_dir = '/srv/data/urop/log_aden/', model_dir='/srv/data/urop/model_aden',
          with_tids=None, analyse_trace=False, early_stopping_min_delta=None,
          early_stopping_patience=None):
@@ -386,9 +376,6 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
         If not None, contains the lists of tags to be merged together 
         (only applies if with_tags is specified).
         
-    num_tags: int
-        The number of tags contained in the tfrecord files.
-        
     log_dir: str
         The directory where the tensorboard data (profiling, PR_AUC, ROC_AUC, 
         loss logging) are stored.
@@ -431,11 +418,12 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
     with open(config_dir) as f:
         file = json.load(f)
         
-    num_output_neurons = file['dataset_specs']['n_tags']
+    num_tags = file['dataset_specs']['n_tags']
     y_input = file['dataset_specs']['n_mels']
     lr = file['training_options']['lr']
     num_units = file['training_options']['n_dense_units']
     num_filt = file['training_options']['n_filters']
+    num_output_neurons = file['training_options']['n_output_neurons']
 
     strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
     
@@ -461,6 +449,7 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None, split=(70, 
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     val_dist_dataset = strategy.experimental_distribute_dataset(val_dataset)
     
+    # should we use this? Should this be hard coded into config.json?
     if with_tags:
         num_output_neurons = len(with_tags)
         if merge_tags:
