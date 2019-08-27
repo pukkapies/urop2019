@@ -3,99 +3,53 @@ import json
 import os
 from datetime import datetime
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # verbose mode, filter out INFO and WARNING messages 
+
 import tensorflow as tf
 
 import projectname
 import projectname_input
 
 from modules.query_lastfm import LastFm
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("api", choices=["built-in", "custom"])
-    parser.add_argument("format", choices=["waveform", "log-mel-spectrogram"])
-    parser.add_argument("-s", "--split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL TEST", type=int, nargs=3, required=True)
     
-    files = parser.add_argument_group('required files')
-    files.add_argument("--root-dir", help="directory to read .tfrecord files from, defaults to path on Boden")
-    files.add_argument("--config", help="path to config.json, defaults to path on Boden", default='/srv/data/urop/config.json')
-    files.add_argument("--lastfm", help="path to (clean) lastfm database, defaults to path on Boden", default='/srv/data/urop/clean_lastfm.db')
-
-    specs1 = parser.add_argument_group('training specs')
-    specs1.add_argument("--batch-size", help="specify the batch size during training", type=int, default=32)
-    specs1.add_argument("--update_freq", help="specify every what number of batches to write metrics and losses", type=int, default=1)
-    specs1.add_argument("--epochs", help="specify the number of epochs to train on", type=int, default=3)
-    specs1.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
-    specs1.add_argument("--checkpoint", help="path to previously saved model")
-
-    specs2 = parser.add_argument_group('generating dataset specs')
-    specs2.add_argument("--preset", help="use one of the predefined list of tags", default=0)
-    specs2.add_argument("--tids", help="list of tids to train on, supply as list of space-separated id's, or as path to .csv file")
-    specs2.add_argument("--tags", help="list of tags to train on, supply as list of space-separated tags (spaces within tags need to be escaped)")
-    specs2.add_argument("--tags-to-merge", help="list of tags to merge, supply as list of space-separated tags, with '..' as class separator (e.g. '--tags-to-merge rock hard-rock .. hip-hop hip\ hop' merges hard-rock with rock and hip hop with hip-hop)")
-
-    args = parser.parse_args()
-    return args
-    
-def parse_conf(args):
+def parse_config(path):
 
     # load tags database
     lastfm = LastFm(os.path.expanduser(args.lastfm))
 
-    if not os.path.isfile(os.path.expanduser(args.config)):
-        args.config = os.path.join(os.path.abspath(os.path.expanduser(args.config)), 'config.json')
+    if not os.path.isfile(os.path.expanduser(path)):
+        path = os.path.join(os.path.abspath(os.path.expanduser(path)), 'config.json')
     else:
-        args.config = os.path.expanduser(args.config)
+        path = os.path.expanduser(path)
 
     # load json
-    with open(args.config, 'r') as f:
+    with open(path, 'r') as f:
         d = f.read()
     config = json.loads(d)
 
-    # check whether we are training on a subset of the total tags; sys.argv takes precedence over json
-    if args.tags is None:
-        args.tags = config['training_options_dataset']['presets'][args.preset]['tags']
-    args.tags = lastfm.vec_tag_to_tag_num(args.tags) if args.tags is not None else None # tags might be None in config.json file
-
-    # check whether we are merging any tags; sys.argv takes precedence over json
-    if args.tags_to_merge is None:
-        args.tags_to_merge = config['training_options_dataset']['presets'][args.preset]['merge_tags']
-    args.tags_to_merge = lastfm.tag_to_tag_num(args.tags_to_merge) if args.tags_to_merge is not None else None # merge_tags might be None in config.json file
+    # read top tags to use
+    top = int(config['training_options']['top'])
+    top = set(lastfm.popularity()popularity['tag'][:top].tolist())
+    
+    tags = top.union(config['training_options']['with_tags'])
+    for tag in ['training_options']['without_tags']:
+        tags.remove(tag)
+    
+    config['training_options']['tags'] = lastfm.vec_tag_to_tag_num(list(tags))
+    config['training_options']['merge_tags'] = lastfm.tag_to_tag_num(config['training_options']['merge']) if config['training_options']['merge'] is not None else None # merge_tags might be None in config.json file
 
     # check the total number of tags (that is, output neurons)
-    if args.tags is not None:
-        args.n_output_neurons = len(args.tags)
-    else:
-        args.n_output_neurons = config['dataset_specs']['n_tags']
-    
-    # check model specs
-    args.y_input = config['dataset_specs']['n_mels']
-    args.n_units = config['model_specs']['n_dense_units']
-    args.n_filts = config['model_specs']['n_filters']
+    config['n_output_neurons'] = config['training_options']['tags']
 
-    # check train specs
-    args.lr = config['training_options']['lr']
-    args.mmnt = config['training_options']['momentum']
-    args.nest = config['training_options']['nesterov_momentum']
+    return config
 
-    # check dataset specs
-    args.sample_rate = config['dataset_specs']['sample_rate']
-    args.shuffle = config['training_options_dataset']['shuffle']
-    args.shuffle_buffer = config['training_options_dataset']['shuffle_buffer_size']
-    args.window = config['training_options_dataset']['window_length']
-    args.window_random = config['training_options_dataset']['window_extract_randomly']
+def build_model(args):
+    model = projectname.build_model(args.format, args.n_output_neurons, args.y_input, args.n_units, args.n_filts)
+    if args.checkpoint:
+        model.load_weights(os.path.expanduser(args.checkpoint))
+    return model
 
-    # if root dir is not specified, use default root dir
-    if not args.root_dir:
-        if args.sample_rate != 16000:
-            s = '-' + str(args.sample_rate // 1000) + 'kHz'
-        else:
-            s = ''
-        args.root_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.format + s)
-
-    return args
-
-def get_model(args):
+def build_compiled_model(args):
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
     with mirrored_strategy.scope():
@@ -104,8 +58,7 @@ def get_model(args):
         model = projectname.build_model(args.format, args.n_output_neurons, args.y_input, args.n_units, args.n_filts)
         model.compile(loss=loss, optimizer=optimizer, metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
         if args.checkpoint:
-            model.load_weights(os.path.expanduser(config_path))
-    
+            model.load_weights(os.path.expanduser(args.checkpoint))
     return model
 
 def train(args, model, train_dataset, valid_dataset):
@@ -156,20 +109,71 @@ def train(args, model, train_dataset, valid_dataset):
 
     return history.history
 
-def valid(args, model, test_dataset):
-    history = model.evaluate(test_dataset)
-    return history
-
 if __name__ == '__main__':
-    # argparse
-    args = parse_conf(parse_args())
-
-    # create datasets
-    train_dataset, valid_dataset, test_dataset = projectname_input.generate_datasets_from_dir(args.root_dir, args.format, args.split, batch_size=32, sample_rate=args.sample_rate, shuffle=args.shuffle, buffer_size=args.shuffle_buffer, window_size=args.window, random=args.window_random, with_tids=args.tids, with_tags=args.tags, merge_tags=args.tags_to_merge, num_epochs=1)
     
-    # get model
-    model = get_model(args)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--api", choices=["fit", "custom"], default="fit")
+    subparsers = parser.add_subparsers(title="subcommands", dest='command')
+    
+    train = subparsers.add_parser('train', help="train the model")
+    train.add_argument("format", choices=["waveform", "log-mel-spectrogram"])
+    train.add_argument("-s", "--perc-split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL (TEST)", type=int, nargs='+')
+    
+    train_files = train.add_argument_group('paths')
+    train_files.add_argument("--root-dir", help="directory to read .tfrecord files from (default to path on Boden)")
+    train_files.add_argument("--config", help="path to config.json (default to path on Boden)", default='/srv/data/urop/config.json')
+    train_files.add_argument("--lastfm", help="path to (clean) lastfm database (default to path on Boden)", default='/srv/data/urop/clean_lastfm.db')
 
-    # train
-    history = train(args, model, train_dataset, valid_dataset)
-    print(history)
+    train_specs = train.add_argument_group('training options')
+    train_specs.add_argument("--epochs", help="specify the number of epochs to train on", type=int, required=True)
+    train_specs.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
+    train_specs.add_argument("--update_freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
+    train_specs.add_argument("--checkpoint", help="load a previously saved model")
+
+    evaluate = subparsers.add_parser('evaluate', help="load a previously saved model and evaluate it")
+    evaluate.add_argument("format", choices=["waveform", "log-mel-spectrogram"])
+    evaluate.add_argument("checkpoint", help="model to load")
+    evaluate.add_argument("--root-dir", help="directory to read .tfrecord files from (default to path on Boden)")
+    evaluate.add_argument("-s", "--perc-split", help="percentage of tracks to go in each dataset, supply as (TRAIN VAL) TEST", type=int, nargs='+')
+
+    predict = subparsers.add_parser('predict', help="load a previously saved model and predict the tags for a given track")
+    predict.add_argument("format", choices=["waveform", "log-mel-spectrogram"])
+    predict.add_argument("checkpoint", help="model to load")
+
+    args = parser.parse_args()
+
+    if not args.root_dir:
+        if args.sample_rate != 16000:
+            s = '-' + str(args.sample_rate // 1000) + 'kHz'
+        else:
+            s = ''
+        args.root_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.format + s)
+
+    if args.command == 'train':
+        # parse config json
+        config = parse_config(args.config)
+
+        # generate train and validation dataset
+        train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(tfrecords_dir=args.root_dir, 
+                                                                                    audio_format=args.format, 
+                                                                                    split=args.perc_split,
+                                                                                    sample_rate=config['specs_data']['sample_rate'],
+                                                                                    batch_size=config['training_options']['batch_size'],
+                                                                                    shuffle=config['training_options']['shuffle'],
+                                                                                    buffer_size=config['training_options']['shuffle_buffer_size'],
+                                                                                    window_length=config['training_options']['window_len'],
+                                                                                    random=config['training_options']['window_slice_random'],
+                                                                                    with_tags=config['training_options']['tags'],
+                                                                                    merge_tags=config['training_options']['merge_tags'],
+                                                                                    num_epochs=1)
+
+        # build model
+        model = build_compiled_model(args)
+
+        # train
+        train(args, model, train_dataset, valid_dataset)
+
+    elif args.command == 'evaluate':
+        pass
+    elif args.command == 'predict':
+        pass
