@@ -23,6 +23,7 @@ def parse_args():
 
     specs1 = parser.add_argument_group('training specs')
     specs1.add_argument("--batch-size", help="specify the batch size during training", type=int, default=32)
+    specs1.add_argument("--update_freq", help="specify every what number of batches to write metrics and losses", type=int, default=1)
     specs1.add_argument("--epochs", help="specify the number of epochs to train on", type=int, default=3)
     specs1.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
     specs1.add_argument("--checkpoint", help="path to previously saved model")
@@ -101,7 +102,7 @@ def get_model(args):
         loss = tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM)
         optimizer = tf.keras.optimizers.SGD(lr=args.lr, momentum=args.mmnt, nesterov=args.nest)
         model = projectname.build_model(args.format, args.n_output_neurons, args.y_input, args.n_units, args.n_filts)
-        model.compile(loss=loss, optimizer=optimizer, metrics=[[tf.keras.metrics.AUC(curve='ROC', name='roc-auc'), tf.keras.metrics.AUC(curve='PR', name='pr-auc')]])
+        model.compile(loss=loss, optimizer=optimizer, metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
         if args.checkpoint:
             model.load_weights(os.path.expanduser(config_path))
     
@@ -112,46 +113,46 @@ def train(args, model, train_dataset, valid_dataset):
     log_dir = os.path.expanduser("~/logs/fit/" + datetime.now().strftime("%y%m%d-%H%M"))
 
     callbacks = [
-        # tf.keras.callbacks.ModelCheckpoint(
-        #     os.path.join(log_dir, 'mymodel.h5'),
-        #     monitor='val_roc-auc',
-        #     mode='max',
-        #     save_best_only=True,
-        #     save_freq=16,
-        #     verbose=1,
-        # ),
+        tf.keras.callbacks.ModelCheckpoint(
+            filepath = os.path.join(log_dir, 'mymodel.h5'),
+            monitor = 'val_AUC-ROC',
+            mode = 'max',
+            save_best_only = True,
+            save_freq = 'epoch',
+            verbose = 1,
+        ),
 
-        # tf.keras.callbacks.EarlyStopping(
-        #     monitor='val_roc-auc',
-        #     mode='max',
-        #     min_delta=0.01,
-        #     restore_best_weights=True,
-        #     patience=5,
-        #     verbose=1,
-        # ),
+        tf.keras.callbacks.EarlyStopping(
+            monitor = 'val_AUC-ROC',
+            mode = 'max',
+            min_delta = 0.2,
+            restore_best_weights = True,
+            patience = 5,
+            verbose = 1,
+        ),
 
-        # tf.keras.callbacks.ReduceLROnPlateau(
-        #     monitor='val_loss',
-        #     mode='min',
-        #     min_delta=0.01,
-        #     min_lr=0.00001,
-        #     factor=0.2,
-        #     patience=2,
-        #     verbose=1,
-        # ),
+        tf.keras.callbacks.ReduceLROnPlateau(
+            monitor = 'val_loss',
+            mode = 'min',
+            min_delta = 0.5,
+            min_lr = 0.00001,
+            factor = 0.2,
+            patience = 2,
+            verbose = 1,
+        ),
 
         tf.keras.callbacks.TensorBoard(
-            log_dir=log_dir, 
-            histogram_freq=1,
-            write_graph=False,
-            update_freq=128,
-            profile_batch=0,
+            log_dir = log_dir, 
+            histogram_freq = 1,
+            write_graph = False,
+            update_freq = args.batch_size*args.update_freq,
+            profile_batch = 0,
         ),
 
         tf.keras.callbacks.TerminateOnNaN(),
     ]
 
-    history = model.fit(train_dataset, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, validation_data=valid_dataset, validation_steps=10)
+    history = model.fit(train_dataset, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, callbacks=callbacks, validation_data=valid_dataset)
 
     return history.history
 
