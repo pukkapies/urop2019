@@ -39,7 +39,7 @@ def parse_config(path):
     config['training_options']['merge_tags'] = lastfm.tag_to_tag_num(config['training_options']['merge']) if config['training_options']['merge'] is not None else None # merge_tags might be None in config.json file
 
     # check the total number of tags (that is, output neurons)
-    config['n_output_neurons'] = config['training_options']['tags']
+    config['n_output_neurons'] = len(config['training_options']['tags'])
 
     return config
 
