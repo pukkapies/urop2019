@@ -55,7 +55,7 @@ import tensorflow as tf
 
 import projectname as Model
 import projectname_input
-import query_lastfm as q_fm
+import modules.query_lastfm as q_fm
 from pretty_print import MyEncoder
 
 

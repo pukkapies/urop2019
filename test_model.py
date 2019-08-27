@@ -2,12 +2,13 @@ import os
 import json
 
 import tensorflow as tf
+import numpy as np
 
 import modules.query_lastfm as q_fm
 import projectname_input
 import projectname as Model
 
-def load_from_checkpoint(checkpoint_dir, audio_format, config_dir)
+def load_from_checkpoint(checkpoint_dir, audio_format, config_dir):
     ''' Loads model from checkpoint '''
 
     # getting config settings
@@ -55,35 +56,39 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
         ROC_AUC.update_state(label_batch, logits)
         PR_AUC.update_state(label_batch, logits)
 
-    print('ROC_AUC: ', ROC_AUC.result(), '; PR_AUC: ', PR_AUC.result())
+    print('ROC_AUC: ', int(ROC_AUC.result()), '; PR_AUC: ', int(PR_AUC.result()))
 
 def get_slices(audio, audio_format, sample_rate, window_size=15):
     
     if audio_format == 'waveform':
         slice_length = window_size*sample_rate
-        n_slices = len(audio)//slice_length
-        return np.array([audio[i*slice_length:(i+1)*slice_length] for i in range(n_slices)].append(:-audio[slices*slice_length]))
+        n_slices = audio.shape[0]//slice_length
+        slices = [audio[i*slice_length:(i+1)*slice_length] for i in range(n_slices)] 
+        slices.append(audio[-slice_length:])
+        return np.array(slices)
 
     elif audio_format == 'log-mel-spectrogram':
         slice_length = window_size*sample_rate//512
-        n_slices = len(audio.shape[1])
-        return np.array([audio[:,i*slice_length:(i+1)*slice_length] for i in range(n_slices)].append(audio[:,:-slices*slice_length]))
+        n_slices = audio.shape[1]//slice_length
 
-def predict(model, audio, audio_format, with_tags, cutoff=0.5, window_length=15, db_path='c/srv/data/urop/lastfm_clean.db'):
+        slices = [audio[:,i*slice_length:(i+1)*slice_length] for i in range(n_slices)]
+        slices.append(audio[:,-slice_length:])
+        return np.array(slices)
+
+def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, window_size=15, db_path='/srv/data/urop/clean_lastfm.db'):
     ''' Predicts tags given audio for one track '''
 
     fm = q_fm.LastFm(db_path)
 
     # compute average by using a moving window
     slices = get_slices(audio, audio_format, sample_rate, window_size)
-    logits = numpy.average(model(slices), axis=0)
+    logits = tf.reduce_mean(model(slices, training=False), axis=[0])
     
     # get tags
     tags = []
     for idx, val in enumerate(logits):
         if val >= cutoff:
-            tags.append((fm.tag_num_to_tag(with_tags[idx-1]), val))
-
+            tags.append((fm.tag_num_to_tag(with_tags[idx-1]), val.numpy()))
     return tags
 
 if __name__ == '__main__':
@@ -92,6 +97,25 @@ if __name__ == '__main__':
     tags = fm.popularity().tag.to_list()[:50]
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
 
-    model = load_from_ceckpoint('/srv/data/urop/tfrecords-log-mel-spectrogram/', '/home/calle', 'log-mel-spectrogram') 
+    model = load_from_checkpoint('/srv/data/urop/model_aden/log-mel-spectrogram_20190826-103644/', 'log-mel-spectrogram', '/home/calle') 
     # loading model
-    test(model, '/srv/data/urop/tfrecords-log-mel-spectrogram/', 'log-mel-spectrogram', (80, 10, 10), batch_size=128, with_tags=with_tags)
+    # test(model, '/srv/data/urop/tfrecords-log-mel-spectrogram/', 'log-mel-spectrogram', (80, 10, 10), batch_size=128, with_tags=with_tags)
+
+    AUDIO_FEATURES_DESCRIPTION = {
+        'audio': tf.io.VarLenFeature(tf.float32),
+        'tid': tf.io.FixedLenFeature((), tf.string),
+        'tags': tf.io.FixedLenFeature((155, ), tf.int64)
+    }
+
+
+    dataset = tf.data.TFRecordDataset('/srv/data/urop/tfrecords-log-mel-spectrogram/log-mel-spectrogram_1.tfrecord')
+    dataset = dataset.map(lambda x: projectname_input._parse_features(x, AUDIO_FEATURES_DESCRIPTION, (96, -1)))
+    i = 0 
+    for entry in dataset.take(2):
+        if i == 0:
+            i += 1
+            continue
+        tid = entry['tid'].numpy().decode('utf-8')
+        print('TID: ', tid)
+        print('tags: ', [tag for tag in fm.query_tags(tid) if tag in tags])
+        print('predicted tags: ', predict(model, entry['audio'], 'log-mel-spectrogram', with_tags, 16000, cutoff=0.0001))

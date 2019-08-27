@@ -54,7 +54,7 @@ import tensorflow as tf
 
 import projectname as Model
 import projectname_input
-import query_lastfm as q_fm
+import modules.query_lastfm as q_fm
 from pretty_print import MyEncoder
 
 
@@ -490,6 +490,6 @@ if __name__ == '__main__':
     fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
     tags = fm.popularity().tag.to_list()[:50]
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
-    CONFIG_FOLDER = '/home/aden/urop2019'
+    CONFIG_FOLDER = '/home/calle'
     main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', CONFIG_FOLDER, split=(80, 10, 10), shuffle=False, batch_size=32, buffer_size=None, random=True,
          with_tags=with_tags, num_epochs=20)
