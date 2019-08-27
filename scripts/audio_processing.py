@@ -292,7 +292,7 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose", action="store_true")
     
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("-s", "--split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL TEST", type=int, nargs=3)
+    mode.add_argument("-s", "--split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL TEST", type=float, nargs=3)
     mode.add_argument("-i", "--start-stop", help="specify which interval of files to process (inclusive, starts from 1), use in combination with --n-tfrecords, supply as START STOP", type=int, nargs=2)
 
     args = parser.parse_args()
@@ -309,7 +309,7 @@ if __name__ == '__main__':
     
     # create output folder
     if not os.path.isdir(args.output):
-        os.mkdir(args.output)
+        os.makedirs(args.output)
 
     # create base name variable, for naming the .tfrecord files
     if args.format == "log-mel-spectrogram":
@@ -322,7 +322,7 @@ if __name__ == '__main__':
         # scaling up split
         tot = len(df)
         split = np.cumsum(args.split) * tot // np.sum(args.split)
-        train, val, test = [v/tot for v in values]
+
 
         # split the DataFrame according to train/val/test split
         df1 = df[:split[0]]
@@ -330,7 +330,7 @@ if __name__ == '__main__':
         df3 = df[split[1]:]
 
         # create + save the three .tfrecord files
-        ending = args.split.replace('/', '-') + ".tfrecord" 
+        ending = str(args.split[0])+'-'+str(args.split[1])+'-'+str(args.split[2]) + ".tfrecord" 
         save_example_to_tfrecord(df1, base_name + "train_" + ending, args.format, args.root_dir, args.tag_path, args.sr, args.verbose)
         save_example_to_tfrecord(df2, base_name + "test_" + ending, args.format, args.root_dir, args.tag_path, args.sr, args.verbose)
         save_example_to_tfrecord(df3, base_name + "valid_" + ending, args.format, args.root_dir, args.tag_path, args.sr, args.verbose)
