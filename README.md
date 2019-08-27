@@ -5,21 +5,31 @@ Summer UROP 2019 project repository.
 
 ## Introduction
 
+## Prerequisites
+
 ## Data Cleaning
 
-### Description
+### Audio
 
-### Code
+### Tags
+
+## Data Input Pipeline
+
+### Tfrecords
+
+### Dataset Preperation 
 
 ## Training
 
-### Description
+### Model and Configuration
 
-### Code
+### Training Loops
+
+## Evaluation Tools
 
 ## Results
 
-## 
+## Contact/Getting Help
 
 
 
