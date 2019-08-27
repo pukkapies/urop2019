@@ -7,15 +7,15 @@ Summer UROP 2019 project repository.
 
 ## Data Cleaning
 
-# Description
+### Description
 
-# Code
+### Code
 
 ## Training
 
-# Description
+### Description
 
-# Code
+### Code
 
 ## Results
 
