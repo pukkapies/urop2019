@@ -1,7 +1,29 @@
-EDITED BY DAVIDE!!
-
 # urop2019
 Summer UROP 2019 project repository.
+
+## Table of Contents
+
+## Introduction
+
+## Data Cleaning
+
+# Description
+
+# Code
+
+## Training
+
+# Description
+
+# Code
+
+## Results
+
+## 
+
+
+
+
 
 ## Workflow
 
