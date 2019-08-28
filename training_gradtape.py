@@ -21,7 +21,6 @@ store the early stopping progress in case the script is stopped and resumed
 later.
 
 IMPORTANT: The codes are written in tensorflow 2.0.0-beta version.
-IMPORTANT: Run export LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64" before loading TensorFlow
 
 Functions
 ---------
@@ -312,6 +311,8 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             gc.collect()
 
 if __name__ == '__main__':
+
+    os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
     
     parser = argparse.ArgumentParser()
     parser.add_argument("frontend", choices=["waveform", "log-mel-spectrogram"])
