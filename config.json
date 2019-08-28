@@ -14,7 +14,7 @@
     "merge": null
   },
   "tfrecords": {
-    "n_mels": 128,
+    "n_mels": 96,
     "n_tags": 155,
     "sample_rate": 16000
   },
