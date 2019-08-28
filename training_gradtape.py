@@ -131,7 +131,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
         train_metrics_1 = tf.keras.metrics.AUC(curve='ROC', name='train_AUC-ROC', dtype=tf.float32)
         train_metrics_2 = tf.keras.metrics.AUC(curve='PR', name='train_AUC-PR', dtype=tf.float32)
-        tot_batches = 'Unknown' # initialize as unknown 
 
         # setting up checkpoint
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
@@ -207,20 +206,18 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             
         @tf.function 
         def distributed_train_body(entry, epoch):
-            global tot_batches
             num_batches = 0 
             for entry in train_dataset:
                 strategy.experimental_run_v2(train_step, args=(entry, ))
                 num_batches += 1
                 # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):
-                    tf.print('{}/{} - loss: {:8.6f} - AUC-ROC {:6.5f} - AUC-PR {:6.5f}'.format(num_batches, tot_batches, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()))
+                    tf.print('{}/Unknown - loss: {:8.6f} - AUC-ROC {:6.5f} - AUC-PR {:6.5f}'.format(num_batches, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()))
                     with train_summary_writer.as_default():
                         tf.summary.scalar('batch_AUC-ROC', train_metrics_1.result(), step=optimizer.iterations)
                         tf.summary.scalar('batch_AUC-PR', train_metrics_2.result(), step=optimizer.iterations)
                         tf.summary.scalar('batch_loss', train_mean_loss.result(), step=optimizer.iterations)
                         train_summary_writer.flush()
-            tot_batches = num_batches # update tot_batches for next epoch
 
         @tf.function
         def distributed_val_body(entry):
