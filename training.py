@@ -65,8 +65,8 @@ def parse_config(config_path, lastfm_path):
     config.tot_tags = config_d['tfrecords']['n_tags']
     config.window_len = config_d['config']['window_length']
     config.window_random = config_d['config']['window_extract_randomly']
-    config.log_dir: config_d['config']['log_dir']
-    config.checkpoint_dir: config_d['config']['checkpoint_dir']
+    config.log_dir = config_d['config']['log_dir']
+    config.checkpoint_dir = config_d['config']['checkpoint_dir']
 
     # create config namespace for the optimizer (will be used by get_optimizer() in order to allow max flexibility)
     config_optim = argparse.Namespace()
