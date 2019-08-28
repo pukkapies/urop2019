@@ -73,17 +73,17 @@ def train(frontend, train_dist_dataset, strategy, checkpoint=None, val_dist_data
         prev_epoch = -1
         
         # resume
-        if checkpoint is None:
+        if checkpoint_path is None:
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
         else:
-            latest_checkpoint_file = tf.train.latest_checkpoint(checkpoint)
+            latest_checkpoint_file = tf.train.latest_checkpoint(checkpoint_path)
             if latest_checkpoint_file:
                 tf.print("Checkpoint file {} found. Restoring...".format(latest_checkpoint_file))
                 checkpoint.restore(latest_checkpoint_file)
                 tf.print("Checkpoint restored.")
                 prev_epoch = int(latest_checkpoint_file.split('-')[-1])-1
-                log_dir = checkpoint # use checkpoint log_dir
+                log_dir = checkpoint_path # use checkpoint log_dir
             else:
                 tf.print("Checkpoint file not found!")
                 return
@@ -236,7 +236,7 @@ def train(frontend, train_dist_dataset, strategy, checkpoint=None, val_dist_data
             elif (early_stopping_min_delta) or (early_stopping_patience):
                 tf.print('Early stopping requires a validation dataset...')
 
-            checkpoint_path = os.path.join(log_dir, 'epoch')
+            checkpoint_path = os.path.join(log_dir, epoch)
             saved_path = checkpoint.save(checkpoint_path)
             tf.print('Saving checkpoint: {}'.format(saved_path))
 
@@ -247,10 +247,7 @@ def train(frontend, train_dist_dataset, strategy, checkpoint=None, val_dist_data
             tf.keras.backend.clear_session()
             gc.collect()
 
-        checkpoint_path = os.path.join(log_dir, 'trained')
-        checkpoint.save(checkpoint_path)
-
-def main(tfrecords_dir, frontend, config_dir, checkpoint=None,
+def main(tfrecords_dir, frontend, config_dir, checkpoint_path=None,
          split=(70, 10, 20), num_epochs=5, sample_rate=16000, batch_size=32,
          cycle_length=2, validation=True, shuffle=True, buffer_size=10000,
          window_size=15, random=False, with_tags=None, merge_tags=None,
@@ -398,7 +395,7 @@ def main(tfrecords_dir, frontend, config_dir, checkpoint=None,
     train(frontend=frontend, 
           train_dist_dataset=train_dist_dataset, 
           strategy=strategy, 
-          checkpoint=checkpoint,
+          checkpoint_path=checkpoint_path,
           val_dist_dataset=val_dist_dataset, 
           validation=validation,  
           num_epochs=num_epochs, 
@@ -422,7 +419,7 @@ if __name__ == '__main__':
     tags = fm.popularity().tag.to_list()[:50]
     with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
 
-    CONFIG_FOLDER = '/home/calle'
+    CONFIG_FOLDER = '/home/davide'
 
     main('/srv/data/urop/tfrecords-waveform', 'waveform', 
                 CONFIG_FOLDER, split=(58, 1, 1),  shuffle=True, batch_size=64,
