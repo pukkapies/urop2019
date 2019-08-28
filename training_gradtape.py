@@ -40,6 +40,7 @@ import gc
 import json
 import os
 import time
+import shutil
 import sys
 
 import numpy as np
@@ -58,15 +59,15 @@ def _required_length(nmin, nmax):
                 setattr(args, self.dest, values)
         return RequiredLength
 
-def parse_config(path_config, path_lastfm):
+def parse_config(config_path, lastfm_path):
 
     # load tags database
-    lastfm = LastFm(os.path.expanduser(path_lastfm))
+    lastfm = LastFm(os.path.expanduser(lastfm_path))
 
-    if not os.path.isfile(os.path.expanduser(path_config)):
-        path = os.path.join(os.path.abspath(os.path.expanduser(path_config)), 'config.json')
+    if not os.path.isfile(os.path.expanduser(config_path)):
+        path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
     else:
-        path = os.path.expanduser(path_config)
+        path = os.path.expanduser(config_path)
 
     # load json
     with open(path, 'r') as f:
@@ -89,21 +90,24 @@ def parse_config(path_config, path_lastfm):
     config.cycle_len = config_d['config']['cycle_length']
     config.early_stop_min_d = config_d['config']['early_stop_min_delta']
     config.early_stop_patience = config_d['config']['early_stop_patience']
-    config.log = config_d['config']['log_dir']
     config.n_dense_units = config_d['model']['n_dense_units']
     config.n_filters = config_d['model']['n_filters']
     config.n_mels = config_d['tfrecords']['n_mels']
     config.n_output_neurons = len(tags)
+    config.path = config_path
     config.plateau_min_d = config_d['config']['reduce_lr_plateau_min_delta']
     config.plateau_patience = config_d['config']['reduce_lr_plateau_patience']
     config.shuffle = config_d['config']['shuffle']
     config.shuffle_buffer = config_d['config']['shuffle_buffer_size']
+    config.split = config_d['config']['split']
     config.sr = config_d['tfrecords']['sample_rate']
     config.tags = lastfm.vec_tag_to_tag_num(list(tags))
     config.tags_to_merge = lastfm.tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
     config.tot_tags = config_d['tfrecords']['n_tags']
     config.window_len = config_d['config']['window_length']
     config.window_random = config_d['config']['window_extract_randomly']
+    config.log_dir: config_d['config']['log_dir']
+    config.checkpoint_dir: config_d['config']['checkpoint_dir']
 
     # create config namespace for the optimizer (will be used by get_optimizer() in order to allow max flexibility)
     config_optim = argparse.Namespace()
@@ -112,9 +116,10 @@ def parse_config(path_config, path_lastfm):
     
     return config, config_optim
             
-def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, steps_per_epoch=None, checkpoint_path=None, update_freq=1, profile=1):
+def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, steps_per_epoch=None, resume_time=None, update_freq=1, analyse_trace=True):
 
-    log_dir = os.path.join(os.path.expanduser(config.log), frontend, datetime.datetime.now().strftime("%y%m%d-%H%M")) # to access training scalars using tensorboard
+    log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M")) # to save training metrics (to access using tensorboard)
+    checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))) # to save model checkpoints
     
     with strategy.scope():
         # build model
@@ -126,23 +131,28 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
         train_metrics_1 = tf.keras.metrics.AUC(curve='ROC', name='train_AUC-ROC', dtype=tf.float32)
         train_metrics_2 = tf.keras.metrics.AUC(curve='PR', name='train_AUC-PR', dtype=tf.float32)
+        tot_steps = 'Unknown' # initialize as unknown 
 
-        # setting up checkpoints
+        # setting up checkpoint
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
         prev_epoch = -1
         
         # resume
-        if checkpoint_path is None:
+        if resume_time is None:
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
+            shutil.copy(config.path, checkpoint_dir) # copy config file in the same folder where the models will be saved
         else:
-            latest_checkpoint_file = tf.train.latest_checkpoint(checkpoint_path)
-            if latest_checkpoint_file:
-                tf.print("Checkpoint file {} found. Restoring...".format(latest_checkpoint_file))
-                checkpoint.restore(latest_checkpoint_file)
+            log_dir = os.path.join(os.path.expanduser(config.log_dir), resume_time) # keep saving logs in the 'old' folder
+            checkpoint_dir = os.path.join(os.path.expanduser(config.checkpoint_dir), resume_time) # keep saving checkpoints in the 'old' folder
+            
+            # try to load checkpoint
+            chkp = tf.train.latest_checkpoint(checkpoint_dir)
+            if chkp:
+                tf.print("Checkpoint file {} found. Restoring...".format(chkp))
+                checkpoint.restore(chkp)
                 tf.print("Checkpoint restored.")
-                prev_epoch = int(latest_checkpoint_file.split('-')[-1])-1
-                log_dir = checkpoint_path # use checkpoint log_dir
+                prev_epoch = int(chkp.split('-')[-1])-1
             else:
                 tf.print("Checkpoint file not found!")
                 return
@@ -160,7 +170,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             val_metrics_2 = tf.keras.metrics.AUC(curve = 'PR', name='val_AUC-PR', dtype=tf.float32)
             val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
         
-        if profile: # make sure the variable LD_LIBRARY_PATH is properly set up
+        if analyse_trace: # make sure the variable LD_LIBRARY_PATH is properly set up
             prof_log_dir = os.path.join(log_dir, 'profile/')
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
         
@@ -199,15 +209,15 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             for entry in train_dataset:
                 strategy.experimental_run_v2(train_step, args=(entry, ))
                 num_batches += 1
+                # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):
-                    tf.print('Epoch', epoch,'; Step', num_batches, '; loss', train_mean_loss.result(), '; AUC-ROC', train_metrics_1.result(), '; AUC-PR', train_metrics_2.result())
-
-                    # write metrics on tensorboard after each iteration
+                    tf.print('{}/{} - loss: {:8.6f} - AUC-ROC {:6.5f} - AUC-PR {:6.5f}'.format(num_batches, tot_steps, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()))
                     with train_summary_writer.as_default():
-                        tf.summary.scalar('iter_AUC-ROC', train_metrics_1.result(), step=optimizer.iterations)
-                        tf.summary.scalar('iter_AUC-PR', train_metrics_2.result(), step=optimizer.iterations)
-                        tf.summary.scalar('iter_loss', train_mean_loss.result(), step=optimizer.iterations)
+                        tf.summary.scalar('batch_AUC-ROC', train_metrics_1.result(), step=optimizer.iterations)
+                        tf.summary.scalar('batch_AUC-PR', train_metrics_2.result(), step=optimizer.iterations)
+                        tf.summary.scalar('batch_loss', train_mean_loss.result(), step=optimizer.iterations)
                         train_summary_writer.flush()
+            tot_steps = num_batches # update tot_steps for next epoch
 
         @tf.function
         def distributed_val_body(entry):
@@ -219,7 +229,9 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         # loop
         for epoch in tf.range(prev_epoch+1, epochs, dtype=tf.int64):
             start_time = time.time()
-            tf.print('Epoch {}'.format(epoch))
+            tf.print()
+            tf.print()
+            tf.print('Epoch {}/{}'.format(epoch, epochs))
 
             tf.summary.trace_on(graph=False, profiler=True)
             
@@ -233,7 +245,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 train_summary_writer.flush()
                 
             # print progress
-            tf.print('Epoch', epoch, ': loss', train_mean_loss.result(), '; AUC-ROC', train_metrics_1.result(), '; AUC-PR', train_metrics_2.result())
+            tf.print('Epoch {}: loss {:8.6f} - AUC-ROC {:6.5f} - AUC-PR {:6.5f}'.format(epoch, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()), end=' ')
             
             train_metrics_1.reset_states()
             train_metrics_2.reset_states()
@@ -254,7 +266,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                     tf.summary.scalar('epoch_loss', val_loss.result(), step=epoch)
                     val_summary_writer.flush()
 
-                tf.print('VALIDATION Epoch', epoch, ': AUC-ROC', val_metrics_1.result(), '; AUC-PR', val_metrics_2.result())
+                tf.print('- val_AUC-ROC {:6.5f} - val_AUC_PR {:6.5f}'.format(val_metrics_1.result(), val_metrics_2.result()))
                 
                 # reset validation metrics after each epoch
                 val_metrics_1.reset_states()
@@ -263,37 +275,38 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 
                 # early stopping
                 if (config.early_stop_min_d) or (config.early_stop_patience):
+                    
                     if not config.early_stop_min_d:
-                        config.early_stop_min_d = 0.
+                        config.early_stop_min_d = 0
+                   
                     if not config.early_stop_patience:
                         config.early_stop_patience = 1
                     
-                    if os.path.isfile(os.path.join(log_dir, 'early_stopping.npy')):
-                        cumerror = int(np.load(os.path.join(log_dir, 'early_stopping.npy')))
+                    if os.path.isfile(os.path.join(checkpoint_dir, 'early_stopping.npy')):
+                        cumerror = int(np.load(os.path.join(checkpoint_dir, 'early_stopping.npy')))
                     
                     if val_metrics_2 > (max_metric + config.early_stop_min_d):
                         max_metric = val_metrics_2
                         cumerror = 0
-                        np.save(os.path.join(log_dir, 'early_stopping.npy'), cumerror)
+                        np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
                     else:
                         cumerror += 1
-                        tf.print('No improvements - {}/{}'.format(cumerror, config.early_stop_patience))
-                        np.save(os.path.join(log_dir, 'early_stopping.npy'), cumerror)
+                        tf.print('Epoch {}: no significant improvements ({}/{})'.format(epoch, epochs, cumerror, config.early_stop_patience))
+                        np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
                         if cumerror == config.early_stop_patience:
-                            tf.print('Early stopping criteria met. Stopping...')
+                            tf.print('Epoch {}: stopping')
                             break
-                    #TODO: record early stopping progress in case crushes
                     
             elif (config.early_stop_min_d) or (config.early_stop_patience):
-                tf.print('Early stopping requires a validation dataset...')
+                raise RuntimeError('EarlyStopping requires a validation dataset')
 
-            checkpoint_path = os.path.join(log_dir, epoch)
-            saved_path = checkpoint.save(checkpoint_path)
-            tf.print('Saving checkpoint: {}'.format(saved_path))
+            checkpoint_path = os.path.join(checkpoint_dir, 'epoch-'+epoch, 'mymodel.h5')
+            checkpoint.save(checkpoint_path)
+            tf.print('Epoch {}: saving model to {}'.format(checkpoint_path))
 
-            #report time
+            # report time
             time_taken = time.time()-start_time
-            tf.print('Time taken for epoch {}: {} s'.format(epoch, time_taken))
+            tf.print('Epoch {}: {} s'.format(epoch, time_taken))
             
             tf.keras.backend.clear_session()
             gc.collect()
@@ -302,16 +315,13 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument("frontend", choices=["waveform", "log-mel-spectrogram"])
-    parser.add_argument("-a", "--api", choices=["fit", "custom"], default="fit")
-    parser.add_argument("-s", "--split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL (TEST)", type=int, nargs='+', action=_required_length(2,3))
     parser.add_argument("--root-dir", dest="tfrecords_dir", help="directory to read .tfrecord files from (default to path on Boden)")
-    parser.add_argument("--path-config", help="path to config.json (default to path on Boden)", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
-    parser.add_argument("--path-lastfm", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
+    parser.add_argument("--config-path", help="path to config.json (default to path on Boden)", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
+    parser.add_argument("--lastfm-path", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
     parser.add_argument("--epochs", help="specify the number of epochs to train on", type=int, required=True)
     parser.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
-    parser.add_argument("--checkpoint_path", help="load a previously saved model")
-    parser.add_argument("--update_freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
-    parser.add_argument("--cuda", help="set cuda visible devices", type=int, nargs="+")
+    parser.add_argument("--resume-time", help="load a previously saved model")
+    parser.add_argument("--update-freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
     parser.add_argument("-v", "--verbose", choices=['0', '1', '2', '3'], help="verbose mode", default='2')
 
     args = parser.parse_args()
@@ -325,7 +335,7 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = args.verbose
 
     # parse json
-    config, config_optim = parse_config(args.path_config, args.path_lastfm)
+    config, config_optim = parse_config(args.config_path, args.lastfm_path)
 
     # if root_dir is not specified, use default path on our server
     if not args.tfrecords_dir:
@@ -336,7 +346,10 @@ if __name__ == '__main__':
         args.tfrecords_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.frontend + s)
 
     # create training and validation datasets
-    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=args.split, which_split=(True, True, ) + (False, ) * (len(args.split)-2),
+    assert config.split
+    assert len(config.split) >= 2
+    assert len(config.split) <= 3
+    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
                                                                                 sample_rate=config.sr, batch_size=config.batch, 
                                                                                 cycle_length=config.cycle_len, 
                                                                                 shuffle=config.shuffle, buffer_size=config.shuffle_buffer, 
@@ -352,14 +365,14 @@ if __name__ == '__main__':
     # train
     train(train_dataset, valid_dataset, frontend=args.frontend, strategy=strategy,
           config=config, config_optim=config_optim,
-          epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, checkpoint_path=args.checkpoint_path, 
+          epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, resume_time=args.resume_time, 
           update_freq=args.update_freq)
 
-# def main(tfrecords_dir, frontend, config_dir, checkpoint_path=None,
+# def main(tfrecords_dir, frontend, config_dir, resume_time=None,
 #          split=(70, 10, 20), epochs=5, sample_rate=16000, batch_size=32,
 #          cycle_length=2, validation=True, shuffle=True, buffer_size=10000,
 #          window_size=15, random=False, with_tags=None, merge_tags=None,
-#          log_dir = '/srv/data/urop/log_aden/', model_dir='/srv/data/urop/model_aden',
+#          log_dir = '/srv/data/urop/log_aden/', checkpoint_dir='/srv/data/urop/model_aden',
 #          with_tids=None, analyse_trace=False, config.early_stop_min_d=None,
 #          config.early_stop_patience=None):
    
@@ -383,7 +396,7 @@ if __name__ == '__main__':
 #     checkpoint: str
 #         The time denoted in the latest checkpoint file of format 'YYMMDD-hhmmss'.
 #         You may find out the time by viewing the folder name stored under the 
-#         model_dir, e.g. log-mel-spectrogram_20190823-000120, then checkpoint
+#         checkpoint_dir, e.g. log-mel-spectrogram_20190823-000120, then checkpoint
 #         should be equal to '20190823-000120'.
 
 #     split: tuple (a tuple of three integers)
@@ -431,7 +444,7 @@ if __name__ == '__main__':
 #         The directory where the tensorboard data (profiling, AUC_PR, AUC_ROC, 
 #         loss logging) are stored.
         
-#     model_dir: str
+#     checkpoint_dir: str
 #         The directory where the Checkpoints files from each epoch will be 
 #         stored. Note that the actual files will be stored under a subfolder
 #         based on the frontend.
@@ -503,7 +516,7 @@ if __name__ == '__main__':
 #     train(frontend=frontend, 
 #           train_dataset=train_dataset, 
 #           strategy=strategy, 
-#           checkpoint_path=checkpoint_path,
+#           resume_time=resume_time,
 #           valid_dataset=valid_dataset, 
 #           validation=validation,  
 #           epochs=epochs, 
@@ -514,7 +527,7 @@ if __name__ == '__main__':
 #           global_batch_size=batch_size,
 #           lr=lr, 
 #           log_dir=log_dir, 
-#           model_dir=model_dir,
+#           checkpoint_dir=checkpoint_dir,
 #           analyse_trace=analyse_trace,
 #           config.early_stop_min_d=config.early_stop_min_d,
 #           config.early_stop_patience=config.early_stop_patience)
