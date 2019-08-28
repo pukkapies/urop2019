@@ -203,7 +203,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 num_batches += 1
                 
                 if tf.equal(num_batches % update_freq, 0):
-                    tf.print('Epoch', epoch,'; Step', num_batches, '; loss', train_mean_loss.result(), '; AUC-ROC', train_metrics_1.result(), ';AUC-PR', train_metrics_2.result())
+                    tf.print('Epoch', epoch,'; Step', num_batches, '; loss', train_mean_loss.result(), '; AUC-ROC', train_metrics_1.result(), '; AUC-PR', train_metrics_2.result())
                     
                     # write metrics on tensorboard after each iteration
                     with train_summary_writer.as_default():
@@ -237,9 +237,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 
             # print progress
             tf.print('Epoch', epoch, ': loss', train_mean_loss.result(), '; AUC-ROC', train_metrics_1.result(), '; AUC-PR', train_metrics_2.result())
-
-            # print progress
-            tf.print('Epoch {} --training done\n'.format(epoch))
             
             train_metrics_1.reset_states()
             train_metrics_2.reset_states()
@@ -260,7 +257,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                     tf.summary.scalar('epoch_loss', val_loss.result(), step=epoch)
                     val_summary_writer.flush()
 
-                tf.print('Val- Epoch', epoch, ': AUC-ROC', val_metrics_1.result(), '; AUC-PR', val_metrics_2.result())
+                tf.print('VALIDATION Epoch', epoch, ': AUC-ROC', val_metrics_1.result(), '; AUC-PR', val_metrics_2.result())
                 
                 # reset validation metrics after each epoch
                 val_metrics_1.reset_states()
