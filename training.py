@@ -139,9 +139,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("frontend", choices=["waveform", "log-mel-spectrogram"])
     parser.add_argument("-a", "--api", choices=["fit", "custom"], default="fit")
-    parser.add_argument("-s", "--percentage", help="percentage of tracks to go in each dataset, supply as TRAIN VAL (TEST)", type=int, nargs='+', action=_required_length(2,3))
+    parser.add_argument("-s", "--split", help="percentage of tracks to go in each dataset, supply as TRAIN VAL (TEST)", type=int, nargs='+', action=_required_length(2,3))
     parser.add_argument("--root-dir", dest="tfrecords_dir", help="directory to read .tfrecord files from (default to path on Boden)")
-    parser.add_argument("--path-config", help="path to config.json (default to path on Boden)", default="/srv/data/urop/config.json")
+    parser.add_argument("--path-config", help="path to config.json (default to path on Boden)", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
     parser.add_argument("--path-lastfm", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
     parser.add_argument("--epochs", help="specify the number of epochs to train on", type=int, required=True)
     parser.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
@@ -161,27 +161,27 @@ if __name__ == '__main__':
     # specify verbose mode
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = args.verbose
 
+    # parse json
+    config, config_optim = parse_config(args.path_config, args.path_lastfm)
+
     # if root_dir is not specified, use default path on our server
     if not args.tfrecords_dir:
-        if args.sample_rate != 16000:
-            s = '-' + str(args.sample_rate // 1000) + 'kHz'
+        if config.sr != 16000:
+            s = '-' + str(config.sr // 1000) + 'kHz'
         else:
             s = ''
         args.tfrecords_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.frontend + s)
 
-    # parse json
-    config, config_optim = parse_config(args.path_config, args.path_lastfm)
-
     # create training and validation datasets
-    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=args.split, which_split=(True, True, ) + (False, ) * (len(args.percentage)-2),
+    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=args.split, which_split=(True, True, ) + (False, ) * (len(args.split)-2),
                                                                                 sample_rate=config.sr, batch_size=config.batch, 
                                                                                 cycle_length=config.cycle_len, 
                                                                                 shuffle=config.shuffle, buffer_size=config.shuffle_buffer, 
                                                                                 num_tags=config.tot_tags, window_size=config.window_len, random=config.window_random, 
                                                                                 with_tags=config.tags, merge_tags=config.tags_to_merge)
-    
+
     # train
-    train(train_dataset, valid_dataset, frontend=args.frontend, 
-          config=config, config_optim=optimizer, 
+    train(train_dataset, valid_dataset, frontend=args.frontend,
+          config=config, config_optim=config_optim,
           epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, checkpoint=args.checkpoint, 
           update_freq=args.update_freq)
