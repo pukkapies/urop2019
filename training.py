@@ -22,7 +22,7 @@ def get_compiled_model(frontend, config, config_optimizer, checkpoint=None):
             model.load_weights(os.path.expanduser(checkpoint))
     return model
 
-def train(train_dataset, valid_dataset, frontend, config, config_optimizer, epochs, steps_per_epoch=None, checkpoint=None, update_freq=1):
+def main(train_dataset, valid_dataset, frontend, config, config_optimizer, epochs, steps_per_epoch=None, checkpoint=None, update_freq=1):
 
     model = get_compiled_model(frontend, config, config_optimizer, checkpoint)
 
