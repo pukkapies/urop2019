@@ -364,8 +364,8 @@ if __name__ == '__main__':
 										                                        as_tuple=False)
     
     if args.steps_per_epoch:
-        train_dataset = train_dataset.take(steps_per_epoch)
-        valid_dataset = valid_dataset.take(steps_per_epoch)
+        train_dataset = train_dataset.take(args.steps_per_epoch)
+        valid_dataset = valid_dataset.take(args.steps_per_epoch)
 
     # set up training strategy
     strategy = tf.distribute.MirroredStrategy()
