@@ -276,7 +276,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 if (config.early_stop_min_d) or (config.early_stop_patience):
                     
                     if not config.early_stop_min_d:
-                        config.early_stop_min_d = 0
+                        config.early_stop_min_d = 0.
                    
                     if not config.early_stop_patience:
                         config.early_stop_patience = 1
