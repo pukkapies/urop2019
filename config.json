@@ -16,7 +16,7 @@
   "tfrecords": {
     "n_mels": 128,
     "n_tags": 155,
-    "sample_rate": 8000
+    "sample_rate": 16000
   },
   "config": {
     "batch_size": 32,
@@ -25,11 +25,11 @@
     "early_stop_patience": 5,
     "log_dir": "/srv/data/urop/log/",
     "checkpoint_dir": "/srv/data/urop/model/",
+    "shuffle": true,
+    "shuffle_buffer_size": 10000,
+    "split": [80, 10, 10],
     "reduce_lr_plateau_min_delta": 0.1,
     "reduce_lr_plateau_patience": 2,
-    "shuffle": true,
-    "shuffle_buffer_size": 4096,
-    "split": (80, 10, 10),
     "window_length": 15,
     "window_extract_randomly": true
   }
