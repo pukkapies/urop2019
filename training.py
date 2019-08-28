@@ -148,6 +148,7 @@ if __name__ == '__main__':
     parser.add_argument("--path-lastfm", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
     parser.add_argument("--epochs", help="specify the number of epochs to train on", type=int, required=True)
     parser.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
+    parser.add_argument("--no-shuffle", action="store_true", help="override shuffle setting")
     parser.add_argument("--resume-time", help="load a previously saved model")
     parser.add_argument("--update-freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
     parser.add_argument("--cuda", help="set cuda visible devices", type=int, nargs="+")
@@ -174,7 +175,11 @@ if __name__ == '__main__':
             s = ''
         args.tfrecords_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.frontend + s)
 
-    # create training and validation datasets
+    # override shuffle setting
+    if no_shuffle:
+        config.shuffle = False
+
+    # create training and validation dataset
     assert config.split
     assert len(config.split) >= 2
     assert len(config.split) <= 3
