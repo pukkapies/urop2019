@@ -93,12 +93,13 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
 
     model = get_compiled_model(frontend, strategy, config, config_optim, resume_time)
 
-    log_dir = os.path.join(os.path.expanduser(config.log), frontend, datetime.datetime.now().strftime("%y%m%d-%H%M")) # to access training scalars using tensorboard
+    log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M")) # to save training metrics (to access using tensorboard)
+    checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))) # to save model checkpoints
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
-            filepath = os.path.join(log_dir, 'mymodel.h5'),
-            monitor = 'val_AUC-ROC',
+            filepath = os.path.join(checkpoint_dir, 'mymodel.h5'),
+            monitor = 'val_AUC-PR',
             mode = 'max',
             save_best_only = True,
             save_freq = 'epoch',
@@ -106,7 +107,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         ),
 
         tf.keras.callbacks.EarlyStopping(
-            monitor = 'val_AUC-ROC',
+            monitor = 'val_AUC-PR',
             mode = 'max',
             min_delta = config.early_stop_min_d,
             restore_best_weights = True,
@@ -176,14 +177,14 @@ if __name__ == '__main__':
         args.tfrecords_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.frontend + s)
 
     # override shuffle setting
-    if no_shuffle:
+    if args.no_shuffle:
         config.shuffle = False
 
     # create training and validation dataset
     assert config.split
     assert len(config.split) >= 2
     assert len(config.split) <= 3
-    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=args.split, which_split=(True, True, ) + (False, ) * (len(args.split)-2),
+    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
                                                                                 sample_rate=config.sr, batch_size=config.batch, 
                                                                                 cycle_length=config.cycle_len, 
                                                                                 shuffle=config.shuffle, buffer_size=config.shuffle_buffer, 
