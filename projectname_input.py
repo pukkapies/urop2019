@@ -38,8 +38,11 @@ Functions
 - _window
     Extract a sample of n seconds from each audio tensor within a batch.
 
+_spect_normalization
+    Ensure zero mean and unit variance within a batch of log-mel-spectrograms.
+
 - _batch_normalization
-    Ensure zero mean and variation within a batch.
+    Ensure zero mean and unit variance within a batch.
 
 - _batch_tuplification
     Transform features from dict to tuple.
@@ -212,9 +215,8 @@ def _window(features_dict, audio_format, sample_rate, window_size=15, random=Fal
     
     return features_dict
 
-def _spectrogram_normalization(features_dict):
+def _spect_normalization(features_dict):
     mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2], keepdims=True)
-
     features_dict['audio'] = tf.divide(tf.subtract(features_dict['audio'], mean), tf.sqrt(variance+0.000001))
     return features_dict
 
@@ -322,7 +324,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
         if with_tags is not None:
             if merge_tags is not None:
                 dataset = dataset.map(lambda x: _merge(x, merge_tags))
-            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
+            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda y: _tag_filter_hotenc_mask(y, with_tags))
         if with_tids is not None:
             dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
         
@@ -334,7 +336,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
 
         # normalize data
         if audio_format == 'log-mel-spectrogram':
-            dataset = dataset.map(_spectrogram_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(_spect_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         else:
             dataset = dataset.map(_batch_normalization, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
