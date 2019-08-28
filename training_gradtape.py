@@ -116,11 +116,7 @@ def parse_config(config_path, lastfm_path):
     
     return config, config_optim
             
-def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, steps_per_epoch=None, resume_time=None, update_freq=1, analyse_trace=True):
-
-    if steps_per_epoch:
-        train_dataset = train_dataset.take(steps_per_epoch)
-        valid_dataset = valid_dataset.take(steps_per_epoch)
+def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, resume_time=None, update_freq=1, analyse_trace=True):
 
     log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M")) # to save training metrics (to access using tensorboard)
     checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))) # to save model checkpoints
@@ -365,8 +361,12 @@ if __name__ == '__main__':
                                                                                 shuffle=config.shuffle, buffer_size=config.shuffle_buffer, 
                                                                                 num_tags=config.tot_tags, window_size=config.window_len, random=config.window_random, 
                                                                                 with_tags=config.tags, merge_tags=config.tags_to_merge,
-										as_tuple=False)
+										                                        as_tuple=False)
     
+    if args.steps_per_epoch:
+        train_dataset = train_dataset.take(steps_per_epoch)
+        valid_dataset = valid_dataset.take(steps_per_epoch)
+
     # set up training strategy
     strategy = tf.distribute.MirroredStrategy()
     train_dataset = strategy.experimental_distribute_dataset(train_dataset)
@@ -375,7 +375,7 @@ if __name__ == '__main__':
     # train
     train(train_dataset, valid_dataset, frontend=args.frontend, strategy=strategy,
           config=config, config_optim=config_optim,
-          epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, resume_time=args.resume_time, 
+          epochs=args.epochs, resume_time=args.resume_time, 
           update_freq=args.update_freq)
 
 # def main(tfrecords_dir, frontend, config_dir, resume_time=None,
