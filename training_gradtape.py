@@ -141,6 +141,8 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         if resume_time is None:
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
+            if not os.path.isdir(checkpoint_dir):
+                os.makedirs(checkpoint_dir)
             shutil.copy(config.path, checkpoint_dir) # copy config file in the same folder where the models will be saved
         else:
             log_dir = os.path.join(os.path.expanduser(config.log_dir), resume_time) # keep saving logs in the 'old' folder
