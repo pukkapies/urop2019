@@ -8,7 +8,7 @@ import projectname_input
 
 def get_compiled_model(frontend, config, config_optimizer, checkpoint=None):
     mirrored_strategy = tf.distribute.MirroredStrategy()
-
+    
     with mirrored_strategy.scope():
         # read optimizer specs from config_optimizer dict for max flexibility
         optimizer = tf.keras.optimizers.get({"class_name": config_optimizer.class_name, "config": config_optimizer.config})
