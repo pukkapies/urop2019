@@ -1,0 +1,34 @@
+{
+  "model": {
+    "n_dense_units": 500,
+    "n_filters": 16
+  },
+  "optimizer": {
+    "name": "SGD",
+    "learning_rate": 0.01
+  },
+  "tags": {
+    "top": 50,
+    "with": null,
+    "without": null,
+    "merge": null
+  },
+  "tfrecords": {
+    "n_mels": 96,
+    "n_tags": 155,
+    "sample_rate": 16000
+  },
+  "config": {
+    "batch_size": 32,
+    "cycle_length": 2,
+    "early_stop_min_delta": 0.2,
+    "early_stop_patience": 5,
+    "log_dir": "~/logs/",
+    "reduce_lr_plateau_min_delta": 0.1,
+    "reduce_lr_plateau_patience": 2,
+    "shuffle": true,
+    "shuffle_buffer_size": 10000,
+    "window_length": 15,
+    "window_extract_randomly": true
+  }
+}
