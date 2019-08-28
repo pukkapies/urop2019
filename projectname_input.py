@@ -232,7 +232,7 @@ def _batch_tuplification(features_dict):
 
     return (features_dict['audio'], features_dict['tags'])
 
-def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_epochs=None, as_tuple=True):
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -245,6 +245,9 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
 
     split: tuple
         Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
+
+    which_split: tuple
+        Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
 
     sample_rate: int
         Specifies the sample rate used to process audio tracks.
@@ -266,6 +269,9 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
 
     random: bool
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+    
+    num_tags: int
+        Specifies the total number of tags.
 
     with_tids: list
         If not None, contains the tids to be trained on.
@@ -276,7 +282,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
     merge_tags: list
         If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
 
-    num_epochs: int
+    repeat: int
         If not None, repeats the dataset only for a given number of epochs (default is repeat indefinitely).
 
     as_tuple: bool
@@ -344,17 +350,24 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
         if as_tuple:
             dataset = dataset.map(_batch_tuplification, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-        dataset = dataset.repeat(num_epochs)
+        dataset = dataset.repeat(repeat)
         dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
 
         datasets.append(dataset)
+    
+    if which_split is not None:
+        if split is not None:
+            assert len(which_split) == len(split) , 'split and which_split must have the same length'
+            datasets = np.array(datasets)[np.array(which_split, dtype=np.bool)].tolist()
+        else:
+            datasets = datasets + [None] * (which_split.count(1) - 1) # useful when trying to unpack datasets, but split has not been provided
     
     if len(datasets) == 1:
         return datasets[0]
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_epochs=None, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -364,6 +377,9 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, sample_r
 
     split: tuple
         Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
+
+    which_split: tuple
+        Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
 
     sample_rate: int
         Specifies the sample rate used to process audio tracks.
@@ -385,6 +401,9 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, sample_r
 
     random: bool
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+    
+    num_tags: int
+        Specifies the total number of tags.
 
     with_tids: list
         If not None, contains the tids to be trained on.
@@ -395,7 +414,7 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, sample_r
     merge_tags: list
         If not None, contains the lists of tags to be merged together (only applies if with_tags is specified).
 
-    num_epochs: int
+    repeat: int
         If not None, repeats the dataset only for a given number of epochs (default is repeat indefinitely).
 
     as_tuple: bool
@@ -408,4 +427,4 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, sample_r
         if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
             tfrecords.append(os.path.abspath(os.path.join(tfrecords_dir, file)))
 
-    return generate_datasets(tfrecords, audio_format, split, sample_rate, batch_size, cycle_length, shuffle, buffer_size, window_size, random, with_tids, with_tags, merge_tags, num_tags, num_epochs, as_tuple)
+    return generate_datasets(tfrecords, audio_format, split, which_split, sample_rate, batch_size, cycle_length, shuffle, buffer_size, window_size, random, with_tids, with_tags, merge_tags, num_tags, repeat, as_tuple)
