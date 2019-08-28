@@ -118,6 +118,10 @@ def parse_config(config_path, lastfm_path):
             
 def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, steps_per_epoch=None, resume_time=None, update_freq=1, analyse_trace=True):
 
+    if steps_per_epoch:
+        train_dataset = train_dataset.take(steps_per_epoch)
+        valid_dataset = valid_dataset.take(steps_per_epoch)
+
     log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M")) # to save training metrics (to access using tensorboard)
     checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))) # to save model checkpoints
     
