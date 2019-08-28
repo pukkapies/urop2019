@@ -6,16 +6,18 @@ import tensorflow as tf
 import projectname
 import projectname_input
 
-def get_optimizer(config):
-    return tf.keras.optimizers.get({"class_name": config.pop('name'), "config": config})
-
 def get_compiled_model(frontend, config, config_optimizer, checkpoint=None):
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
     with mirrored_strategy.scope():
-        optimizer = get_optimizer(config_optimizer)
-        model = projectname.build_model(frontend, config.n_output_neurons, config.n_dense_units, config.n_filters)
+        # read optimizer specs from config_optimizer dict for max flexibility
+        optimizer = tf.keras.optimizers.get({"class_name": config_optimizer.class_name, "config": config_optimizer.config})
+
+        # compile model
+        model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM), metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
+        
+        # restore checkpoint (if provided)
         if checkpoint:
             model.load_weights(os.path.expanduser(checkpoint))
     return model
@@ -24,7 +26,7 @@ def train(train_dataset, valid_dataset, frontend, config, config_optimizer, epoc
 
     model = get_compiled_model(frontend, config, config_optimizer, checkpoint)
 
-    log_dir = os.path.expanduser("~/logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M"))
+    log_dir = os.path.expanduser("~/logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M")) # to access training scalars using tensorboard
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
