@@ -124,7 +124,7 @@ def create_config_json(config_path, **kwargs):
         'checkpoint_dir': '/srv/data/urop/model/',
         'shuffle': True,
         'shuffle_buffer_size': 10000,
-        'split': (80, 10, 10),
+        'split': NoIndent((80, 10, 10)),
         'reduce_lr_plateau_min_delta': 0.1,
         'reduce_lr_plateau_patience': 2,
         'window_length': 15,
