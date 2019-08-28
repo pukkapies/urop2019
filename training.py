@@ -1,7 +1,7 @@
 import argparse
+import datetime
 import json
 import os
-import datetime
 
 import tensorflow as tf
 
@@ -46,12 +46,16 @@ def parse_config(path_config, path_lastfm):
     # create config namespace (to be accessed more easily than a dictionary)
     config = argparse.Namespace()
     config.batch = config_d['config']['batch_size']
-    config.cycle_len = config_d['config']['interleave']
+    config.cycle_len = config_d['config']['cycle_length']
+    config.early_stop_min_d = config_d['config']['early_stop_min_delta']
+    config.early_stop_patience = config_d['config']['early_stop_patience']
     config.log = config_d['config']['log_dir']
     config.n_dense_units = config_d['model']['n_dense_units']
     config.n_filters = config_d['model']['n_filters']
     config.n_mels = config_d['tfrecords']['n_mels']
     config.n_output_neurons = len(tags)
+    config.plateau_min_d = config_d['config']['reduce_lr_plateau_min_delta']
+    config.plateau_patience = config_d['config']['reduce_lr_plateau_patience']
     config.shuffle = config_d['config']['shuffle']
     config.shuffle_buffer = config_d['config']['shuffle_buffer_size']
     config.sr = config_d['tfrecords']['sample_rate']
@@ -68,10 +72,8 @@ def parse_config(path_config, path_lastfm):
     
     return config, config_optim
 
-def get_compiled_model(frontend, config, config_optim, checkpoint=None):
-    mirrored_strategy = tf.distribute.MirroredStrategy()
-    
-    with mirrored_strategy.scope():
+def get_compiled_model(frontend, strategy, config, config_optim, checkpoint_path=None):
+    with strategy.scope():
         # read optimizer specs from config_optim dict for max flexibility
         optimizer = tf.keras.optimizers.get({"class_name": config_optim.class_name, "config": config_optim.config})
 
@@ -79,16 +81,16 @@ def get_compiled_model(frontend, config, config_optim, checkpoint=None):
         model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM), metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
         
-        # restore checkpoint (if provided)
-        if checkpoint:
-            model.load_weights(os.path.expanduser(checkpoint))
+        # restore checkpoint_path (if provided)
+        if checkpoint_path:
+            model.load_weights(os.path.expanduser(checkpoint_path))
     return model
 
-def train(train_dataset, valid_dataset, frontend, config, config_optim, epochs, steps_per_epoch=None, checkpoint=None, update_freq=1):
+def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, steps_per_epoch=None, checkpoint_path=None, update_freq=1, profile_batch=0):
 
-    model = get_compiled_model(frontend, config, config_optim, checkpoint)
+    model = get_compiled_model(frontend, strategy, config, config_optim, checkpoint_path)
 
-    log_dir = os.path.expanduser("~/logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M")) # to access training scalars using tensorboard
+    log_dir = os.path.join(os.path.expanduser(config.log), frontend, datetime.datetime.now().strftime("%y%m%d-%H%M")) # to access training scalars using tensorboard
 
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
@@ -103,19 +105,19 @@ def train(train_dataset, valid_dataset, frontend, config, config_optim, epochs, 
         tf.keras.callbacks.EarlyStopping(
             monitor = 'val_AUC-ROC',
             mode = 'max',
-            min_delta = 0.2,
+            min_delta = config.early_stop_min_d,
             restore_best_weights = True,
-            patience = 5,
+            patience = config.early_stop_patience,
             verbose = 1,
         ),
 
         tf.keras.callbacks.ReduceLROnPlateau(
             monitor = 'val_loss',
             mode = 'min',
-            min_delta = 0.5,
+            min_delta = config.plateau_min_d,
             min_lr = 0.00001,
             factor = 0.2,
-            patience = 2,
+            patience = config.plateau_patience,
             verbose = 1,
         ),
 
@@ -124,7 +126,7 @@ def train(train_dataset, valid_dataset, frontend, config, config_optim, epochs, 
             histogram_freq = 1,
             write_graph = False,
             update_freq = update_freq,
-            profile_batch = 0,
+            profile_batch = profile_batch, # make sure the variable LD_LIBRARY_PATH is properly set up
         ),
 
         tf.keras.callbacks.TerminateOnNaN(),
@@ -145,8 +147,7 @@ if __name__ == '__main__':
     parser.add_argument("--path-lastfm", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
     parser.add_argument("--epochs", help="specify the number of epochs to train on", type=int, required=True)
     parser.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
-    parser.add_argument("--checkpoint", help="load a previously saved model")
-    parser.add_argument("--checkpoint-time", help="load a previously saved model from the specified resume time")
+    parser.add_argument("--checkpoint_path", help="load a previously saved model")
     parser.add_argument("--update_freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
     parser.add_argument("--cuda", help="set cuda visible devices", type=int, nargs="+")
     parser.add_argument("-v", "--verbose", choices=['0', '1', '2', '3'], help="verbose mode", default='2')
@@ -180,8 +181,11 @@ if __name__ == '__main__':
                                                                                 num_tags=config.tot_tags, window_size=config.window_len, random=config.window_random, 
                                                                                 with_tags=config.tags, merge_tags=config.tags_to_merge)
 
+    # set up training strategy
+    strategy = tf.distribute.MirroredStrategy()
+
     # train
-    train(train_dataset, valid_dataset, frontend=args.frontend,
+    train(train_dataset, valid_dataset, frontend=args.frontend, strategy=strategy,
           config=config, config_optim=config_optim,
-          epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, checkpoint=args.checkpoint, 
+          epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, checkpoint_path=args.checkpoint_path, 
           update_freq=args.update_freq)
