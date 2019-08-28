@@ -212,7 +212,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 num_batches += 1
                 # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):
-                    tf.print('{}/Unknown - loss: {:8.6f} - AUC-ROC {:6.5f} - AUC-PR {:6.5f}'.format(num_batches, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()))
+                    tf.print('{}/Unknown - loss: {} - AUC-ROC {} - AUC-PR {}'.format(num_batches, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()))
                     with train_summary_writer.as_default():
                         tf.summary.scalar('batch_AUC-ROC', train_metrics_1.result(), step=optimizer.iterations)
                         tf.summary.scalar('batch_AUC-PR', train_metrics_2.result(), step=optimizer.iterations)
@@ -245,7 +245,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 train_summary_writer.flush()
                 
             # print progress
-            tf.print('Epoch {}: loss {:8.6f} - AUC-ROC {:6.5f} - AUC-PR {:6.5f}'.format(epoch, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()), end=' ')
+            tf.print('Epoch {}: loss {} - AUC-ROC {} - AUC-PR {}'.format(epoch, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()), end=' ')
             
             train_metrics_1.reset_states()
             train_metrics_2.reset_states()
@@ -266,7 +266,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                     tf.summary.scalar('epoch_loss', val_loss.result(), step=epoch)
                     val_summary_writer.flush()
 
-                tf.print('- val_AUC-ROC {:6.5f} - val_AUC_PR {:6.5f}'.format(val_metrics_1.result(), val_metrics_2.result()))
+                tf.print('- val_AUC-ROC {} - val_AUC_PR {}'.format(val_metrics_1.result(), val_metrics_2.result()))
                 
                 # reset validation metrics after each epoch
                 val_metrics_1.reset_states()
