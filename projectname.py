@@ -49,7 +49,7 @@ conditions and the following disclaimer in the documentation and/or other materi
 promote products derived from this software without specific prior written permission.
 
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR 
 IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
 AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
 CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
@@ -117,12 +117,16 @@ def create_config_json(config_path, **kwargs):
 
     config = {
         'batch_size': 32,
+        'cycle_length': 2,
+        'early_stop_min_delta': 0.2,
+        'early_stop_patience': 5,
         'log_dir': '~/logs/',
         'shuffle': True,
         'shuffle_buffer_size': 10000,
+        'reduce_lr_plateau_min_delta': 0.1,
+        'reduce_lr_plateau_patience': 2,
         'window_length': 15,
         'window_extract_randomly': True,
-        'interleave': 2,
     }
 
     def substitute_into_dict(key, value):
@@ -374,7 +378,7 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500
         front_out = log_mel_spec_frontend(input, y_input=y_input, num_filts=num_filts)
 
     else:
-        raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
+        raise ValueError('please specify the frontend_mode: 'waveform' or 'log-mel-spectrogram'')
 
     model = tf.keras.Model(input,
                            backend(front_out,
