@@ -106,8 +106,8 @@ def parse_config(config_path, lastfm_path):
     config.tot_tags = config_d['tfrecords']['n_tags']
     config.window_len = config_d['config']['window_length']
     config.window_random = config_d['config']['window_extract_randomly']
-    config.log_dir: config_d['config']['log_dir']
-    config.checkpoint_dir: config_d['config']['checkpoint_dir']
+    config.log_dir = config_d['config']['log_dir']
+    config.checkpoint_dir = config_d['config']['checkpoint_dir']
 
     # create config namespace for the optimizer (will be used by get_optimizer() in order to allow max flexibility)
     config_optim = argparse.Namespace()
@@ -327,6 +327,7 @@ if __name__ == '__main__':
     parser.add_argument("--no-shuffle", action="store_true", help="override shuffle setting")
     parser.add_argument("--resume-time", help="load a previously saved model")
     parser.add_argument("--update-freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
+    parser.add_argument("--cuda", help="set cuda visible devices", type=int, nargs="+")
     parser.add_argument("-v", "--verbose", choices=['0', '1', '2', '3'], help="verbose mode", default='2')
 
     args = parser.parse_args()
@@ -351,7 +352,7 @@ if __name__ == '__main__':
         args.tfrecords_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.frontend + s)
 
     # override shuffle setting
-    if no_shuffle:
+    if args.no_shuffle:
         config.shuffle = False
 
     # create training and validation dataset
