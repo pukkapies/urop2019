@@ -49,12 +49,12 @@ import projectname
 import projectname_input
 from modules.query_lastfm import LastFm
             
-def train(frontend, train_dist_dataset, strategy, checkpoint=None, val_dist_dataset=None, validation=True, 
+def train(frontend, train_dist_dataset, strategy, checkpoint_path=None, val_dist_dataset=None, validation=True, 
           num_epochs=10, num_output_neurons=155, y_input=96, num_units=1024, global_batch_size=32,
           num_filt=32, lr=0.001, log_dir = 'logs/trial1/', model_dir='/srv/data/urop/model',
           analyse_trace=False, early_stopping_min_delta=None, early_stopping_patience=None):
 
-    log_dir = os.path.join(os.path.expanduser(config.log), frontend, datetime.datetime.now().strftime("%y%m%d-%H%M")) # to access training scalars using tensorboard
+    log_dir = os.path.join(os.path.expanduser(log_dir), frontend, datetime.datetime.now().strftime("%y%m%d-%H%M")) # to access training scalars using tensorboard
     
     with strategy.scope():
 
