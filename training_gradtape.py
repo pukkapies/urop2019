@@ -346,6 +346,8 @@ if __name__ == '__main__':
     
     # set up training strategy
     strategy = tf.distribute.MirroredStrategy()
+    train_dataset = strategy.experimental_distribute_dataset(train_dataset)
+    valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
 
     # train
     train(train_dataset, valid_dataset, frontend=args.frontend, strategy=strategy,
