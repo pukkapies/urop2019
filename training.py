@@ -7,20 +7,22 @@ import projectname
 import projectname_input
 
 def get_optimizer(config):
-    return tf.keras.optimizers.get({"class_name": config.optimizer.pop('name'), "config": config.optimizer})
+    return tf.keras.optimizers.get({"class_name": config.pop('name'), "config": config})
 
-def get_compiled_model(config, frontend, checkpoint=None):
+def get_compiled_model(frontend, config, config_optimizer, checkpoint=None):
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
     with mirrored_strategy.scope():
-        optimizer = get_optimizer(config)
+        optimizer = get_optimizer(config_optimizer)
         model = projectname.build_model(frontend, config.n_output_neurons, config.n_dense_units, config.n_filters)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM), metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
         if checkpoint:
             model.load_weights(os.path.expanduser(checkpoint))
     return model
 
-def train(model, train_dataset, valid_dataset, epochs, steps_per_epoch=None, update_freq=1):
+def train(train_dataset, valid_dataset, frontend, config, config_optimizer, epochs, steps_per_epoch=None, checkpoint=None, update_freq=1):
+
+    model = get_compiled_model(frontend, config, config_optimizer, checkpoint)
 
     log_dir = os.path.expanduser("~/logs/fit/" + datetime.datetime.now().strftime("%y%m%d-%H%M"))
 
@@ -66,12 +68,4 @@ def train(model, train_dataset, valid_dataset, epochs, steps_per_epoch=None, upd
 
     history = model.fit(train_dataset, epochs=epochs, steps_per_epoch=steps_per_epoch, callbacks=callbacks, validation_data=valid_dataset)
 
-    return history
-
-def main(train_dataset, valid_dataset, frontend, config, epochs, steps_per_epoch=None, split=None, checkpoint=None, update_freq=1):
-
-    model = get_compiled_model(config, frontend, checkpoint)
-
-    history = train(model, train_dataset, valid_dataset, epochs, steps_per_epoch, update_freq)
-
-    return history
+    return history.history
