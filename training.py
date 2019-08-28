@@ -68,8 +68,7 @@ def train(model, train_dataset, valid_dataset, epochs, steps_per_epoch=None, upd
 
     return history
 
-def main(tfrecords_dir, frontend, config, epochs, steps_per_epoch=None, split=None, checkpoint=None, update_freq=1):
-    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(tfrecords_dir, frontend, split, **config.config)
+def main(train_dataset, valid_dataset, frontend, config, epochs, steps_per_epoch=None, split=None, checkpoint=None, update_freq=1):
 
     model = get_compiled_model(config, frontend, checkpoint)
 
