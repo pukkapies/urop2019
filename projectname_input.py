@@ -188,7 +188,10 @@ def _window(features_dict, audio_format, sample_rate, window_size=15, random=Fal
         slice_length = tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)) # get the actual slice length
         if random:
             maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[0] - slice_length
-            x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
+            if tf.equal(maxval, 0):
+                x = tf.constant(0, dtype=tf.int32)
+            else:
+                x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
             y = x + slice_length
             features_dict['audio'] = features_dict['audio'][x:y]
         else:
@@ -322,7 +325,7 @@ def generate_datasets(tfrecords, audio_format, split=None, sample_rate=16000, ba
         if with_tags is not None:
             if merge_tags is not None:
                 dataset = dataset.map(lambda x: _merge(x, merge_tags))
-            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda x: _tag_filter_hotenc_mask(x, with_tags))
+            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda y: _tag_filter_hotenc_mask(y, with_tags))
         if with_tids is not None:
             dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
         

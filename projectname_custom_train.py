@@ -160,9 +160,8 @@ def train(frontend_mode, train_dist_dataset, strategy, resume_time=None, val_dis
         # fucntions needs to be defined within the strategy scope
         def train_step(entry):
             audio_batch, label_batch = entry['audio'], entry['tags']
-
             with tf.GradientTape() as tape:
-                logits = model(audio_batch) # TODO: training=True????
+                logits = model(audio_batch)
                 loss = compute_loss(label_batch, logits)
             variables = model.trainable_variables
             grads = tape.gradient(loss, variables)
@@ -425,7 +424,7 @@ def main(tfrecords_dir, frontend_mode, config_dir, resume_time=None,
     num_filt = file['training_options']['n_filters']
     num_output_neurons = file['training_options']['n_output_neurons']
 
-    strategy = tf.distribute.MirroredStrategy(devices=['/gpu:0', '/gpu:1'])
+    strategy = tf.distribute.MirroredStrategy()
     
     print('Preparing Dataset')
     train_dataset, val_dataset = \
@@ -486,8 +485,7 @@ if __name__ == '__main__':
 
     CONFIG_FOLDER = '/home/calle'
 
-    main('/srv/data/urop/tfrecords-log-mel-spectrogram', 'log-mel-spectrogram', 
-                CONFIG_FOLDER, split=(80, 10, 10),  shuffle=True, batch_size=64,
-                buffer_size=1000, random=True, log_dir='/srv/data/urop/model/logs/trial2',
-                with_tags=with_tags, num_epochs=10, early_stopping_min_delta=0.001,
-                early_stopping_patience=3, model_dir='/srv/data/urop/model/trial2')
+    main('/srv/data/urop/tfrecords-waveform', 'waveform', 
+                CONFIG_FOLDER, split=(58, 1, 1),  shuffle=True, batch_size=64,
+                buffer_size=1000, random=True, log_dir='/srv/data/urop/model/logs/',
+                with_tags=with_tags, num_epochs=10, model_dir='/srv/data/urop/model/')
