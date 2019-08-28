@@ -57,6 +57,18 @@ class LastFm:
     - tag_to_tag_num
         Get tag_num given tag.
 
+    - vec_tag_num_to_tag
+        Get tag given tag_num (vectorized version).
+
+    - vec_tag_to_tag_num
+        Get tag_num given tag (vectorized version).
+
+    - vec_tid_to_tid_num
+        Get tid_num given tid (vectorized version).
+
+    - vec_tid_num_to_tid
+        Get tid given tid_num (vectorized version).
+
     - get_tags
         Return a list of all the tags.
         
@@ -104,7 +116,12 @@ class LastFm:
         self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
         self.path = path
-    
+
+        self.vec_tag_num_to_tag = np.vectorize(self.tag_num_to_tag)
+        self.vec_tag_to_tag_num = np.vectorize(self.tag_to_tag_num)
+        self.vec_tid_num_to_tid = np.vectorize(self.tid_num_to_tid)
+        self.vec_tid_to_tid_num = np.vectorize(self.tid_to_tid_num)
+
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
 
