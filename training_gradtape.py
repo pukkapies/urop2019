@@ -150,18 +150,18 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         tf.summary.trace_off() # in case of previous keyboard interrupt
         
         # setting up summary writers
-        train_log_dir = os.path.join(log_dir, 'train')
+        train_log_dir = os.path.join(log_dir, 'train/')
         train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         
         if valid_dataset:
-            val_log_dir = os.path.join(log_dir, 'validation')
+            val_log_dir = os.path.join(log_dir, 'validation/')
             val_summary_writer = tf.summary.create_file_writer(val_log_dir)
             val_metrics_1 = tf.keras.metrics.AUC(curve = 'ROC', name='val_AUC-ROC', dtype=tf.float32)
             val_metrics_2 = tf.keras.metrics.AUC(curve = 'PR', name='val_AUC-PR', dtype=tf.float32)
             val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
         
         if profile: # make sure the variable LD_LIBRARY_PATH is properly set up
-            prof_log_dir = log_dir + log_time + '/profile'
+            prof_log_dir = os.path.join(log_dir, 'profile/')
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
         
         # rescale loss
@@ -195,16 +195,13 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             
         @tf.function 
         def distributed_train_body(entry, epoch):
-            num_batches = 0
-            
+            num_batches = 0            
             for entry in train_dataset:
                 strategy.experimental_run_v2(train_step, args=(entry, ))
-                
                 num_batches += 1
-                
                 if tf.equal(num_batches % update_freq, 0):
                     tf.print('Epoch', epoch,'; Step', num_batches, '; loss', train_mean_loss.result(), '; AUC-ROC', train_metrics_1.result(), '; AUC-PR', train_metrics_2.result())
-                    
+
                     # write metrics on tensorboard after each iteration
                     with train_summary_writer.as_default():
                         tf.summary.scalar('iter_AUC-ROC', train_metrics_1.result(), step=optimizer.iterations)
@@ -344,13 +341,14 @@ if __name__ == '__main__':
                                                                                 cycle_length=config.cycle_len, 
                                                                                 shuffle=config.shuffle, buffer_size=config.shuffle_buffer, 
                                                                                 num_tags=config.tot_tags, window_size=config.window_len, random=config.window_random, 
-                                                                                with_tags=config.tags, merge_tags=config.tags_to_merge)
+                                                                                with_tags=config.tags, merge_tags=config.tags_to_merge,
+										as_tuple=False)
     
     # set up training strategy
     strategy = tf.distribute.MirroredStrategy()
 
     # train
-    train(train_dataset, valid_dataset, frontend=args.frontend,
+    train(train_dataset, valid_dataset, frontend=args.frontend, strategy=strategy,
           config=config, config_optim=config_optim,
           epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, checkpoint_path=args.checkpoint_path, 
           update_freq=args.update_freq)
