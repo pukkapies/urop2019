@@ -380,7 +380,7 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500
         front_out = log_mel_spec_frontend(input, y_input=y_input, num_filts=num_filts)
 
     else:
-        raise ValueError('please specify the frontend_mode: 'waveform' or 'log-mel-spectrogram'')
+        raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
 
     model = tf.keras.Model(input,
                            backend(front_out,
