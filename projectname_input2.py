@@ -68,7 +68,7 @@ def _parse_features(example, features_dict, shape):
     features_dict['audio'] = tf.reshape(tf.sparse.to_dense(features_dict['audio']), shape)
     return features_dict
 
-def _merge(features_dict, merge_tags):
+def _merge(features_dict, tags):
     ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.map).
     
     Parameters
@@ -87,20 +87,18 @@ def _merge(features_dict, merge_tags):
     >>> _merge(features, merge_tags=[[0, 1], [3, 4]])
     features['tags']: [1, 1, 1, 0, 0] 
     '''
-    print(merge_tags)
 
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
     feature_tags = tf.dtypes.cast(features_dict['tags'], tf.bool)
     
-    for tags in merge_tags:
-        idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-        vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
-        tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
-        tags = tf.sparse.to_dense(tags)
-        tags = tf.dtypes.cast(tags, tf.bool)
-        # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
-        features_dict['tags'] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
+    idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
+    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
+    tags = tf.sparse.to_dense(tags)
+    tags = tf.dtypes.cast(tags, tf.bool)
+    # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
+    features_dict['tags'] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
     features_dict['tags'] = tf.cast(features_dict['tags'], tf.float32) # cast back to float32
     return features_dict
 
@@ -335,8 +333,10 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         if with_tags is not None:
             with_tags = tf.constant(with_tags, dtype=tf.int64)
             if merge_tags is not None:
-                #merge_tags = tf.constant(merge_tags, dtype=tf.int64)
-                dataset = dataset.map(lambda x: _merge(x, merge_tags))
+                for tags in merge_tags:
+                    tags = tf.constant(tags, dtype=tf.int64)
+                    dataset = dataset.map(lambda x: _merge(x, tags))
+                    
             dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda y: _tag_filter_hotenc_mask(y, with_tags))
         if with_tids is not None:
             with_tids = tf.constant(with_tids, dtype=tf.string)
