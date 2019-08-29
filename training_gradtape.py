@@ -115,7 +115,7 @@ def parse_config(config_path, lastfm_path):
     
     return config, config_optim
             
-def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, resume_time=None, update_freq=1, analyse_trace=True):
+def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, resume_time=None, update_freq=1, analyse_trace=False):
 
     log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M")) # to save training metrics (to access using tensorboard)
     checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))) # to save model checkpoints
@@ -215,15 +215,17 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 if tf.equal(num_batches % update_freq, 0):
                     tf.print('{}/Unknown - loss: {} - AUC-ROC {} - AUC-PR {}'.format(num_batches, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()))
                     with train_summary_writer.as_default():
-                        tf.summary.scalar('batch_AUC-ROC', train_metrics_1.result(), step=optimizer.iterations)
-                        tf.summary.scalar('batch_AUC-PR', train_metrics_2.result(), step=optimizer.iterations)
-                        tf.summary.scalar('batch_loss', train_mean_loss.result(), step=optimizer.iterations)
+                        tf.summary.scalar('ROC_AUC_itr', train_metrics_1.result(), step=optimizer.iterations)
+                        tf.summary.scalar('PR_AUC_itr', train_metrics_2.result(), step=optimizer.iterations)
+                        tf.summary.scalar('Loss_itr', train_mean_loss.result(), step=optimizer.iterations)
                         train_summary_writer.flush()
+                gc.collect()
 
         @tf.function
         def distributed_val_body(entry):
             for entry in valid_dataset:
                 strategy.experimental_run_v2(valid_step, args=(entry, ))
+                gc.collect()
         
         max_metric = -200 # for early stopping
 
@@ -237,12 +239,13 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             tf.summary.trace_on(graph=False, profiler=True)
             
             distributed_train_body(train_dataset, epoch)
+            gc.collect()
             
             # write metrics on tensorboard after each epoch
             with train_summary_writer.as_default():
-                tf.summary.scalar('epoch_AUC-ROC', train_metrics_1.result(), step=epoch)
-                tf.summary.scalar('epoch_AUC-PR', train_metrics_2.result(), step=epoch)
-                tf.summary.scalar('epoch_loss', train_mean_loss.result(), step=epoch)
+                tf.summary.scalar('ROC_AUC_epoch', train_metrics_1.result(), step=epoch)
+                tf.summary.scalar('PR_AUC_epoch', train_metrics_2.result(), step=epoch)
+                tf.summary.scalar('mean_loss_epoch', train_mean_loss.result(), step=epoch)
                 train_summary_writer.flush()
                 
             # print progress
@@ -261,6 +264,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
 
             if valid_dataset:
                 distributed_val_body(valid_dataset)
+                gc.collect()
                 with val_summary_writer.as_default():
                     tf.summary.scalar('epoch_AUC-ROC', val_metrics_1.result(), step=epoch)
                     tf.summary.scalar('epoch_AUC-PR', val_metrics_2.result(), step=epoch)
