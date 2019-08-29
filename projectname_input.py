@@ -191,7 +191,10 @@ def _window(features_dict, audio_format, sample_rate, window_size=15, random=Fal
         slice_length = tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)) # get the actual slice length
         if random:
             maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[0] - slice_length
-            x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
+            if tf.equal(maxval, 0):
+                x = tf.constant(0, dtype=tf.int32)
+            else:
+                x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
             y = x + slice_length
             features_dict['audio'] = features_dict['audio'][x:y]
         else:

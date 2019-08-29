@@ -171,6 +171,8 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             val_loss = tf.keras.metrics.Mean(name='val_loss', dtype=tf.float32)
         
         if analyse_trace: # make sure the variable LD_LIBRARY_PATH is properly set up
+            print('TIPS: To ensure the profiler works correctly, make sure the LD_LIBRARY_PATH is set correctly. \
+                  For Boden, set--- export LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64" before Python is initialised.')
             prof_log_dir = os.path.join(log_dir, 'profile/')
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
         
@@ -311,8 +313,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             gc.collect()
 
 if __name__ == '__main__':
-
-    os.environ["LD_LIBRARY_PATH"]="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64"
     
     parser = argparse.ArgumentParser()
     parser.add_argument("frontend", choices=["waveform", "log-mel-spectrogram"])
