@@ -226,19 +226,27 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             for entry in valid_dataset:
                 strategy.experimental_run_v2(valid_step, args=(entry, ))
                 gc.collect()
-        
-        max_metric = -200 # for early stopping
 
+        max_metric = -200 # for early stopping
+        
+        def measure_graph_size(f, *args):
+            g = f.get_concrete_function(*args).graph
+            print("{}({}) contains {} nodes in its graph".format(
+                    f.__name__, ', '.join(map(str, args)), len(g.as_graph_def().node)))
+        
         # loop
         for epoch in tf.range(prev_epoch+1, epochs, dtype=tf.int64):
             start_time = time.time()
             tf.print()
             tf.print()
             tf.print('Epoch {}/{}'.format(epoch, epochs))
-
-            tf.summary.trace_on(graph=False, profiler=True)
+            
+            if analyse_trace:
+                tf.summary.trace_off()
+                tf.summary.trace_on(graph=False, profiler=True)
             
             distributed_train_body(train_dataset, epoch)
+            measure_graph_size(distributed_train_body, train_dataset, epoch)
             gc.collect()
             
             # write metrics on tensorboard after each epoch
@@ -264,6 +272,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
 
             if valid_dataset:
                 distributed_val_body(valid_dataset)
+                measure_graph_size(distributed_val_body, valid_dataset)
                 gc.collect()
                 with val_summary_writer.as_default():
                     tf.summary.scalar('epoch_AUC-ROC', val_metrics_1.result(), step=epoch)
@@ -272,11 +281,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                     val_summary_writer.flush()
 
                 tf.print('- val_AUC-ROC {} - val_AUC_PR {}'.format(val_metrics_1.result(), val_metrics_2.result()))
-                
-                # reset validation metrics after each epoch
-                val_metrics_1.reset_states()
-                val_metrics_2.reset_states()
-                val_loss.reset_states()
                 
                 # early stopping
                 if (config.early_stop_min_d) or (config.early_stop_patience):
@@ -290,24 +294,29 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                     if os.path.isfile(os.path.join(checkpoint_dir, 'early_stopping.npy')):
                         cumerror = int(np.load(os.path.join(checkpoint_dir, 'early_stopping.npy')))
                     
-                    if val_metrics_2 > (max_metric + config.early_stop_min_d):
-                        max_metric = val_metrics_2
+                    if val_metrics_2.result() > (max_metric + config.early_stop_min_d):
+                        max_metric = val_metrics_2.result()
                         cumerror = 0
                         np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
                     else:
                         cumerror += 1
-                        tf.print('Epoch {}: no significant improvements ({}/{})'.format(epoch, epochs, cumerror, config.early_stop_patience))
+                        tf.print('Epoch {}/{}: no significant improvements ({}/{})'.format(epoch, epochs, cumerror, config.early_stop_patience))
                         np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
                         if cumerror == config.early_stop_patience:
                             tf.print('Epoch {}: stopping')
                             break
+                
+                # reset validation metrics after each epoch
+                val_metrics_1.reset_states()
+                val_metrics_2.reset_states()
+                val_loss.reset_states()
                     
             elif (config.early_stop_min_d) or (config.early_stop_patience):
                 raise RuntimeError('EarlyStopping requires a validation dataset')
 
-            checkpoint_path = os.path.join(checkpoint_dir, 'epoch-'+epoch, 'mymodel.h5')
-            checkpoint.save(checkpoint_path)
-            tf.print('Epoch {}: saving model to {}'.format(checkpoint_path))
+            checkpoint_path = os.path.join(checkpoint_dir+str(tf.constant(0).numpy()), 'epoch')
+            saved_path = checkpoint.save(checkpoint_path)
+            tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
 
             # report time
             time_taken = time.time()-start_time
