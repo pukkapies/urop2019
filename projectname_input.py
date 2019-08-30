@@ -238,7 +238,8 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         Specifies the feature audio format.
 
     split: tuple
-        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files.
+        If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
 
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
@@ -297,8 +298,11 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
 
     if split is not None:
-        assert len(tfrecords) >= sum(split) , 'too few .tfrecord files to apply split'
-        split = np.cumsum(split)
+        if np.sum(split) == 100:
+            split = np.cumsum(split) * len(tfrecords) // 100
+        else:
+            assert np.sum(split) <= len(tfrecords) , 'split exceeds the number of available .tfrecord files'
+            split = np.cumsum(split)
         tfrecords_split = np.split(tfrecords, split)
         tfrecords_split = tfrecords_split[:-1] # discard last empty split
     else:
@@ -370,7 +374,8 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         Directory containing the .tfrecord files.
 
     split: tuple
-        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files.
+        If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
 
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
