@@ -300,19 +300,19 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         assert len(tfrecords) >= sum(split) , 'too few .tfrecord files to apply split'
         split = np.cumsum(split)
         tfrecords_split = np.split(tfrecords, split)
-        tfrecords_split = tfrecords_split[:-1] # discard last 'empty' split
+        tfrecords_split = tfrecords_split[:-1] # discard last empty split
     else:
         tfrecords_split = [tfrecords]
 
     datasets = []
 
     for files_list in tfrecords_split:
-    
-        files = tf.data.Dataset.from_tensor_slices(files_list)
-        
-        # load dataset, read files in parallel
-        dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=cycle_length, block_length=1, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        
+        if len(files_list) > 1: # read files in parallel (number of parallel threads specified by cycle_length)
+            files = tf.data.Dataset.from_tensor_slices(files_list)
+            dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=cycle_length, block_length=1, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        else:
+            dataset = tf.data.TFRecordDataset(files_list)
+            
         # parse serialized features
         dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
