@@ -87,23 +87,27 @@ def get_compiled_model(frontend, strategy, config, config_optim, resume_time=Non
         
         # restore resume_time (if provided)
         if resume_time:
-            model.load_weights(os.path.expanduser(resume_time))
+            model.load_weights(os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + resume_time)))
 
     return model
 
 def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, steps_per_epoch=None, resume_time=None, update_freq=1, profile_batch=0):
 
+    # load model
     model = get_compiled_model(frontend, strategy, config, config_optim, resume_time)
 
-    log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M")) # to save training metrics (to access using tensorboard)
-    checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))) # to save model checkpoints
+    # set logs and checkpoints directories
+    now = datetime.datetime.now().strftime("%y%m%d-%H%M")
+    path_logs = os.path.join(os.path.expanduser(config.log_dir), now) 
+    path_checkpoints = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + now))
     
     if resume_time is None:
         shutil.copy(config.path, checkpoint_dir)
-        
+    
+    # set callbacks
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
-            filepath = os.path.join(checkpoint_dir, 'mymodel.h5'),
+            filepath = os.path.join(path_checkpoints, 'mymodel.h5'),
             monitor = 'val_AUC-PR',
             mode = 'max',
             save_best_only = True,
@@ -131,7 +135,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         ),
 
         tf.keras.callbacks.TensorBoard(
-            log_dir = log_dir, 
+            log_dir = path_logs,
             histogram_freq = 1,
             write_graph = False,
             update_freq = update_freq,
