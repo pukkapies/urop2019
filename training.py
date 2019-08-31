@@ -34,9 +34,6 @@ variable LD_LIBRARY_PATH is specified.
 
 Functions
 ---------
-- get_compiled_model
-    Creates a compiled instance of the training model. 
-
 - train
     Creates a compiled instance of the training model and trains it. 
 '''
