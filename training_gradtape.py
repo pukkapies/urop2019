@@ -120,9 +120,43 @@ def parse_config(config_path, lastfm_path):
     return config, config_optim
             
 def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, resume_time=None, update_freq=1, analyse_trace=False):
+    ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
 
-    log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M")) # to save training metrics (to access using tensorboard)
-    path_checkpoints = os.path.join(os.path.join(os.path.expanduser(config.path_checkpoints), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))) # to save model checkpoints
+    Parameters
+    ----------
+    train_dataset: tf.data.Dataset
+        The training dataset.
+        
+    valid_dataset: tf.data.Dataset
+        The validation dataset. If None, validation will be disabled. Tfe callbacks might not work properly.
+
+    frontend: {'waveform', 'log-mel-spectrogram'}
+        The frontend to adopt.
+        
+    strategy: tf.distribute.Strategy
+        Strategy for multi-GPU distribution.
+
+    config: argparse.Namespace
+        Instance of the config namespace. It is generated when parsing the config.json file.
+    
+    config_optim: argparse.Namespace
+        Instance of the config_optim namespace. The optimizer will be fully specified by this parameter. It is generated when parsing the config.json file.
+        
+    epochs: int
+        Specifies the number of epochs to train for.
+
+    steps_per_epoch: int
+        Specifies the number of steps to perform for each epoch. If None, the whole dataset will be used.
+    
+    resume_time: str
+        Specifies the timestamp of the checkpoint to restore. Should be a timestamp in the 'YYMMDD-hhmm' format.
+
+    update_freq: int
+        Specifies the number of batches to wait before writing to logs. Note that writing too frequently can slow down training.
+    
+    analyse_trace: bool
+        Specifies whether to enable profiling.
+    '''
     
     with strategy.scope():
         # build model
