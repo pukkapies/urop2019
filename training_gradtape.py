@@ -252,7 +252,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 num_batches += 1
                 # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):
-                    tf.print('{}/Unknown - loss: {} - AUC-ROC {} - AUC-PR {}'.format(num_batches, train_mean_loss.result(), train_metrics_1.result(), train_metrics_2.result()))
+                    tf.print('Epoch', epoch,'; Step', num_batches, '; loss', train_mean_loss.result(), '; AUC-ROC', train_metrics_1.result(), '; AUC-PR', train_metrics_2.result())
                     with train_summary_writer.as_default():
                         tf.summary.scalar('ROC_AUC_itr', train_metrics_1.result(), step=optimizer.iterations)
                         tf.summary.scalar('PR_AUC_itr', train_metrics_2.result(), step=optimizer.iterations)
