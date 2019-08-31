@@ -82,7 +82,7 @@ def parse_config(config_path, lastfm_path):
     if config_d['tags']['with']:
         tags.union(config_d['tags']['with'])
     if config_d['tags']['without']:
-        tags.discard(config_d['tags']['without'])
+        tags = [tag for tag in tags if tag not in config_d['tags']['without']]
 
     # create config namespace (to be accessed more easily than a dictionary)
     config = argparse.Namespace()
@@ -101,7 +101,7 @@ def parse_config(config_path, lastfm_path):
     config.shuffle_buffer = config_d['config']['shuffle_buffer_size']
     config.split = config_d['config']['split']
     config.sr = config_d['tfrecords']['sample_rate']
-    config.tags = lastfm.vec_tag_to_tag_num(list(tags))
+    config.tags = lastfm.vec_tag_to_tag_num(tags)
     config.tags_to_merge = lastfm.tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
     config.tot_tags = config_d['tfrecords']['n_tags']
     config.window_len = config_d['config']['window_length']
@@ -198,11 +198,11 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         now = datetime.datetime.now().strftime("%y%m%d-%H%M")
         path_logs = os.path.join(os.path.expanduser(config.log_dir), now) 
         path_checkpoints = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + now))
-        if not os.path.isdir(log_dir):
-            os.makedirs(log_dir)
-        if not os.path.isdir(checkpoint_dir):
-            os.makedirs(checkpoint_dir)
-        shutil.copy(config.path, checkpoint_dir) # copy config file in the same folder where the checkpoints will be saved
+        if not os.path.isdir(path_logs):
+            os.makedirs(path_logs)
+        if not os.path.isdir(path_checkpoints):
+            os.makedirs(path_checkpoints)
+        shutil.copy(config.path, path_checkpoints) # copy config file in the same folder where the checkpoints will be saved
     else:
         path_logs = os.path.join(os.path.expanduser(config.log_dir), resume_time)
         path_checkpoints = os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + resume_time)
