@@ -110,7 +110,7 @@ def parse_config(config_path, lastfm_path):
     config.window_len = config_d['config']['window_length']
     config.window_random = config_d['config']['window_extract_randomly']
     config.log_dir = config_d['config']['log_dir']
-    config.path_checkpoints = config_d['config']['path_checkpoints']
+    config.checkpoint_dir = config_d['config']['checkpoint_dir']
 
     # create config namespace for the optimizer (will be used by get_optimizer() in order to allow max flexibility)
     config_optim = argparse.Namespace()
@@ -177,7 +177,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         if resume_time is None:
             now = datetime.datetime.now().strftime("%y%m%d-%H%M")
             path_logs = os.path.join(os.path.expanduser(config.log_dir), now) 
-            path_checkpoints = os.path.join(os.path.join(os.path.expanduser(config.path_checkpoints), frontend + '_' + now))
+            path_checkpoints = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + now))
             if not os.path.isdir(path_logs):
                 os.makedirs(path_logs)
             if not os.path.isdir(path_checkpoints):
@@ -185,7 +185,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             shutil.copy(config.path, path_checkpoints) # copy config file in the same folder where the checkpoints will be saved
         else:
             path_logs = os.path.join(os.path.expanduser(config.log_dir), resume_time)
-            path_checkpoints = os.path.join(os.path.expanduser(config.path_checkpoints), frontend + '_' + resume_time)
+            path_checkpoints = os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + resume_time)
             chkp = tf.train.latest_checkpoint(path_checkpoints) # try to load checkpoint
             if chkp:
                 tf.print("Checkpoint file {} found. Restoring...".format(chkp))
