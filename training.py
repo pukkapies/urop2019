@@ -21,8 +21,8 @@ interrupted if the validation AUC PR does not improve for more than early_stop_p
 epochs. The delta which determines what is to be consiered a valid improvement
 is determined by plateau_min_d and early_stop_min_d, respectively.
 
-Logs are saved automatically subdirectories named after the timestamp and can be accessed
-using TensorBoard. Checkpoints are saved automatically in subdirectories named after
+The logs are saved automatically subdirectories named after the timestamp and can be accessed
+using TensorBoard. The checkpoints are saved automatically in subdirectories named after
 the frontend being adopted and timestamp. The config.json file is copied automatically
 in the latter directory for future reference.
 
