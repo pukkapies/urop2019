@@ -260,8 +260,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("frontend", choices=["waveform", "log-mel-spectrogram"])
     parser.add_argument("--root-dir", dest="tfrecords_dir", help="directory to read .tfrecord files from (default to path on Boden)")
-    parser.add_argument("--path-config", help="path to config.json (default to path on Boden)", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
-    parser.add_argument("--path-lastfm", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
+    parser.add_argument("--config-path", help="path to config.json (default to path on Boden)", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
+    parser.add_argument("--lastfm-path", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
     parser.add_argument("--epochs", help="specify the number of epochs to train on", type=int, required=True)
     parser.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
     parser.add_argument("--no-shuffle", action="store_true", help="override shuffle setting")
@@ -281,7 +281,7 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = args.verbose
 
     # parse json
-    config, config_optim = parse_config(args.path_config, args.path_lastfm)
+    config, config_optim = parse_config(args.config_path, args.lastfm_path)
 
     # if root_dir is not specified, use default path on our server
     if not args.tfrecords_dir:
