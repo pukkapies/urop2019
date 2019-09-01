@@ -68,7 +68,7 @@ def _parse_features(example, features_dict, shape):
     features_dict['audio'] = tf.reshape(tf.sparse.to_dense(features_dict['audio']), shape)
     return features_dict
 
-def _merge(features_dict, merge_tags):
+def _merge(features_dict, tags):
     ''' Removes unwanted tids from the dataset (use with tf.data.Dataset.map).
     
     Parameters
@@ -87,23 +87,18 @@ def _merge(features_dict, merge_tags):
     >>> _merge(features, merge_tags=[[0, 1], [3, 4]])
     features['tags']: [1, 1, 1, 0, 0] 
     '''
-    
-    merge_tags = np.array(merge_tags)
-
-    assert len(merge_tags.shape) == 2 , 'merge_tags must be a two-dimensional array'
-
+    tags = tf.dtypes.cast(tags, tf.int64)
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
     feature_tags = tf.dtypes.cast(features_dict['tags'], tf.bool)
-
-    for tags in merge_tags: # for each list of tags in 'merge_tags' (which is a list of lists...)
-        idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)).reshape(-1, 1), 1)
-        vals = np.ones(len(tags), dtype=np.int64)
-        tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
-        tags = tf.sparse.to_dense(tags)
-        tags = tf.dtypes.cast(tags, tf.bool)
-        # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
-        features_dict['tags'] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
+    
+    idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
+    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
+    tags = tf.sparse.to_dense(tags)
+    tags = tf.dtypes.cast(tags, tf.bool)
+    # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
+    features_dict['tags'] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
     features_dict['tags'] = tf.cast(features_dict['tags'], tf.float32) # cast back to float32
     return features_dict
 
@@ -123,7 +118,7 @@ def _tag_filter(features_dict, tags):
 
     feature_tags = tf.math.equal(tf.unstack(features_dict['tags']), 1) # bool tensor where True/False correspond to has/doesn't have tag
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    vals = tf.constant(1, dtype=tf.int64, shape=[tags.shape[0]])
     tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
@@ -159,7 +154,7 @@ def _tag_filter_hotenc_mask(features_dict, tags):
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    vals = tf.constant(1, dtype=tf.int64, shape=[tags.shape[0]])
     tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
