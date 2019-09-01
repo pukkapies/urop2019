@@ -156,8 +156,14 @@ def _tag_filter_hotenc_mask(features_dict, tags):
         List containing tag idxs used for filtering with _tag_filter.
     '''
 
-    idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)), 1)
-    features_dict['tags'] = tf.gather(features_dict['tags'], idxs)
+    n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
+
+    idxs = np.subtract(np.sort(np.array(tags, dtype=np.int64)).reshape(-1, 1), 1)
+    vals = np.ones(len(tags), dtype=np.int64)
+    tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
+    tags_mask = tf.sparse.to_dense(tags_mask)
+    tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
+    features_dict['tags'] = tf.boolean_mask(features_dict['tags'], tags_mask)
     return features_dict
 
 def _window(features_dict, audio_format, sample_rate, window_size=15, random=False):
@@ -185,7 +191,10 @@ def _window(features_dict, audio_format, sample_rate, window_size=15, random=Fal
         slice_length = tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)) # get the actual slice length
         if random:
             maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[0] - slice_length
-            x = tf.cond(tf.equal(maxval, 0), lambda: tf.constant(0, dtype=tf.int32), lambda: tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32))
+            if tf.equal(maxval, 0):
+                x = tf.constant(0, dtype=tf.int32)
+            else:
+                x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
             y = x + slice_length
             features_dict['audio'] = features_dict['audio'][x:y]
         else:
@@ -198,7 +207,10 @@ def _window(features_dict, audio_format, sample_rate, window_size=15, random=Fal
         slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)), tf.constant(512, dtype=tf.int32)) # get the actual slice length
         if random:
             maxval = tf.shape(features_dict['audio'], out_type=tf.int32)[1] - slice_length
-            x = tf.cond(tf.equal(maxval, 0), lambda: tf.constant(0, dtype=tf.int32), lambda: tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32))
+            if tf.equal(maxval, 0):
+                x = tf.constant(0, dtype=tf.int32)
+            else:
+                x = tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32)
             y = x + slice_length
             features_dict['audio'] = features_dict['audio'][:,x:y]
         else:
@@ -226,7 +238,7 @@ def _batch_tuplification(features_dict):
 
     return (features_dict['audio'], features_dict['tags'])
 
-def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -238,11 +250,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         Specifies the feature audio format.
 
     split: tuple
-        Specifies the number of train/validation/test files to use when reading the .tfrecord files.
-        If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
-
-    which_split: tuple
-        Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
 
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
@@ -301,25 +309,22 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
 
     if split is not None:
-        if np.sum(split) == 100:
-            split = np.cumsum(split) * len(tfrecords) // 100
-        else:
-            assert np.sum(split) <= len(tfrecords) , 'split exceeds the number of available .tfrecord files'
-            split = np.cumsum(split)
+        assert len(tfrecords) >= sum(split) , 'too few .tfrecord files to apply split'
+        split = np.cumsum(split)
         tfrecords_split = np.split(tfrecords, split)
-        tfrecords_split = tfrecords_split[:-1] # discard last empty split
+        tfrecords_split = tfrecords_split[:-1] # discard last 'empty' split
     else:
         tfrecords_split = [tfrecords]
 
     datasets = []
 
     for files_list in tfrecords_split:
-        if len(files_list) > 1: # read files in parallel (number of parallel threads specified by cycle_length)
-            files = tf.data.Dataset.from_tensor_slices(files_list)
-            dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=cycle_length, block_length=1, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        else:
-            dataset = tf.data.TFRecordDataset(files_list)
-            
+    
+        files = tf.data.Dataset.from_tensor_slices(files_list)
+        
+        # load dataset, read files in parallel
+        dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=cycle_length, block_length=1, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        
         # parse serialized features
         dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
@@ -368,7 +373,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -377,11 +382,7 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         Directory containing the .tfrecord files.
 
     split: tuple
-        Specifies the number of train/validation/test files to use when reading the .tfrecord files.
-        If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
-
-    which_split: tuple
-        Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
 
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
