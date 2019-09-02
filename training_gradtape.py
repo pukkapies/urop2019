@@ -113,7 +113,7 @@ def parse_config(config_path, lastfm_path):
     config.split = config_d['config']['split']
     config.sr = config_d['tfrecords']['sample_rate']
     config.tags = lastfm.vec_tag_to_tag_num(list(tags)) if tags is not None else None
-    config.tags_to_merge = lastfm.tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
+    config.tags_to_merge = lastfm.vec_tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
     config.tot_tags = config_d['tfrecords']['n_tags']
     config.window_len = config_d['config']['window_length']
     config.window_random = config_d['config']['window_extract_randomly']
@@ -282,7 +282,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             start_time = time.time()
             tf.print()
             tf.print()
-            tf.print('Epoch {}/{}'.format(epoch, epochs))
+            tf.print('Epoch {}/{}'.format(epoch, epochs-1))
             
             if analyse_trace and tf.equal(epoch, 1):
                 tf.summary.trace_off()
@@ -341,7 +341,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                         np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
                     else:
                         cumerror += 1
-                        tf.print('Epoch {}/{}: no significant improvements ({}/{})'.format(epoch, epochs, cumerror, config.early_stop_patience))
+                        tf.print('Epoch {}/{}: no significant improvements ({}/{})'.format(epoch, epochs-1, cumerror, config.early_stop_patience))
                         np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
                         if cumerror == config.early_stop_patience:
                             tf.print('Epoch {}: stopping')
