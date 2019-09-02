@@ -192,6 +192,7 @@ def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
         y = tf.add(mid, tf.math.floordiv(tf.add(slice_length, tf.constant(1)), tf.constant(2, dtype=tf.int32))) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
         audio = audio[x:y]
         return audio
+
     features_dict['audio'] = tf.where(random, fn1a(features_dict['audio']), fn1b(features_dict['audio']))
     return features_dict
 
@@ -230,6 +231,7 @@ def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, rand
         y = tf.add(mid, tf.math.floordiv(tf.add(slice_length, tf.constant(1)), tf.constant(2, dtype=tf.int32))) # 'slice_length + 1' ensures x:y has always length 'slice_length' regardless of whether 'slice_length' is odd or even
         audio = audio[:,x:y]
         return audio
+        
     features_dict['audio'] = tf.where(random, fn2a(features_dict['audio']), fn2b(features_dict['audio']))
     return features_dict
 
@@ -405,7 +407,7 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
     split: tuple
         Specifies the number of train/validation/test files to use when reading the .tfrecord files.
         If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
-        
+
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
 
