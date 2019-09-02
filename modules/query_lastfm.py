@@ -94,13 +94,10 @@ class LastFm:
         Return a dataframe containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold.
 
     - tid_tag_count
-        Get a dict with tids as keys and its number of tags as value.
+        Given a list of tids, returns a dict with tids as keys and its number of tags as value.
 
-    - filter_tags
-        Filter list of tids based on minimum number of tags.
-
-    - tag_count
-        Get a dict with the tags associated to tids as keys and their count number as values.
+    - tid_tag_count_filter
+        Given a list of tids, filters out those with less than minimum number of tags.
         
     - db_to_csv
         Convert the tags database into three different csv files.
@@ -233,32 +230,8 @@ class LastFm:
             tags_dict[tid] = self.query_tags(tid)
         return tags_dict
 
-    def tag_count(self, tids):
-        ''' Gets number of tags for each given tid.
-        
-        Parameters
-        ----------
-        tids : list
-            List containing tids as strings.
-
-        Returns
-        -------
-        count_dict : dict
-            The keys are the tags associated to any tid from the input list.
-            The values are the number of tids which the given tag is associated to.
-        '''
-
-        count_dict = {}
-        for tag_list in self.query_tags_dict(tids).values():
-            for tag in tag_list:
-                if tag not in count_dict:
-                    count_dict[tag] = 1
-                else:
-                    count_dict[tag] += 1 
-        return count_dict
-
     def tid_tag_count(self, tids):
-        ''' Gets number of tags for each given tid.
+        ''' Given a list of tids, returns a dict with tids as keys and its number of tags as value.
         
         Parameters
         ----------
@@ -277,8 +250,17 @@ class LastFm:
             count_dict[tid] = len(self.query_tags(tid))
         return count_dict
 
-    def filter_tags(self, tids, min_tags):
-        ''' Given list of tids, returns list of those with more than min_tags tags. '''
+    def tid_tag_count_filter(self, tids, min_tags):
+        ''' Given a list of tids, filters out those with less than minimum number of tags. 
+        
+        Parameters
+        ----------
+        tids : list
+            List containing tids as strings.
+        
+        min_tags: int
+            Minimum number of tags to allow in output list.
+        '''
 
         count_dict = self.tid_tag_count(tids)
         tids_filtered = [tid for tid in tids if count_dict[tid] >= min_tags]
