@@ -102,7 +102,6 @@ def _merge(features_dict, tags):
     tags = tf.dtypes.cast(tags, tf.bool)
     # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
     features_dict['tags'] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
-    features_dict['tags'] = tf.cast(features_dict['tags'], tf.float32) # cast back to float32
     return features_dict
 
 def _tag_filter(features_dict, tags):
