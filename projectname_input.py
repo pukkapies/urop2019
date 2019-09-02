@@ -154,14 +154,8 @@ def _tag_filter_hotenc_mask(features_dict, tags):
         List containing tag idxs used for filtering with _tag_filter.
     '''
     tags = tf.dtypes.cast(tags, dtype=tf.int64)
-    n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
-
-    idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
-    tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
-    tags_mask = tf.sparse.to_dense(tags_mask)
-    tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
-    features_dict['tags'] = tf.boolean_mask(features_dict['tags'], tags_mask)
+    idxs = tf.subtract(tf.sort(tags)), tf.constant(1, dtype=tf.int64))
+    features_dict['tags'] = tf.gather(features_dict['tags'], idxs)
     return features_dict
 
 def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
