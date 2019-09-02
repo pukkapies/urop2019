@@ -168,7 +168,8 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
     
     with strategy.scope():
         
-        num_replica = tf.distribute.Strategy.num_replicas_in_sync
+        num_replica = strategy.num_replicas_in_sync
+        tf.print('num_replica:', num_replica)
         
         # build model
         model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
