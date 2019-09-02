@@ -167,6 +167,9 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
     checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M%S"))) # to save model checkpoints
     
     with strategy.scope():
+        
+        num_replica = tf.distribute.Strategy.num_replicas_in_sync
+        
         # build model
         model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
         
@@ -252,19 +255,19 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             return loss
             
         @tf.function 
-        def distributed_train_body(entry, epoch):
+        def distributed_train_body(entry, epoch, num_replica):
             num_batches = 0 
             for entry in train_dataset:
                 strategy.experimental_run_v2(train_step, args=(entry, ))
                 num_batches += 1
                 # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):
-                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', train_mean_loss.result(), '; ROC_AUC', train_metrics_1.result(), ';PR_AUC', train_metrics_2.result())
+                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', tf.multiply(train_mean_loss.result(), num_replica), '; ROC_AUC', train_metrics_1.result(), ';PR_AUC', train_metrics_2.result())
 
                     with train_summary_writer.as_default():
                         tf.summary.scalar('ROC_AUC_itr', train_metrics_1.result(), step=optimizer.iterations)
                         tf.summary.scalar('PR_AUC_itr', train_metrics_2.result(), step=optimizer.iterations)
-                        tf.summary.scalar('Loss_itr', train_mean_loss.result(), step=optimizer.iterations)
+                        tf.summary.scalar('Loss_itr', tf.multiply(train_mean_loss.result(), num_replica), step=optimizer.iterations)
                         train_summary_writer.flush()
                 gc.collect()
 
@@ -288,18 +291,18 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 tf.summary.trace_off()
                 tf.summary.trace_on(graph=False, profiler=True)
             
-            distributed_train_body(train_dataset, epoch)
+            distributed_train_body(train_dataset, epoch, num_replica)
             gc.collect()
             
             # write metrics on tensorboard after each epoch
             with train_summary_writer.as_default():
                 tf.summary.scalar('ROC_AUC_epoch', train_metrics_1.result(), step=epoch)
                 tf.summary.scalar('PR_AUC_epoch', train_metrics_2.result(), step=epoch)
-                tf.summary.scalar('mean_loss_epoch', train_mean_loss.result(), step=epoch)
+                tf.summary.scalar('mean_loss_epoch', tf.multiply(train_mean_loss.result(), num_replica), step=epoch)
                 train_summary_writer.flush()
                 
             # print progress
-            tf.print('Epoch', epoch,  ': loss', train_mean_loss.result(), '; ROC_AUC', train_metrics_1.result(), '; PR_AUC', train_metrics_2.result())
+            tf.print('Epoch', epoch,  ': loss', tf.multiply(train_mean_loss.result(), num_replica), '; ROC_AUC', train_metrics_1.result(), '; PR_AUC', train_metrics_2.result())
             
             train_metrics_1.reset_states()
             train_metrics_2.reset_states()
@@ -318,10 +321,10 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC_epoch', val_metrics_1.result(), step=epoch)
                     tf.summary.scalar('PR_AUC_epoch', val_metrics_2.result(), step=epoch)
-                    tf.summary.scalar('mean_loss_epoch', val_loss.result(), step=epoch)
+                    tf.summary.scalar('mean_loss_epoch', tf.multiply(val_loss.result(), num_replica), step=epoch)
                     val_summary_writer.flush()
 
-                tf.print('Val- Epoch', epoch, ': ROC_AUC', val_metrics_1.result(), '; PR_AUC', val_metrics_2.result())
+                tf.print('Val- Epoch', epoch, ': loss', tf.multiply(val_loss.result(), num_replica), ';ROC_AUC', val_metrics_1.result(), '; PR_AUC', val_metrics_2.result())
                 
                 # early stopping
                 if (config.early_stop_min_d) or (config.early_stop_patience):
