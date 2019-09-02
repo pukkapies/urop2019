@@ -248,7 +248,7 @@ def _batch_tuplification(features_dict):
     ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. '''
     return (features_dict['audio'], features_dict['tags'])
 
-def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -390,7 +390,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
