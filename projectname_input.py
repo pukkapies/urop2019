@@ -119,7 +119,7 @@ def _tag_filter(features_dict, tags):
     tags = tf.dtypes.cast(tags, dtype=tf.int64)
     n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
-    feature_tags = tf.math.equal(tf.unstack(features_dict['tags']), tf.constant(1, dtype=tf.float32)) # bool tensor where True/False correspond to has/doesn't have tag
+    feature_tags = tf.math.equal(tf.unstack(features_dict['tags']), tf.constant(1, dtype=tf.int64)) # bool tensor where True/False correspond to has/doesn't have tag
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
     vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
     tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
@@ -154,7 +154,7 @@ def _tag_filter_hotenc_mask(features_dict, tags):
         List containing tag idxs used for filtering with _tag_filter.
     '''
     tags = tf.dtypes.cast(tags, dtype=tf.int64)
-    idxs = tf.subtract(tf.sort(tags)), tf.constant(1, dtype=tf.int64))
+    idxs = tf.subtract(tf.sort(tags), tf.constant(1, dtype=tf.int64))
     features_dict['tags'] = tf.gather(features_dict['tags'], idxs)
     return features_dict
 
