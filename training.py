@@ -227,25 +227,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             verbose = 1,
         ),
 
-        tf.keras.callbacks.EarlyStopping(
-            monitor = 'val_AUC-PR',
-            mode = 'max',
-            min_delta = config.early_stop_min_d,
-            restore_best_weights = True,
-            patience = config.early_stop_patience,
-            verbose = 1,
-        ),
-
-        tf.keras.callbacks.ReduceLROnPlateau(
-            monitor = 'val_loss',
-            mode = 'min',
-            min_delta = config.plateau_min_d,
-            min_lr = 0.00001,
-            factor = 0.5,
-            patience = config.plateau_patience,
-            verbose = 1,
-        ),
-
         tf.keras.callbacks.TensorBoard(
             log_dir = path_logs,
             histogram_freq = 1,
@@ -256,6 +237,31 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
 
         tf.keras.callbacks.TerminateOnNaN(),
     ]
+
+    if config.early_stop_min_d is not None and config.early_stop_patience is not None:
+        callbacks.append(
+            tf.keras.callbacks.EarlyStopping(
+                monitor = 'val_AUC-PR',
+                mode = 'max',
+                min_delta = config.early_stop_min_d,
+                restore_best_weights = True,
+                patience = config.early_stop_patience,
+                verbose = 1,
+            ),
+        )
+    
+    if config.plateau_min_d is not None and config.plateau_patience is not None:
+        callbacks.append(
+            tf.keras.callbacks.ReduceLROnPlateau(
+                monitor = 'val_loss',
+                mode = 'min',
+                min_delta = config.plateau_min_d,
+                min_lr = 0.00001,
+                factor = 0.5,
+                patience = config.plateau_patience,
+                verbose = 1,
+            ),
+        )
 
     history = model.fit(train_dataset, epochs=epochs, steps_per_epoch=steps_per_epoch, callbacks=callbacks, validation_data=valid_dataset)
 
