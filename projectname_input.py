@@ -35,10 +35,13 @@ Functions
 - _tag_filter_hotenc_mask
     Change the shape of tag hot-encoded vector to suit the output of _tag_filter.
 
-- _window
-    Extract a sample of n seconds from each audio tensor within a batch.
+- _window_waveform
+    Extract a sample of n seconds from each audio tensor within a batch (use with waveform).
 
-_spect_normalization
+- _window_log_mel_spectrogram
+    Extract a sample of n seconds from each audio tensor within a batch (use with log_mel_spectrogram).
+
+- _spect_normalization
     Ensure zero mean and unit variance within a batch of log-mel-spectrograms.
 
 - _batch_normalization
@@ -169,8 +172,8 @@ def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
     features_dict: dict
         Dict of features (as provided by .map).
 
-    audio_format: str
-        Specifies the feature audio format. Either 'waveform' or 'log-mel-spectrogram'.
+    sample_rate: int
+        Specifies the sample rate of the audio track.
     
     window_size: int
         Length (in seconds) of the desired output window.
@@ -178,15 +181,13 @@ def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
     random: bool
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
     '''
-  #  if audio_format not in ('waveform', 'log-mel-spectrogram'):
-  #      raise KeyError('invalid audio format')
     
     slice_length = tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)) # get the actual slice length
     slice_length = tf.reshape(slice_length, ())
+
     def fn1a(audio, slice_length=slice_length):
         maxval = tf.subtract(tf.shape(audio, out_type=tf.int32)[0], slice_length)
         x = tf.cond(tf.equal(maxval, tf.constant(0)), lambda: tf.constant(0, dtype=tf.int32), lambda: tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32))
-
         y = tf.add(x, slice_length)
         audio = audio[x:y]
         return audio
@@ -201,6 +202,23 @@ def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
     return features_dict
 
 def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, random=False):
+    ''' Extracts a window of 'window_size' seconds from the audio tensors (use with tf.data.Dataset.map).
+
+    Parameters
+    ----------
+    features_dict: dict
+        Dict of features (as provided by .map).
+
+    sample_rate: int
+        Specifies the sample rate of the audio track.
+    
+    window_size: int
+        Length (in seconds) of the desired output window.
+    
+    random: bool
+        Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+    '''
+
     slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)), tf.constant(512, dtype=tf.int32)) # get the actual slice length
     slice_length = tf.reshape(slice_length, ())
     
@@ -221,8 +239,6 @@ def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, rand
     features_dict['audio'] = tf.where(random, fn2a(features_dict['audio']), fn2b(features_dict['audio']))
     return features_dict
 
-
-
 def _spect_normalization(features_dict):
     mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2], keepdims=True)
     features_dict['audio'] = tf.divide(tf.subtract(features_dict['audio'], mean), tf.sqrt(variance+tf.constant(0.000001)))
@@ -237,7 +253,6 @@ def _batch_normalization(features_dict):
 def _batch_tuplification(features_dict):
     ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. '''
     return (features_dict['audio'], features_dict['tags'])
-
 
 def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
