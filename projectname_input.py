@@ -179,6 +179,8 @@ def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
     slice_length = tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)) # get the actual slice length
     slice_length = tf.reshape(slice_length, ())
 
+    random = tf.constant(random, dtype=tf.bool)
+
     def fn1a(audio, slice_length=slice_length):
         maxval = tf.subtract(tf.shape(audio, out_type=tf.int32)[0], slice_length)
         x = tf.cond(tf.equal(maxval, tf.constant(0)), lambda: tf.constant(0, dtype=tf.int32), lambda: tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32))
@@ -193,7 +195,7 @@ def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
         audio = audio[x:y]
         return audio
 
-    features_dict['audio'] = tf.where(random, fn1a(features_dict['audio']), fn1b(features_dict['audio']))
+    features_dict['audio'] = tf.cond(random, lambda: fn1a(features_dict['audio']), lambda: fn1b(features_dict['audio']))
     return features_dict
 
 def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, random=False):
@@ -216,7 +218,9 @@ def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, rand
 
     slice_length = tf.math.floordiv(tf.math.multiply(tf.constant(window_size, dtype=tf.int32), tf.constant(sample_rate, dtype=tf.int32)), tf.constant(512, dtype=tf.int32)) # get the actual slice length
     slice_length = tf.reshape(slice_length, ())
-    
+
+    random = tf.constant(random, dtype=tf.bool)
+
     def fn2a(audio, slice_length=slice_length):
         maxval = tf.subtract(tf.shape(audio, out_type=tf.int32)[1], slice_length)
         x = tf.cond(tf.equal(maxval, tf.constant(0)), lambda: tf.constant(0, dtype=tf.int32), lambda: tf.random.uniform(shape=(), maxval=maxval, dtype=tf.int32))
@@ -232,7 +236,7 @@ def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, rand
         audio = audio[:,x:y]
         return audio
         
-    features_dict['audio'] = tf.where(random, fn2a(features_dict['audio']), fn2b(features_dict['audio']))
+    features_dict['audio'] = tf.cond(random, lambda: fn2a(features_dict['audio']), lambda: fn2b(features_dict['audio']))
     return features_dict
 
 def _spect_normalization(features_dict):
