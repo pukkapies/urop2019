@@ -333,11 +333,11 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     datasets = []
 
     for files_list in tfrecords_split:
-        
-        files = tf.data.Dataset.from_tensor_slices(files_list)
-        
-        # load dataset, read files in parallel
-        dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=cycle_length, block_length=1, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        if len(files_list) > 1: # read files in parallel (number of parallel threads specified by cycle_length)
+            files = tf.data.Dataset.from_tensor_slices(files_list)
+            dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=cycle_length, block_length=1, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        else:
+            dataset = tf.data.TFRecordDataset(files_list)
         
         # parse serialized features
         dataset = dataset.map(lambda x: _parse_features(x, AUDIO_FEATURES_DESCRIPTION, AUDIO_SHAPE[audio_format]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -403,8 +403,9 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         Directory containing the .tfrecord files.
 
     split: tuple
-        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
-
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files.
+        If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
+        
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
 
