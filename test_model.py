@@ -96,6 +96,17 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
 
     return model
 
+def get_audio(mp3_path, audio_format, config):
+
+    array, sr_in = librosa.core.load(path, sr=None, mono=False)
+    array = librosa.core.to_mono(array)
+    array = librosa.resample(array, sr_in, config.sr)
+
+    if audio_format == "log-mel-spectrogram":
+        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, config.sr, config.n_mels))
+
+    return array
+
 def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=15, random=False, with_tags=None, with_tids=None, merge_tags=None):
     ''' Tests model '''
 
