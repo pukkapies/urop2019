@@ -18,10 +18,11 @@ def load_from_checkpoint(checkpoint_path, audio_format, config_dir):
     with open(config_dir) as f:
         file = json.load(f)
 
-    y_input = file['dataset_specs']['n_mels']
-    num_units = file['training_options']['n_dense_units']
-    num_filt = file['training_options']['n_filters']
-    num_output_neurons = file['training_options']['n_output_neurons']
+    y_input = file['tfrecords']['n_mels']
+    num_units = file['model']['n_dense_units']
+    num_filt = file['model']['n_filters']
+    num_output_neurons = 50  # TODO
+    print(y_input, num_units, num_filt)
 
     # loading model
     model = Model.build_model(frontend_mode=audio_format, 
@@ -57,7 +58,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
 
         audio_batch, label_batch = entry[0], entry[1]
 
-        logits = model(audio_batch)
+        logits = tf.multiply(model(audio_batch), tf.constant(0.001, dtype=tf.float32))
 
         ROC_AUC.update_state(label_batch, logits)
         PR_AUC.update_state(label_batch, logits)
@@ -85,24 +86,25 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     ''' Predicts tags given audio for one track '''
 
     fm = q_fm.LastFm(db_path)
+    # make sure tags are sorted
+    with_tags = np.sort(with_tags)
 
     # compute average by using a moving window
     slices = get_slices(audio, audio_format, sample_rate, window_size)
     logits = tf.reduce_mean(model(slices, training=False), axis=[0])
     
-    return logits
-    # # get tags
-    # tags = []
-    # for idx, val in enumerate(logits):
-    #     if val >= cutoff:
-    #         tags.append((fm.tag_num_to_tag(with_tags[idx]+1), val.numpy()))
-    # return tags
+    # get tags
+    tags = []
+    for idx, val in enumerate(logits):
+        if val >= cutoff:
+            tags.append((fm.tag_num_to_tag(int(with_tags[idx])), val.numpy()))
+    return tags
 
 if __name__ == '__main__':
     # getting tags
     fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
     tags = fm.popularity().tag.to_list()[:50]
-    with_tags = [fm.tag_to_tag_num(tag) for tag in tags]
+    with_tags = np.sort([fm.tag_to_tag_num(tag) for tag in tags])
 
     model = load_from_checkpoint('/srv/data/urop/model/log-mel-spectrogram_20190826-103644/epoch-18', 'log-mel-spectrogram', '/home/calle') 
     # loading model
@@ -118,13 +120,12 @@ if __name__ == '__main__':
     dataset = tf.data.TFRecordDataset('/srv/data/urop/tfrecords-log-mel-spectrogram/log-mel-spectrogram_1.tfrecord')
     dataset = dataset.map(lambda x: projectname_input._parse_features(x, AUDIO_FEATURES_DESCRIPTION, (96, -1)))
     dataset = dataset.filter(lambda x: projectname_input._tag_filter(x, with_tags)).map(lambda y: projectname_input._tag_filter_hotenc_mask(y, with_tags))
-    i = 0 
-    for entry in dataset.take(5):
-        if i < 4:
-            i +=1
-            continue
+
+    np.set_printoptions(formatter={'float': '{: 0.5f}'.format})
+    for entry in dataset.take(40):
         tid = entry['tid'].numpy().decode('utf-8')
         print('TID: ', tid)
         print('tags: ', [tag for tag in fm.query_tags(tid) if tag in tags])
-        print('tfrecord tags: ', entry['tags'])
-        print('predicted tags: ', predict(model, entry['audio'], 'log-mel-spectrogram', with_tags, 16000, cutoff=0.1))
+        tg = entry['tags'].numpy()
+        pred = predict(model, entry['audio'], 'log-mel-spectrogram', with_tags, 16000, cutoff=0.1)
+        print('predicted tags: ', pred)
