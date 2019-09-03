@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 
 import tensorflow as tf
 import numpy as np
@@ -11,7 +12,7 @@ import projectname as Model
 def parse_config(config_path, lastfm_path):
 
     # load tags database
-    lastfm = LastFm(os.path.expanduser(lastfm_path))
+    lastfm = q_fm.LastFm(os.path.expanduser(lastfm_path))
 
     if not os.path.isfile(os.path.expanduser(config_path)):
         path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
@@ -74,7 +75,7 @@ def parse_config(config_path, lastfm_path):
 
     return config, config_optim
 
-def load_from_checkpoint(audio_format, config, config_path=None):
+def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     ''' Loads model from checkpoint '''
 
     # loading model
@@ -84,8 +85,8 @@ def load_from_checkpoint(audio_format, config, config_path=None):
     
     # restoring from checkpoint
     checkpoint = tf.train.Checkpoint(model=model)
-    if config_path:
-        print('Loading from {}'.format(config_path))
+    if checkpoint_path:
+        print('Loading from {}'.format(checkpoint_path))
         checkpoint.restore(checkpoint_path)
     else:
         # loading latest training checkpoint 
@@ -154,12 +155,8 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     return tags
 
 if __name__ == '__main__':
-    # getting tags
-    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
-    tags = fm.popularity().tag.to_list()[:50]
-    with_tags = np.sort([fm.tag_to_tag_num(tag) for tag in tags])
-
-    model = load_from_checkpoint('/srv/data/urop/model/log-mel-spectrogram_20190826-103644/epoch-18', 'log-mel-spectrogram', '/home/calle') 
+    config = parse_config('/home/calle', '/srv/data/urop/clean_lastfm.db')[0]
+    model = load_from_checkpoint('log-mel-spectrogram', config, checkpoint_path='/srv/data/urop/model/log-mel-spectrogram_20190826-103644/epoch-18') 
     # loading model
     # test(model, '/srv/data/urop/tfrecords-log-mel-spectrogram/', 'log-mel-spectrogram', (80, 10, 10), batch_size=128, with_tags=with_tags)
 
@@ -172,13 +169,15 @@ if __name__ == '__main__':
 
     dataset = tf.data.TFRecordDataset('/srv/data/urop/tfrecords-log-mel-spectrogram/log-mel-spectrogram_1.tfrecord')
     dataset = dataset.map(lambda x: projectname_input._parse_features(x, AUDIO_FEATURES_DESCRIPTION, (96, -1)))
-    dataset = dataset.filter(lambda x: projectname_input._tag_filter(x, with_tags)).map(lambda y: projectname_input._tag_filter_hotenc_mask(y, with_tags))
+    dataset = dataset.filter(lambda x: projectname_input._tag_filter(x, config.tags)).map(lambda y: projectname_input._tag_filter_hotenc_mask(y, config.tags))
 
+    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
     np.set_printoptions(formatter={'float': '{: 0.5f}'.format})
+
     for entry in dataset.take(40):
         tid = entry['tid'].numpy().decode('utf-8')
         print('TID: ', tid)
-        print('tags: ', [tag for tag in fm.query_tags(tid) if tag in tags])
+        print('tags: ', [tag for tag in fm.query_tags(tid) if tag in fm.vec_tag_num_to_tag(config.tags)])
         tg = entry['tags'].numpy()
-        pred = predict(model, entry['audio'], 'log-mel-spectrogram', with_tags, 16000, cutoff=0.1)
+        pred = predict(model, entry['audio'], 'log-mel-spectrogram', config.tags, 16000, cutoff=0.1)
         print('predicted tags: ', pred)
