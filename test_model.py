@@ -4,6 +4,7 @@ import argparse
 
 import tensorflow as tf
 import numpy as np
+import librosa
 
 import modules.query_lastfm as q_fm
 import projectname_input
@@ -81,7 +82,7 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     # loading model
     model = Model.build_model(frontend_mode=audio_format, 
                                 num_output_neurons=config.n_output_neurons, y_input=config.n_mels,
-                                num_units=config.n_dense_units, num_filt=config.n_filters)
+                                num_units=config.n_dense_units, num_filts=config.n_filters)
     
     # restoring from checkpoint
     checkpoint = tf.train.Checkpoint(model=model)
@@ -98,12 +99,15 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
 
 def get_audio(mp3_path, audio_format, config):
 
-    array, sr_in = librosa.core.load(path, sr=None, mono=False)
+    array, sr_in = librosa.core.load(mp3_path, sr=None, mono=False)
     array = librosa.core.to_mono(array)
     array = librosa.resample(array, sr_in, config.sr)
 
     if audio_format == "log-mel-spectrogram":
-        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, config.sr, config.n_mels))
+        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, config.sr, n_mels=config.n_mels))
+        # normalization
+        mean, variance = tf.nn.moments(tf.constant(array), axes=[0,1], keepdims=True)
+        array = (array - mean) / np.sqrt(variance+0.000001)
 
     return array
 
@@ -168,27 +172,30 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
 if __name__ == '__main__':
     config = parse_config('/home/calle', '/srv/data/urop/clean_lastfm.db')[0]
     model = load_from_checkpoint('log-mel-spectrogram', config, checkpoint_path='/srv/data/urop/model/log-mel-spectrogram_20190826-103644/epoch-18') 
+
+    audio = get_audio('/home/calle/memory_lane_nas.mp3', 'log-mel-spectrogram', config)
+    print(predict(model, audio, 'log-mel-spectrogram', config.tags, config.sr, cutoff=0.01))
     # loading model
     # test(model, '/srv/data/urop/tfrecords-log-mel-spectrogram/', 'log-mel-spectrogram', (80, 10, 10), batch_size=128, with_tags=with_tags)
 
-    AUDIO_FEATURES_DESCRIPTION = {
-        'audio': tf.io.VarLenFeature(tf.float32),
-        'tid': tf.io.FixedLenFeature((), tf.string),
-        'tags': tf.io.FixedLenFeature((155, ), tf.int64)
-    }
+    # AUDIO_FEATURES_DESCRIPTION = {
+    #     'audio': tf.io.VarLenFeature(tf.float32),
+    #     'tid': tf.io.FixedLenFeature((), tf.string),
+    #     'tags': tf.io.FixedLenFeature((155, ), tf.int64)
+    # }
 
 
-    dataset = tf.data.TFRecordDataset('/srv/data/urop/tfrecords-log-mel-spectrogram/log-mel-spectrogram_1.tfrecord')
-    dataset = dataset.map(lambda x: projectname_input._parse_features(x, AUDIO_FEATURES_DESCRIPTION, (96, -1)))
-    dataset = dataset.filter(lambda x: projectname_input._tag_filter(x, config.tags)).map(lambda y: projectname_input._tag_filter_hotenc_mask(y, config.tags))
+    # dataset = tf.data.TFRecordDataset('/srv/data/urop/tfrecords-log-mel-spectrogram/log-mel-spectrogram_1.tfrecord')
+    # dataset = dataset.map(lambda x: projectname_input._parse_features(x, AUDIO_FEATURES_DESCRIPTION, (96, -1)))
+    # dataset = dataset.filter(lambda x: projectname_input._tag_filter(x, config.tags)).map(lambda y: projectname_input._tag_filter_hotenc_mask(y, config.tags))
 
-    fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
-    np.set_printoptions(formatter={'float': '{: 0.5f}'.format})
+    # fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
+    # np.set_printoptions(formatter={'float': '{: 0.5f}'.format})
 
-    for entry in dataset.take(40):
-        tid = entry['tid'].numpy().decode('utf-8')
-        print('TID: ', tid)
-        print('tags: ', [tag for tag in fm.query_tags(tid) if tag in fm.vec_tag_num_to_tag(config.tags)])
-        tg = entry['tags'].numpy()
-        pred = predict(model, entry['audio'], 'log-mel-spectrogram', config.tags, 16000, cutoff=0.1)
-        print('predicted tags: ', pred)
+    # for entry in dataset.take(40):
+    #     tid = entry['tid'].numpy().decode('utf-8')
+    #     print('TID: ', tid)
+    #     print('tags: ', [tag for tag in fm.query_tags(tid) if tag in fm.vec_tag_num_to_tag(config.tags)])
+    #     tg = entry['tags'].numpy()
+    #     pred = predict(model, entry['audio'], 'log-mel-spectrogram', config.tags, 16000, cutoff=0.1)
+    #     print('predicted tags: ', pred)
