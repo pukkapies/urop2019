@@ -8,6 +8,72 @@ import modules.query_lastfm as q_fm
 import projectname_input
 import projectname as Model
 
+def parse_config(config_path, lastfm_path):
+
+    # load tags database
+    lastfm = LastFm(os.path.expanduser(lastfm_path))
+
+    if not os.path.isfile(os.path.expanduser(config_path)):
+        path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
+    else:
+        path = os.path.expanduser(config_path)
+
+    # load json
+    with open(path, 'r') as f:
+        config_d = json.loads(f.read())
+
+
+    n_tags = config_d['tfrecords']['n_tags']
+    # read top tags from popularity dataframe
+    top = config_d['tags']['top']
+    if (top is not None) and (top !=n_tags):
+        top_tags = lastfm.popularity()['tag'][:top].tolist()
+        tags = set(top_tags)
+    else:
+        tags=None
+
+    # find tags to use
+    if tags is not None:
+        if config_d['tags']['with']:
+            tags.update(config_d['tags']['with'])
+
+        if config_d['tags']['without']:
+            tags.difference_update(config_d['tags']['without'])
+    else:
+        raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
+
+    # create config namespace (to be accessed more easily than a dictionary)
+    config = argparse.Namespace()
+    config.batch = config_d['config']['batch_size']
+    config.cycle_len = config_d['config']['cycle_length']
+    config.early_stop_min_d = config_d['config']['early_stop_min_delta']
+    config.early_stop_patience = config_d['config']['early_stop_patience']
+    config.n_dense_units = config_d['model']['n_dense_units']
+    config.n_filters = config_d['model']['n_filters']
+    config.n_mels = config_d['tfrecords']['n_mels']
+    config.n_output_neurons = len(tags) if tags is not None else n_tags
+    config.path = config_path
+    config.plateau_min_d = config_d['config']['reduce_lr_plateau_min_delta']
+    config.plateau_patience = config_d['config']['reduce_lr_plateau_patience']
+    config.shuffle = config_d['config']['shuffle']
+    config.shuffle_buffer = config_d['config']['shuffle_buffer_size']
+    config.split = config_d['config']['split']
+    config.sr = config_d['tfrecords']['sample_rate']
+    config.tags = lastfm.vec_tag_to_tag_num(list(tags)) if tags is not None else None
+    config.tags_to_merge = lastfm.vec_tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
+    config.tot_tags = config_d['tfrecords']['n_tags']
+    config.window_len = config_d['config']['window_length']
+    config.window_random = config_d['config']['window_extract_randomly']
+    config.log_dir = config_d['config']['log_dir']
+    config.checkpoint_dir = config_d['config']['checkpoint_dir']
+
+    # create config namespace for the optimizer (will be used by get_optimizer() in order to allow max flexibility)
+    config_optim = argparse.Namespace()
+    config_optim.class_name = config_d['optimizer'].pop('name')
+    config_optim.config = config_d['optimizer']
+
+    return config, config_optim
+
 def load_from_checkpoint(checkpoint_path, audio_format, config_dir):
     ''' Loads model from checkpoint '''
 
