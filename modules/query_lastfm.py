@@ -139,21 +139,21 @@ class LastFm:
         ''' Returns tid, given tid_num. '''
 
         q = "SELECT tid FROM tids WHERE rowid = ?"
-        self.query(q, tid_num)
+        self.query(q, int(tid_num))
         return self.c.fetchone()[0]
 
     def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
 
         q = "SELECT tag FROM tid_tag WHERE tid = ?"
-        self.query(q, tid_num)
+        self.query(q, int(tid_num))
         return [i[0] for i in self.c.fetchall()]
         
     def tag_num_to_tag(self, tag_num):
         ''' Returns tag given tag_num. '''
 
         q = "SELECT tag FROM tags WHERE rowid = ?"
-        self.query(q, tag_num)
+        self.query(q, int(tag_num))
         return self.c.fetchone()[0]
 
     def tag_to_tag_num(self, tag):
