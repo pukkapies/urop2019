@@ -166,15 +166,15 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     tags = []
     for idx, val in enumerate(logits):
         if val >= cutoff:
-            tags.append((fm.tag_num_to_tag(int(with_tags[idx])), val.numpy()))
+            tags.append([float(val.numpy()), fm.tag_num_to_tag(int(with_tags[idx]))])
     return tags
 
 if __name__ == '__main__':
-    config = parse_config('/home/calle', '/srv/data/urop/clean_lastfm.db')[0]
-    model = load_from_checkpoint('log-mel-spectrogram', config, checkpoint_path='/srv/data/urop/model/log-mel-spectrogram_20190826-103644/epoch-18') 
+    config = parse_config('/home/calle', '/home/calle/clean_lastfm.db')[0]
+    model = load_from_checkpoint('log-mel-spectrogram', config, checkpoint_path='/home/calle/checkpoint/epoch-18') 
 
-    audio = get_audio('/home/calle/memory_lane_nas.mp3', 'log-mel-spectrogram', config)
-    print(predict(model, audio, 'log-mel-spectrogram', config.tags, config.sr, cutoff=0.01))
+    audio = get_audio('/home/calle/Downloads/gucci_gang.mp3', 'log-mel-spectrogram', config)
+    print(predict(model, audio, 'log-mel-spectrogram', config.tags, config.sr, cutoff=0.1, db_path='/home/calle/clean_lastfm.db'))
     # loading model
     # test(model, '/srv/data/urop/tfrecords-log-mel-spectrogram/', 'log-mel-spectrogram', (80, 10, 10), batch_size=128, with_tags=with_tags)
 
