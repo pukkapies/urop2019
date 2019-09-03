@@ -74,37 +74,24 @@ def parse_config(config_path, lastfm_path):
 
     return config, config_optim
 
-def load_from_checkpoint(checkpoint_path, audio_format, config_dir):
+def load_from_checkpoint(audio_format, config, config_path=None):
     ''' Loads model from checkpoint '''
-
-    # getting config settings
-    if not os.path.isfile(config_dir):
-        config_dir = os.path.join(os.path.normpath(config_dir), 'config.json')
-
-    with open(config_dir) as f:
-        file = json.load(f)
-
-    y_input = file['tfrecords']['n_mels']
-    num_units = file['model']['n_dense_units']
-    num_filt = file['model']['n_filters']
-    num_output_neurons = 50  # TODO
-    print(y_input, num_units, num_filt)
 
     # loading model
     model = Model.build_model(frontend_mode=audio_format, 
-                                num_output_neurons=num_output_neurons, y_input=y_input,
-                                num_units=num_units, num_filt=num_filt)
-
+                                num_output_neurons=config.n_output_neurons, y_input=config.n_mels,
+                                num_units=config.n_dense_units, num_filt=config.n_filters)
+    
+    # restoring from checkpoint
     checkpoint = tf.train.Checkpoint(model=model)
-    latest = tf.train.latest_checkpoint(checkpoint_path)
-    if latest:
+    if config_path:
+        print('Loading from {}'.format(config_path))
+        checkpoint.restore(checkpoint_path)
+    else:
         # loading latest training checkpoint 
+        latest = tf.train.latest_checkpoint(config.checkpoint_dir)
         print('Loading from {}'.format(latest))
         checkpoint.restore(latest)
-    else:
-        # assuming path was a specific checkpoint
-        print('Loading from {}'.format(checkpoint_path))
-        checkpoint.restore(checkpoint_path)
 
     return model
 
