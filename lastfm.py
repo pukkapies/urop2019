@@ -699,9 +699,9 @@ class Matrix():
 
         # load matrix tags
         with open (os.path.splitext(path) + '.nfo', 'rb') as f:
-            matrix_tags = pickle.load(f)
+            tags = pickle.load(f)
 
-        return matrix, matrix_tags
+        return matrix, tags
 
     def tags_et(self, tags):
     
@@ -731,17 +731,46 @@ class Matrix():
             idxs = np.where(np.array([self.m_tags] * len(tags)) == tags[:,None])[1] # 'numpy version' of idxs = [self.m_tags.index(tag) for tag in tags]
             assert len(idxs) == len(tags) # sanity check (np.where will not return errors if correspondent idx does not exist)
         
-        return sum((-1)**(i+1) * tags_et(subset, self.m) # inclusion-exclusion principle
+        return sum((-1)**(i+1) * self.tags_et(subset) # inclusion-exclusion principle
                 for i in range(1, len(idxs) + 1)
                 for subset in itertools.combinations(idxs, i))
 
     def with_one_without_many(self, with_tags, without_tags):
         assert len(with_tags) == 1 and len(without_tags) >= 1
-        return tags_or(with_tags + without_tags) - tags_or(without_tags)
+        return self.tags_or(with_tags + without_tags) - self.tags_or(without_tags)
 
-    def with_many_without_one(self, with_tags, without_tags):
+    def with_many_without_one(self, with_tags, without_tags): # when with_one_without_one is needed, this function should be preferred
         assert len(with_tags) >= 1 and len(without_tags) == 1
-        return tags_et(with_tags) - tags_et(with_tags + without_tags)
+        return self.tags_et(with_tags) - self.tags_et(with_tags + without_tags)
+
+    def correlation_matrix_2d(self):
+        l = len(self.m_tags)
+        matrix = np.zeros((l, )*2)
+        for i in range(l):
+            for j in range(l):
+                tot = self.tags_et([i])
+                matrix[i,j] = 1 - (self.with_many_without_one(with_tags=[i], without_tags=[j]) / tot)
+        return matrix
+
+    def correlation_matrix_3d_12(self):
+        l = len(self.m_tags)
+        matrix = np.zeros((l, )*3)
+        for i in range(l):
+            for j in range(l):
+                for k in range(l):
+                    tot = self.tags_et([i])
+                    matrix[i,j,k] = 1 - (self.with_one_without_many(with_tags=[i], without_tags=[j,k]) / tot)
+        return matrix
+
+    def correlation_matrix_3d_21(self):
+        l = len(self.m_tags)
+        matrix = np.zeros((l, )*3)
+        for i in range(l):
+            for j in range(l):
+                for k in range(l):
+                    tot = self.tags_et([i,j])
+                    matrix[i,j,k] = 1 - (self.with_many_without_one(with_tags=[i,j], without_tags=[k]) / tot)
+        return matrix
 
 def crazysum(n, s, k):
     return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
