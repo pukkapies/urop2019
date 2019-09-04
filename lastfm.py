@@ -688,17 +688,17 @@ class Matrix():
             sparse.save_npz(save_to, matrix) # default to compressed format (i.e. sparse format)
 
             # save matrix tags
-            with open(os.path.splitext(save_to) + '.nfo', 'wb') as f:
+            with open(os.path.splitext(save_to)[0] + '.nfo', 'wb') as f:
                 pickle.dump(tags, f)
         
         return matrix, tags
 
-    def matrix_load(path):
+    def matrix_load(self, path):
         # load matrix
-        matrix = sparse.load_npz(os.path.splitext(path) + '.npz')
+        matrix = sparse.load_npz(os.path.splitext(path)[0] + '.npz')
 
         # load matrix tags
-        with open (os.path.splitext(path) + '.nfo', 'rb') as f:
+        with open (os.path.splitext(path)[0] + '.nfo', 'rb') as f:
             tags = pickle.load(f)
 
         return matrix, tags
