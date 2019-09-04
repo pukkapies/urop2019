@@ -69,7 +69,7 @@ import os
 
 import tensorflow as tf
 
-from utils import MyEncoder, NoIndent
+from utils import MyEncoder, WithoutIndent
         
 def create_config_json(config_path, **kwargs):
     ''' Creates configuration file with training specs.
@@ -104,9 +104,9 @@ def create_config_json(config_path, **kwargs):
 
     tags = {
         'top': 50,
-        'with': NoIndent(None),
-        'without': NoIndent(None),
-        'merge': NoIndent(None),
+        'with': WithoutIndent(None),
+        'without': WithoutIndent(None),
+        'merge': WithoutIndent(None),
     }
 
     tfrecords = {
@@ -124,7 +124,7 @@ def create_config_json(config_path, **kwargs):
         'checkpoint_dir': '/srv/data/urop/model/',
         'shuffle': True,
         'shuffle_buffer_size': 10000,
-        'split': NoIndent((80, 10, 10)),
+        'split': WithoutIndent((80, 10, 10)),
         'reduce_lr_plateau_min_delta': 0.1,
         'reduce_lr_plateau_patience': 2,
         'window_length': 15,

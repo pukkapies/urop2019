@@ -37,7 +37,7 @@ import pandas as pd
 import numpy as np
 import sparse
 
-from tensorflow.keras.utils import Progbar
+from utils import MyProgbar
 
 DEFAULT = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
@@ -658,7 +658,7 @@ class Matrix():
         # check whether a progress bar is needed
         verbose = n_steps > 5000
         if verbose:
-            progbar = Progbar(n_steps) # instantiate progress bar
+            progbar = MyProgbar(n_steps) # instantiate progress bar
         
         def count_intersect_tags(tags):
             tids_list = [lastfm.with_tag(tag) for tag in tags]
