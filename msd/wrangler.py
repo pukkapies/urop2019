@@ -265,9 +265,9 @@ if __name__ == "__main__":
             raise OSError("file " + args.path_db + " does not exist!")
         lastfm = q_fm.LastFm(args.path_db)
     else:
-        if not os.path.isfile(q_fm.default):
-            raise OSError("file " + q_fm.default + " does not exist!")
-        lastfm = q_fm.LastFm(q_fm.default)
+        if not os.path.isfile(q_fm.DEFAULT):
+            raise OSError("file " + q_fm.DEFAULT + " does not exist!")
+        lastfm = q_fm.LastFm(q_fm.DEFAULT)
 
     df = ultimate_output(df, lastfm, args.discard_no_tag, args.discard_dupl)
     

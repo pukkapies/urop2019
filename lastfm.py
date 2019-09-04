@@ -37,7 +37,7 @@ import sparse
 
 from tensorflow.keras.utils import Progbar
 
-default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
+DEFAULT = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
 class LastFm:
     ''' Opens a SQLite connection to the last.fm database. Provides methods to perform advanced queries on it.
@@ -406,7 +406,7 @@ class LastFm2Pandas():
                 conn.close()
 
     @classmethod
-    def from_sql(cls, path=default, no_tags=False, no_tids=False, no_tid_tag=False):
+    def from_sql(cls, path=DEFAULT, no_tags=False, no_tids=False, no_tid_tag=False):
         return cls(from_sql=path, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
 
     @classmethod
