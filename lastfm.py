@@ -27,13 +27,15 @@ Classes
     This class is slower to init, since the whole database is loaded into memory, but consequently queries are much faster. This class also contain some additional "advanced" methods.
 '''
 
+import math
 import os
 import sqlite3
 
 import pandas as pd
 import numpy as np
+import sparse
 
-from numpy import ndarray
+from tensorflow.keras.utils import Progbar
 
 default = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
@@ -348,6 +350,9 @@ class LastFm2Pandas():
         
     - fetch_all_tids_tags_threshold
         Return a dataframe containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold.
+    
+    - with_tag
+        Return all tids with a given tag.
 
     - popularity
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
@@ -475,7 +480,7 @@ class LastFm2Pandas():
 
         Returns
         -------
-        tag_nums : ndarray, series.
+        tag_nums : ndarray, series
             if tid_num is an int:
                 ndarray of corresponding tag_nums (int)
             if array-like:
@@ -508,7 +513,7 @@ class LastFm2Pandas():
 
         tag_nums = self.tid_num_to_tag_nums(tid_num)
 
-        if isinstance(tag_nums, (list, ndarray)):
+        if isinstance(tag_nums, (list, np.ndarray)):
             return self.tag_num_to_tag(tag_nums)
 
         return tag_nums.map(self.tag_num_to_tag)
@@ -610,7 +615,7 @@ class LastFm2Pandas():
 
         tags = self.tid_num_to_tags(self.tid_to_tid_num(tid))
 
-        if isinstance(tags, (list, ndarray)):
+        if isinstance(tags, (list, np.ndarray)):
             return tags
 
         return tags.rename(self.tid_num_to_tid)
@@ -624,6 +629,14 @@ class LastFm2Pandas():
         ''' Returns a list of tuples containing tids and tags (as they appear in the tid_tag table) satisfying val > threshold. '''
 
         return self.tid_tag[['tid', 'tag']][self.tid_tag['val'] > threshold]
+
+    def with_tag(self, tag):
+        ''' Return all tids with a given tag. '''
+        
+        tag_idx = self.tag_to_tag_num(tag)
+        tids = self.tid_tag['tid'][self.tid_tag['tag'] == tag_idx]
+        tids = self.tid_num_to_tid(tids)
+        return tids.tolist()
 
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
@@ -639,4 +652,53 @@ class LastFm2Pandas():
         self.pop.index += 1
         return self.pop
 
-class Matrix()
+class Matrix():
+    def __init__(lastfm, tags, dim=3, save_npz=None):
+        pass
+
+    def matrix(self, lastfm, dim=3, tags=None, save_to=None):
+
+        if tags is None:
+            tags = lastfm.get_tags()
+        else:
+            tags = [tag for tag in tags if tag in lastfm.get_tags()] # possibly purge inexistent tags
+        
+        matrix = sparse.DOK((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (perfect for easy creation, awful for calculations)
+
+        n_steps = crazysum(n=len(tags), s=3, k=dim-1)
+        verbose = n_steps > 5000
+        if verbose:
+            progbar = Progbar(n_steps) # instantiate progress bar
+        
+        def count_intersect_tags(tags):
+            tids_list = [lastfm.with_tag(tag) for tag in tags]
+            tids_list.sort(key=len, reverse=True)
+            tids = set(tids_list.pop()) # start with shortest list of tids to improve performance; convert to set to be able to intersect
+            for _ in range(len(tids_list)):
+                tids = tids.intersection(tids_list.pop()) # intersections performed from shortest list to longest
+            return len(tids) # how many tids have all tags
+        
+        # recursively iterate count_intersect_tags dim times; and avoid combinatorial repetitions such as 'rock AND pop AND folk' vs. 'rock AND folk AND pop' vs. 'folk AND pop AND rock'
+        def count_intersect_tags_recursive(tags_idxs, dim):
+            if dim>=1:
+                for i in range(tags_idxs[-1] + 1):
+                    count_intersect_tags_recursive(tags_idxs + (i, ), dim-1)
+            else:
+                matrix[tags_idxs] = count_intersect_tags(np.take(tags, tags_idxs)) # add count to sparse matrix
+                if verbose:
+                    progbar.add(1)
+        
+        for i in range(len(tags)):
+            count_intersect_tags_recursive((i, ), dim-1) # instantiate recursive loop
+        
+        matrix = matrix.to_coo() # convert to coordinate matrix
+        
+        if save_to is not None:
+            sparse.save_npz(save_to, matrix) # default to compress (that is, sparse) format
+        
+        return matrix, tags
+
+def crazysum(n, s, k):
+    ''' Returns sum of first n s-gonal k-dimensional nubers (see http://www.iosrjournals.org/iosr-jm/papers/Vol8-issue3/A0830110.pdf). '''
+
+    return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
