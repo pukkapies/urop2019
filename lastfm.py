@@ -656,7 +656,7 @@ class Matrix():
         n_steps = crazysum(n=len(tags), s=3, k=dim-1)
 
         # check whether a progress bar is needed
-        verbose = n_steps > 5000
+        verbose = n_steps > 1000
         if verbose:
             progbar = MyProgbar(n_steps) # instantiate progress bar
         
