@@ -763,7 +763,7 @@ class Matrix():
                 matrix[i,j] = 1 - (self.with_many_without_one(with_tags=[i], without_tags=[j]) / tot)
         return matrix
 
-    def correlation_matrix_3d_12(self):
+    def correlation_matrix_3d(self):
         l = len(self.m_tags)
         matrix = np.zeros((l, )*3)
         for i in range(l):
@@ -773,14 +773,39 @@ class Matrix():
                     matrix[i,j,k] = 1 - (self.with_one_without_many(with_tags=[i], without_tags=[j,k]) / tot)
         return matrix
 
-    def correlation_matrix_3d_21(self):
-        l = len(self.m_tags)
-        matrix = np.zeros((l, )*3)
-        for i in range(l):
-            for j in range(l):
-                for k in range(l):
-                    tot = self.tags_et([i,j])
-                    matrix[i,j,k] = 1 - (self.with_many_without_one(with_tags=[i,j], without_tags=[k]) / tot)
+    def are_equivalent(self, threshold=0.8, verbose=False):
+        correlation = self.correlation_matrix_2d()
+        matrix = np.where((correlation > threshold) & np.transpose(correlation > threshold), correlation, 0)
+        np.fill_diagonal(matrix, 0)
+        if verbose:
+            count = 0
+            for x, y in zip(*np.where(np.tril(matrix>0))):
+                count+=1
+                print('{0:>3}. {1:3.1f}% of {3} is {4}\n{5:>3}  {2:3.1f}% of {4} is {3}\n'.format(count, correlation[x,y]*100, correlation[y,x]*100, self.m_tags[x], self.m_tags[y], ' ' * len(str(count))))
+        return matrix
+
+    def all_tag_is(self, threshold=0.7, verbose=False):
+        correlation = self.correlation_matrix_2d()
+        matrix = np.where((correlation > threshold), correlation, 0)
+        np.fill_diagonal(matrix, 0)
+        if verbose:
+            count = 0
+            for x, y in zip(*np.where(matrix>0)):
+                count+=1
+                print('{0:>3}. {1:3.1f}% of {3} is {4}\n{5}(but {2:3.1f}% of {4} is {3})\n'.format(count, correlation[x,y]*100, correlation[y,x]*100, self.m_tags[x], self.m_tags[y], ' ' * max(0, len(str(count))-3)))
+        return matrix
+
+    def all_tag_is_either(self, threshold=0.7, verbose=False):
+        correlation = self.correlation_matrix_3d()
+        matrix = np.where((correlation > threshold), correlation, 0)
+        for i in range(len(self.m_tags)):
+            matrix[i,i,:]=0
+            matrix[i,:,i]=0
+        if verbose:
+            count = 0
+            for x, y, z in zip(*np.where(matrix>0)):
+                count+=1
+                print('{0:>3}. {1:3.1f}% of {2} is either {3} or {4}\n'.format(count, correlation[x,y,z]*100, self.m_tags[x], self.m_tags[y], self.m_tags[z]))
         return matrix
 
 def crazysum(n, s, k):
