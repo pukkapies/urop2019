@@ -49,7 +49,7 @@ conditions and the following disclaimer in the documentation and/or other materi
 promote products derived from this software without specific prior written permission.
 
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR 
 IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
 AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
 CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
@@ -69,7 +69,7 @@ import os
 
 import tensorflow as tf
 
-from pretty_print import MyEncoder, NoIndent
+from utils import MyEncoder, NoIndent
         
 def create_config_json(config_path, **kwargs):
     ''' Creates configuration file with training specs.
@@ -89,40 +89,50 @@ def create_config_json(config_path, **kwargs):
 
     Examples
     --------
-    >>> create_config_json(config_path, lr=0.00001, n_filters=64)
+    >>> create_config_json(config_path, learning_rate=0.00001, n_filters=64)
     '''
 
-    dataset_specs = {
-        'n_tags': 155, 
-        'n_mels': 96,
-        'sample_rate': 16000,
-    }
-
-    train_options = {
-        'lr': 0.001,
+    model = {
         'n_dense_units': 500,
         'n_filters': 16,
     }
 
-    train_options_dataset = {
-        'presets': [
-            {
-                'tags': NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal']),
-                'merge_tags': None,
-            },
-            {
-                'tags': NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal', 'instrumental', 'male', 'female']),
-                'merge_tags': None,
-            },
-        ],
-        'window_length': 15,
-        'window_extract_randomly': False,
+    optimizer = {
+        'name': 'SGD',
+        'learning_rate': 0.01,
+    }
+
+    tags = {
+        'top': 50,
+        'with': NoIndent(None),
+        'without': NoIndent(None),
+        'merge': NoIndent(None),
+    }
+
+    tfrecords = {
+        'n_mels': 128,
+        'n_tags': 155,
+        'sample_rate': 16000,
+    }
+
+    config = {
+        'batch_size': 32,
+        'cycle_length': 2,
+        'early_stop_min_delta': 0.2,
+        'early_stop_patience': 5,
+        'log_dir': '/srv/data/urop/log/',
+        'checkpoint_dir': '/srv/data/urop/model/',
         'shuffle': True,
         'shuffle_buffer_size': 10000,
+        'split': NoIndent((80, 10, 10)),
+        'reduce_lr_plateau_min_delta': 0.1,
+        'reduce_lr_plateau_patience': 2,
+        'window_length': 15,
+        'window_extract_randomly': True,
     }
 
     def substitute_into_dict(key, value):
-        for dict in (dataset_specs, train_options, train_options_dataset):
+        for dict in (model, tags, tfrecords, config):
             if key in dict:
                 dict[key] = value
                 return
@@ -135,7 +145,7 @@ def create_config_json(config_path, **kwargs):
         config_path = os.path.join(os.path.abspath(config_path),'config.json')
     
     with open(config_path, 'w') as f:
-        d = {'dataset_specs': dataset_specs, 'training_options': train_options, 'training_options_dataset': train_options_dataset}
+        d = {'model': model, 'optimizer': optimizer, 'tags': tags, 'tfrecords': tfrecords, 'config': config}
         s = json.dumps(d, cls=MyEncoder, indent=2)
         f.write(s)
     
@@ -189,7 +199,7 @@ def wave_frontend(input):
     exp_dim = tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, [3]), name='expdim2_wave')(pool6)
     return exp_dim
 
-def log_mel_spec_frontend(input, y_input=96, num_filt=32):
+def log_mel_spec_frontend(input, y_input=96, num_filts=32):
     ''' Creates the frontend model for log-mel-spectrogram input. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
@@ -199,7 +209,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     input_pad_3 = tf.keras.layers.ZeroPadding2D(((0, 0), (1, 1)), name='pad3_spec')(input)
     
     # [TIMBRE] filter shape: 0.9y*7
-    conv1 = tf.keras.layers.Conv2D(filters=num_filt, 
+    conv1 = tf.keras.layers.Conv2D(filters=num_filts, 
                kernel_size=[int(0.9 * y_input), 7],
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv1_spec')(input_pad_7)    
@@ -209,7 +219,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     p1 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque1_spec')(pool1)
     
     # [TIMBRE] filter shape: 0.9y*3
-    conv2 = tf.keras.layers.Conv2D(filters=num_filt*2,
+    conv2 = tf.keras.layers.Conv2D(filters=num_filts*2,
                kernel_size=[int(0.9 * y_input), 3],
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv2_spec')(input_pad_3)
@@ -219,7 +229,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     p2 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque2_spec')(pool2)
     
     # [TIMBRE] filter shape: 0.9y*1
-    conv3 = tf.keras.layers.Conv2D(filters=num_filt*4,
+    conv3 = tf.keras.layers.Conv2D(filters=num_filts*4,
                kernel_size=[int(0.9 * y_input), 1], 
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv3_spec')(input)
@@ -229,7 +239,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     p3 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque3_spec')(pool3)
 
     # [TIMBRE] filter shape: 0.4y*7
-    conv4 = tf.keras.layers.Conv2D(filters=num_filt,
+    conv4 = tf.keras.layers.Conv2D(filters=num_filts,
                kernel_size=[int(0.4 * y_input), 7],
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv4_spec')(input_pad_7)
@@ -239,7 +249,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     p4 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque4_spec')(pool4)
 
     # [TIMBRE] filter shape: 0.4y*3
-    conv5 = tf.keras.layers.Conv2D(filters=num_filt*2,
+    conv5 = tf.keras.layers.Conv2D(filters=num_filts*2,
                kernel_size=[int(0.4 * y_input), 3],
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv5_spec')(input_pad_3)
@@ -249,7 +259,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     p5 = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque5_spec')(pool5)
 
     # [TIMBRE] filter shape: 0.4y*1
-    conv6 = tf.keras.layers.Conv2D(filters=num_filt*4,
+    conv6 = tf.keras.layers.Conv2D(filters=num_filts*4,
                kernel_size=[int(0.4 * y_input), 1],
                padding='valid', activation='relu',
                kernel_initializer=initializer, name='conv6_spec')(input)
@@ -264,25 +274,25 @@ def log_mel_spec_frontend(input, y_input=96, num_filt=32):
     avg_pool = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, 1), name='sque7_spec')(avg_pool)
 
     # [TEMPORAL] filter shape: 165*1
-    conv7 = tf.keras.layers.Conv1D(filters=num_filt, kernel_size=165,
+    conv7 = tf.keras.layers.Conv1D(filters=num_filts, kernel_size=165,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv7_spec')(avg_pool)
     bn_conv7 = tf.keras.layers.BatchNormalization(name='bn7_spec')(conv7)
     
     # [TEMPORAL] filter shape: 128*1
-    conv8 = tf.keras.layers.Conv1D(filters=num_filt*2, kernel_size=128,
+    conv8 = tf.keras.layers.Conv1D(filters=num_filts*2, kernel_size=128,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv8_spec')(avg_pool)
     bn_conv8 = tf.keras.layers.BatchNormalization(name='bn8_spec')(conv8)
 
     # [TEMPORAL] filter shape: 64*1
-    conv9 = tf.keras.layers.Conv1D(filters=num_filt*4, kernel_size=64,
+    conv9 = tf.keras.layers.Conv1D(filters=num_filts*4, kernel_size=64,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv9_spec')(avg_pool)
     bn_conv9 = tf.keras.layers.BatchNormalization(name='bn9_spec')(conv9)
     
     # [TEMPORAL] filter shape: 32*1
-    conv10 = tf.keras.layers.Conv1D(filters=num_filt*8, kernel_size=32,
+    conv10 = tf.keras.layers.Conv1D(filters=num_filts*8, kernel_size=32,
                    padding='same', activation='relu',
                    kernel_initializer=initializer, name='conv10_spec')(avg_pool)
     bn_conv10 = tf.keras.layers.BatchNormalization(name='bn10_spec')(conv10)
@@ -336,7 +346,7 @@ def backend(input, num_output_neurons, num_units=1024):
     return tf.keras.layers.Dense(activation='sigmoid', units=num_output_neurons,
                  kernel_initializer=initializer, name='dense2_back')(dense_dropout)
 
-def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500, num_filt=16, batch_size=None):
+def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500, num_filts=16, batch_size=None):
     ''' Generates the final model by combining frontend and backend.
     
     Parameters
@@ -367,7 +377,7 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500
 
     elif frontend_mode == 'log-mel-spectrogram':
         input = tf.keras.Input(shape=[y_input, None], batch_size=batch_size)
-        front_out = log_mel_spec_frontend(input, y_input=y_input, num_filt=num_filt)
+        front_out = log_mel_spec_frontend(input, y_input=y_input, num_filts=num_filts)
 
     else:
         raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
