@@ -628,10 +628,8 @@ class LastFm2Pandas():
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
 
-        # count number of occurence of each tag
         df_1 = self.tid_tag['tag'].value_counts().to_frame()
         df_2 = self.tags['tag'].to_frame()
-
         self.pop = df_2.merge(df_1, left_index=True, right_index=True)
         self.pop.rename(columns={self.pop.columns[0]:'tag', self.pop.columns[1]:'count'}, inplace=True)
         self.pop.sort_values('count', ascending=False, inplace=True)
@@ -640,3 +638,5 @@ class LastFm2Pandas():
         self.pop = pd.concat([self.pop['tag'], self.pop['tag_num'], self.pop['count']], axis=1)
         self.pop.index += 1
         return self.pop
+
+class Matrix()
