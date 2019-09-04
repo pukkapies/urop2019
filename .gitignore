@@ -7,3 +7,4 @@ ehthumbs.db
 Thumbs.db
 __pycache__/
 *.py[cod]
+logs/
