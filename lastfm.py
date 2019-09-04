@@ -29,6 +29,7 @@ Classes
 
 import math
 import os
+import pickle
 import sqlite3
 
 import pandas as pd
@@ -358,7 +359,7 @@ class LastFm2Pandas():
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, from_sql=None, from_csv=None, from_csv_split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
+    def __init__(self, path, no_tags=False, no_tids=False, no_tid_tag=False):
         '''
         Parameters
         ----------
@@ -375,43 +376,20 @@ class LastFm2Pandas():
             If True, do not store tid_tag table.
         '''
 
-        # open tables as dataframes and shift index to match rowid in the original database
-        if from_csv is not None:
-            # read from three .csv files
-            assert len(from_csv_split) == 3
-            if not no_tags:
-                self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split[0]), index_col=0)
-                self.tags.index += 1
-            if not no_tids:
-                self.tids = pd.read_csv(os.path.join(from_csv, from_csv_split[1]), index_col=0)
-                self.tids.index += 1
-            if not no_tid_tag:
-                self.tid_tag = pd.read_csv(os.path.join(from_csv, from_csv_split[2]), index_col=0)
-                self.tid_tag.index += 1
-        else:
-            # read from database
-            if not os.path.isfile(from_sql):
-                raise OSError("file " + from_sql + " does not exist!")
-            else:
-                conn = sqlite3.connect(from_sql)
-                if not no_tags:
-                    self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
-                    self.tags.index += 1
-                if not no_tids:
-                    self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
-                    self.tids.index += 1
-                if not no_tid_tag:
-                    self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
-                    self.tid_tag.index += 1
-                conn.close()
+        if not os.path.isfile(path):
+            raise OSError("file " + path + " does not exist!")
 
-    @classmethod
-    def from_sql(cls, path=DEFAULT, no_tags=False, no_tids=False, no_tid_tag=False):
-        return cls(from_sql=path, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
-
-    @classmethod
-    def from_csv(cls, path='/srv/data/urop/', split=['lastfm_tags.csv', 'lastfm_tids.csv', 'lastfm_tid_tag.csv'], no_tags=False, no_tids=False, no_tid_tag=False):
-        return cls(from_csv=path, from_csv_split=split, no_tags=no_tags, no_tids=no_tids, no_tid_tag=no_tid_tag)
+        conn = sqlite3.connect(path)
+        if not no_tags:
+            self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
+            self.tags.index += 1
+        if not no_tids:
+            self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
+            self.tids.index += 1
+        if not no_tid_tag:
+            self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
+            self.tid_tag.index += 1
+        conn.close()
 
     def tid_to_tid_num(self, tid, order=False):
         ''' Returns tid_num(s) given tid(s)
@@ -653,11 +631,17 @@ class LastFm2Pandas():
         return self.pop
 
 class Matrix():
-    def __init__(lastfm, tags, dim=3, save_npz=None):
-        pass
+    def __init__(self, lastfm, tags, dim=3, save_to=None, load_from=None):
+        if load_from is None:
+            self.m, self.m_tags = self.matrix(lastfm, tags=tags, dim=dim, save_to=save_to)
+        else:
+            self.m, self.m_tags = self.matrix_load(load_from)
+        
+    @classmethod
+    def load_from(cls, path):
+        return cls(None, None, load_from=path)
 
-    def matrix(self, lastfm, dim=3, tags=None, save_to=None):
-
+    def matrix(self, lastfm, tags=None, dim=3, save_to=None):
         # initialize matrix tags
         if tags is None:
             tags = lastfm.get_tags()
@@ -699,9 +683,24 @@ class Matrix():
         matrix = matrix.to_coo() # convert to coordinate matrix
         
         if save_to is not None:
+            # save matrix
             sparse.save_npz(save_to, matrix) # default to compressed format (i.e. sparse format)
+
+            # save matrix tags
+            with open(os.path.splitext(save_to) + '.nfo', 'wb') as f:
+                pickle.dump(tags, f)
         
         return matrix, tags
+
+    def matrix_load(path):
+        # load matrix
+        matrix = sparse.load_npz(os.path.splitext(path) + '.npz')
+
+        # load matrix tags
+        with open (os.path.splitext(path) + '.nfo', 'rb') as f:
+            matrix_tags = pickle.load(f)
+
+        return matrix, matrix_tags
 
 def crazysum(n, s, k):
     return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
