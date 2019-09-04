@@ -35,9 +35,10 @@ import sys
 
 import pandas as pd
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')))
 
-import query_lastfm as q_fm
+from lastfm import LastFm
+from lastfm import LastFm2Pandas
 
 def flatten(df: pd.DataFrame):
     ''' Produce a dataframe with the following columns: 'tag', 'new_tag_num'.
@@ -81,12 +82,12 @@ def flatten(df: pd.DataFrame):
     output = pd.DataFrame(data={'tag': tags, 'new_tag_num': tags_nums})
     return output
 
-def flatten_to_tag_num(lf: q_fm.LastFm, df: pd.DataFrame):
+def flatten_to_tag_num(lf: LastFm, df: pd.DataFrame):
     ''' Produce a dataframe with the following columns: 'tag_num', 'new_tag_num'. The tags in the tag column in flatten() are substituted by their original tag nums.
     
     Parameters
     ----------
-    lf : q_fm.LastFm, q_fm.LastFm2Pandas
+    lf : LastFm, LastFm2Pandas
         Any instance of the tags database.
 
     df : pd.DataFrame
@@ -98,13 +99,13 @@ def flatten_to_tag_num(lf: q_fm.LastFm, df: pd.DataFrame):
     output.columns = ['tag_num', 'new_tag_num']
     return output
 
-def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
+def create_tag_tag_table(lf: LastFm, df: pd.DataFrame):
     '''
     Produce a series having the old 'tag_num' as index, as the 'new_tag_num' as values. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
     
     Parameters
     ----------
-    lf : q_fm.LastFm, q_fm.LastFm2Pandas
+    lf : LastFm, LastFm2Pandas
         Any instance of the tags database.
 
     df : pd.DataFrame
@@ -131,13 +132,13 @@ def create_tag_tag_table(lf: q_fm.LastFm, df: pd.DataFrame):
     tag_tag = tag_tag.map(loc_except)
     return tag_tag
 
-def create_tid_tag_table(lf: q_fm.LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
+def create_tid_tag_table(lf: LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: int = None):
     '''
     Produce a dataframe with the following columns: 'tid', 'tag'. 
 
     Parameters
     ----------
-    lf : q_fm.LastFm, q_fm.LastFm2Pandas
+    lf : LastFm, LastFm2Pandas
         Any instance of the tags database.
 
     tag_tag : pd.DataFrame
@@ -170,18 +171,18 @@ if __name__ == "__main__":
     description = "Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track."
     epilog = "Example: python clean_lastfm.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="input db filename or path, or csv folder path")
+    parser.add_argument("input", help="input db filename or path, or .csv folder path")
     parser.add_argument("output", help="output db filename or path")
     parser.add_argument('--val', type=float, help="discard tags with val less than or equal to specified threshold")
     parser.add_argument('--supp-txt-path', help="set supplementary txt folder path")
     
     args = parser.parse_args()
     
-    # if user provided a csv folder, load csv into LastFm2Pandas; otherwise, load db into LastFm
+    # if user provided a .csv folder, load .csv into LastFm2Pandas; otherwise, load db into LastFm
     if os.path.isdir(args.input):
-        lastfm = q_fm.LastFm2Pandas.from_csv(args.input)
+        lastfm = LastFm2Pandas.from_csv(args.input)
     else:
-        lastfm = q_fm.LastFm(args.input)
+        lastfm = LastFm(args.input)
 
     # check if output ends with db extension
     if args.output[-3:] != '.db':

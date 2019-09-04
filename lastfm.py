@@ -103,7 +103,7 @@ class LastFm:
         Get a dict with the tags associated to tids as keys and their count number as values.
         
     - db_to_csv
-        Convert the tags database into three different csv files.
+        Convert the tags database into three different .csv files.
 
     - popularity
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
@@ -285,12 +285,12 @@ class LastFm:
         return tids_filtered
 
     def db_to_csv(self, output_dir=None):
-        ''' Converts the tags database into three different csv files. 
+        ''' Converts the tags database into three different .csv files. 
         
         Parameters
         ----------
         output_dir: str
-            Output directory of the csv files. If None, the files will be saved
+            Output directory of the .csv files. If None, the files will be saved
             under the same directory as lastfm_tags.db
         '''
         
@@ -390,7 +390,7 @@ class LastFm2Pandas():
 
         # open tables as dataframes and shift index to match rowid in the original database
         if from_csv is not None:
-            # read from three csv files
+            # read from three .csv files
             assert len(from_csv_split) == 3
             if not no_tags:
                 self.tags = pd.read_csv(os.path.join(from_csv, from_csv_split[0]), index_col=0)

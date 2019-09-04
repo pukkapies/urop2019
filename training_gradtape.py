@@ -50,7 +50,8 @@ import tensorflow as tf
 
 import projectname
 import projectname_input
-from modules.query_lastfm import LastFm
+
+from lastfm import LastFm
 
 def parse_config(config_path, lastfm_path):
 
