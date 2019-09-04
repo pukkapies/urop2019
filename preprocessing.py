@@ -1,4 +1,4 @@
-''' Contains tools to process the .npz files and create the .tfrecord files.
+''' Contains tools to process the .npz files (or the .mp3 files directly) and create the .tfrecord files.
 
 
 Notes
@@ -12,7 +12,7 @@ TRAIN, VAL, TEST can be either integer or floats and they dictate what proportio
 Example: python audio_processing --split 0.9/0.05/0.05 will save 90% of entries to the train file and 5% each 
 to the remaining ones.
 
-if --num-files NUM_FILES is set then NUM_FILES .tfrecord files will be created, each with the same amount of entries. Furthermore,
+If --num-files NUM_FILES is set then NUM_FILES .tfrecord files will be created, each with the same amount of entries. Furthermore,
 if --interval START/STOP is specified then running the script will only create the files between START and STOP, where 
 START and STOP are integers. This is useful for splitting up the workload between multiple instances to save time.
 
@@ -57,8 +57,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from modules.query_lastfm import LastFm
-from modules.query_lastfm import LastFm2Pandas
+from lastfm import LastFm
+from lastfm import LastFm2Pandas
 
 def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
     ''' Processesing array and applying desired audio format 

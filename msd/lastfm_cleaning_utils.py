@@ -163,17 +163,18 @@ Functions
     merging tags for each genre tag and vocal tag respectively.
 '''
 
-import numpy as np
 import os
-import pandas as pd
 import re
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
+import pandas as pd
 
-import query_lastfm as q_fm
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')))
 
-txt_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'lastfm_tool')
+from lastfm import LastFm
+from lastfm import LastFm2Pandas
+
+txt_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
     
 def set_txt_path(new_path):
     '''Set new_path as default path for opening all the supplementary txt files, and the output path
@@ -185,7 +186,7 @@ def set_txt_path(new_path):
         path of the form /xxx/xx/xx .'''
         
     global txt_path
-    txt_path = os.path.normpath(new_path)
+    txt_path = os.path.expanduser(new_path)
     
 def percentile(df, perc=90):
     '''Return a dataframe with subset of tags (descending order) of the input 
@@ -229,7 +230,7 @@ def generate_vocal_txt(df: pd.DataFrame, tag_list = ['rap', 'instrumental', 'mal
     df: pd.DataFrame
         The popularity dataframe.
         Example:
-        popularity = q_fm.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
+        popularity = LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
     tag_list: list
         The list of vocal tags that will be considered.
@@ -276,7 +277,7 @@ def generate_genre_txt(df: pd.DataFrame, threshold: int = 20000):
     df: pd.DataFrame
         The popularity dataframe.
         Example:
-        popularity = q_fm.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
+        popularity = LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
     threshold: int
         Tags with count greater than or equal to the threshold will be stored 
@@ -525,7 +526,7 @@ def combine_tags(df_input, list_of_tags, merge_idx=None):
         merge_index = merge_idx
     else:
         # merge into the row with greatest popularity
-        merge_index = np.min(rows.index.tolist())
+        merge_index = min(rows.index.tolist())
 
     
     for idx in range(rows.shape[0]):
@@ -746,7 +747,7 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         with columns 'tag', 'count'. This dataframe provides a list of tags
         as a pool where another tag can find corresponding matching tags from.
         Example:
-        popularity = q_fm.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
+        popularity = LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
     df_output: pd.DataFrame
         A dataframe with columns: 'tag', 'merge_tags'. This is the dataframe 
@@ -872,7 +873,7 @@ def generate_genre_df(popularity: pd.DataFrame, threshold: int = 2000, sub_thres
     popularity: pd.DataFrame
         The popularity dataframe.
         Example:
-        popularity = q_fm.LastFm2Pandas.from_csv('/srv/data/urop').popularity()
+        popularity = LastFm2Pandas.from_csv('/srv/data/urop').popularity()
         
     threshold: int
         Searches will be run on tags with count above or equal to the 
@@ -1030,7 +1031,7 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop', from_csv_path
     
     Parameters
     ----------
-    lastfm: q_fm.LastFm, q_fm.LastFm2Pandas
+    lastfm: LastFm, LastFm2Pandas
         Instance of the database class to produce the popularity dataframe.
 
     from_csv_path: str
@@ -1117,7 +1118,7 @@ def generate_final_df(lastfm=None, from_csv_path='/srv/data/urop', from_csv_path
         df = lastfm.popularity()
     else:
         assert len(from_csv_path_split) == 3
-        lastfm = q_fm.LastFm2Pandas.from_csv(from_csv_path, from_csv_path_split)
+        lastfm = LastFm2Pandas.from_csv(from_csv_path, from_csv_path_split)
         df = lastfm.popularity()
     
     vocal = generate_vocal_df(indicator=vocal_indicator)

@@ -58,11 +58,12 @@ import sys
 import h5py
 import numpy as np
 import pandas as pd
+
 from itertools import islice
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../modules')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')))
 
-import query_lastfm as q_fm
+import lastfm as q_fm
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'

@@ -62,8 +62,6 @@ import os
 import numpy as np
 import tensorflow as tf
 
-default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
-
 def _parse_features(example, features_dict, shape):
     ''' Parses the serialized tf.Example. '''
 

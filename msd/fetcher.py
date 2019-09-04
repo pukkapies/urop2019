@@ -35,6 +35,7 @@ import sys
 import time
 
 import pandas as pd
+
 from mutagen.mp3 import MP3
 from mutagen.mp3 import HeaderNotFoundError
 
@@ -44,7 +45,7 @@ def set_mp3_root_dir(new_root_dir):
     ''' Function to set mp3_root_dir, useful when script is used as module. '''
 
     global mp3_root_dir
-    mp3_root_dir = new_root_dir
+    mp3_root_dir = os.path.expanduser(new_root_dir)
 
 def find_tracks(abs_path = False):
     ''' Finds all the mp3 files within mp3_root_dir. 

@@ -43,6 +43,7 @@ Functions
     Return a (list of) attribute(s) such as title or artist_id given a (list of ) track_id('s), song_id('s) or 7digitalid('s)
 '''
 
+import os
 import sqlite3
 
 import tables
@@ -53,11 +54,11 @@ path_db = '/srv/data/urop/track_metadata.db'  # default path to 'database versio
 
 def set_path_h5(new_path):
     global path_h5
-    path_h5 = new_path
+    path_h5 = os.path.expanduser(new_path)
 
 def set_path_db(new_path):
     global path_db
-    path_db = new_path
+    path_db = os.path.expanduser(new_path)
 
 def get_trackid_from_7digitalid(ids: list):
     ''' Returns the track_id of the song specified by the 7digital_id. '''

@@ -3,8 +3,8 @@
 
 Notes
 -----
-This file can be run as a script. To do so, just type 'python mp3_to_npz.py <input>' in the terminal. The help 
-page, accessed by typing: "python mp3_to_npz.py --help", should contain all the options you might possibly need. 
+This file can be run as a script. To do so, just type 'python mp3_to_numpy.py <input>' in the terminal. The help 
+page, accessed by typing: "python mp3_to_numpy.py --help", should contain all the options you might possibly need. 
 You will first need to run track_fetch.py and provide the output of that script as an input argument for this one.
 
 This script performs the following operations:
@@ -236,7 +236,7 @@ def no_sound_count(df, final_check=False):
 if __name__ == "__main__":
 
     description= "Script to convert mp3 files into waveform NumPy arrays."
-    epilog= "Example: python mp3_to_npz.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
+    epilog= "Example: python mp3_to_numpy.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input csv filename or path")
     parser.add_argument("--root-dir-npz", help="set directory to save npz files")
