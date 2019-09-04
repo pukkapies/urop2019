@@ -69,7 +69,7 @@ import os
 
 import tensorflow as tf
 
-from pretty_print import MyEncoder, NoIndent
+from utils import MyEncoder, NoIndent
         
 def create_config_json(config_path, **kwargs):
     ''' Creates configuration file with training specs.
