@@ -178,21 +178,21 @@ def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, d
     
     Parameters
     ----------
-    df : pd.DataFrame
+    df: pd.DataFrame
         The dataframe to purge.
 
     lf: q_fm.LastFm
         An instance of the tags database.
     
-    discard_no_tag : bool
+    discard_no_tag: bool
         If True, discards tracks which are not matched to any tag.
 
-    discard_dupl : bool
+    discard_dupl: bool
         If True, discards tracks which are duplicates and keeps one for each set.
 
     Returns
     -------
-    df : pd.DataFrame
+    df: pd.DataFrame
         The columns are the ones listed above.
         The entries are the ones specified by the given parameters.
     '''

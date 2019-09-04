@@ -219,12 +219,12 @@ class LastFm():
         
         Parameters
         ----------
-        tids : list
+        tids: list
             List containing tids as strings.
 
         Returns
         -------
-        tag_dict : dict
+        tag_dict: dict
             The keys are the tids from the input list.
             The values are lists of tags for each given tid.
         '''
@@ -239,12 +239,12 @@ class LastFm():
         
         Parameters
         ----------
-        tids : list
+        tids: list
             List containing tids as strings.
 
         Returns
         -------
-        count_dict : dict
+        count_dict: dict
             The keys are the tids from the input list.
             The values are the number of tags for each given tid.
         '''
@@ -259,7 +259,7 @@ class LastFm():
         
         Parameters
         ----------
-        tids : list
+        tids: list
             List containing tids as strings.
         
         min_tags: int
@@ -364,16 +364,16 @@ class LastFm2Pandas():
         '''
         Parameters
         ----------
-        path : str
+        path: str
             Path to tags database. Defaults to path on Boden.
 
-        no_tags : bool
+        no_tags: bool
             If True, do not store tags table.
 
-        no_tids : bool
+        no_tids: bool
             If True, do not store tids table.
 
-        no_tid_tag : bool
+        no_tid_tag: bool
             If True, do not store tid_tag table.
         '''
 
@@ -397,7 +397,7 @@ class LastFm2Pandas():
         
         Parameters
         ----------
-        tid : str, array-like
+        tid: str, array-like
             A single tid or an array-like structure containing tids
             
         order: bool
@@ -406,7 +406,7 @@ class LastFm2Pandas():
 
         Returns
         -------
-        tid_num : str, pandas.Index
+        tid_num: str, pandas.Index
             if tid is a string: 
                 corresponding tid_num (int)
             if array_like: 
@@ -426,7 +426,7 @@ class LastFm2Pandas():
         
         Parameters
         ----------
-        tid_num : int, array-like
+        tid_num: int, array-like
             A single tid_num or an array-like structure containing tid_nums.
         
         order: bool
@@ -434,7 +434,7 @@ class LastFm2Pandas():
 
         Returns
         -------
-        tid : str, ndarray
+        tid: str, ndarray
             if tid_num is an int: 
                 corresponding tid (str)
             if array-like: 
@@ -454,12 +454,12 @@ class LastFm2Pandas():
         
         Parameters
         ----------
-        tid_num : int, array-like
+        tid_num: int, array-like
             A single tid_num or an array-like structure containing tid_nums
 
         Returns
         -------
-        tag_nums : ndarray, series
+        tag_nums: ndarray, series
             if tid_num is an int:
                 ndarray of corresponding tag_nums (int)
             if array-like:
@@ -478,12 +478,12 @@ class LastFm2Pandas():
         
         Parameters
         ----------
-        tid_num : int, array-like
+        tid_num: int, array-like
             A single tid_num or an array-like structure containing tid_nums
 
         Returns
         -------
-        tags : ndarray, pd.Series 
+        tags: ndarray, pd.Series 
             if tid_num is an int:
                 ndarray containing corresponding tags     
             if array-like:
@@ -502,7 +502,7 @@ class LastFm2Pandas():
 
         Parameters
         ----------
-        tag_num : int, array-like
+        tag_num: int, array-like
             A single tag_num or an array-like structure containing tag_nums
             
         order: bool
@@ -511,7 +511,7 @@ class LastFm2Pandas():
 
         Returns
         -------
-        tag : str, ndarray
+        tag: str, ndarray
             if tid_num is an int:
                 corresponding tag (str)
             if array-like:
@@ -531,7 +531,7 @@ class LastFm2Pandas():
 
         Parameters
         ----------
-        tag : str, array-like
+        tag: str, array-like
             A single tag or an array-like structure containing tags
             
         order: bool
@@ -540,7 +540,7 @@ class LastFm2Pandas():
 
         Returns
         -------
-        tag_num : int, pd.Index
+        tag_num: int, pd.Index
             if tag is a str:
                 Corresponding tag_num (int)
             if array-like:
@@ -580,12 +580,12 @@ class LastFm2Pandas():
         
         Parameters
         ----------
-        tid : str, array-like
+        tid: str, array-like
             A single tid or an array-like structure containing tids
 
         Returns
         -------
-        tags : ndarray, pd.Series
+        tags: ndarray, pd.Series
             if tag is a str:
                 ndarray containing corresponding tags
             if array-like:

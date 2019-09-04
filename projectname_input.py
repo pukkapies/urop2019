@@ -360,10 +360,10 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         # slice into audio windows
         
         if audio_format == 'waveform':
-            dataset = dataset.map(lambda x : _window_waveform(x, sample_rate, window_size, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(lambda x: _window_waveform(x, sample_rate, window_size, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         elif audio_format == 'log-mel-spectrogram':
-            dataset = dataset.map(lambda x : _window_log_mel_spectrogram(x, sample_rate, window_size, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(lambda x: _window_log_mel_spectrogram(x, sample_rate, window_size, random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         # batch
         dataset = dataset.batch(batch_size, drop_remainder=True)
 

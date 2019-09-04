@@ -45,7 +45,7 @@ def flatten(df: pd.DataFrame):
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df: pd.DataFrame
         The new tags dataframe to flatten.
 
     Examples
@@ -87,10 +87,10 @@ def flatten_to_tag_num(lf: LastFm, df: pd.DataFrame):
     
     Parameters
     ----------
-    lf : LastFm, LastFm2Pandas
+    lf: LastFm, LastFm2Pandas
         Any instance of the tags database.
 
-    df : pd.DataFrame
+    df: pd.DataFrame
         The new tags dataframe to flatten.
     '''
 
@@ -105,10 +105,10 @@ def create_tag_tag_table(lf: LastFm, df: pd.DataFrame):
     
     Parameters
     ----------
-    lf : LastFm, LastFm2Pandas
+    lf: LastFm, LastFm2Pandas
         Any instance of the tags database.
 
-    df : pd.DataFrame
+    df: pd.DataFrame
         The new tags dataframe.
     '''
     
@@ -138,13 +138,13 @@ def create_tid_tag_table(lf: LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: i
 
     Parameters
     ----------
-    lf : LastFm, LastFm2Pandas
+    lf: LastFm, LastFm2Pandas
         Any instance of the tags database.
 
-    tag_tag : pd.DataFrame
+    tag_tag: pd.DataFrame
         The tag_tag dataframe produced with create_tag_tag_table().
     
-    tid_tag_threshold : int
+    tid_tag_threshold: int
         The minimum value for val (see original tags database) to allow in the new tid_tag table.
     '''
     
