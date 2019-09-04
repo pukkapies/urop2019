@@ -27,6 +27,7 @@ Classes
     This class is slower to init, since the whole database is loaded into memory, but consequently queries are much faster. This class also contain some additional "advanced" methods.
 '''
 
+import itertools
 import math
 import os
 import pickle
@@ -40,7 +41,7 @@ from tensorflow.keras.utils import Progbar
 
 DEFAULT = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
-class LastFm:
+class LastFm():
     ''' Opens a SQLite connection to the last.fm database. Provides methods to perform advanced queries on it.
 
     Methods
@@ -701,6 +702,46 @@ class Matrix():
             matrix_tags = pickle.load(f)
 
         return matrix, matrix_tags
+
+    def tags_et(self, tags):
+    
+        tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
+        
+        assert len(tags) <= len(self.m.shape)
+        
+        if tags.dtype == int:
+            idxs = tags
+        else:
+            idxs = np.where(np.array([self.m_tags] * len(tags)) == tags[:,None])[1] # 'numpy version' of idxs = [self.m_tags.index(tag) for tag in tags]
+            assert len(idxs) == len(tags) # sanity check (np.where will not return errors if correspondent idx does not exist)
+            
+        idxs = sorted(idxs, reverse=True) # matrix is sparse, idxs needs to be ordered
+        idxs.extend([idxs[-1]] * (len(self.m.shape)-len(idxs))) # match matrix shape if less idxs are provided
+        return self.m[tuple(idxs)]
+
+    def tags_or(self, tags):
+        
+        tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
+        
+        assert len(tags) <= len(self.m.shape)
+        
+        if tags.dtype == int:
+            idxs = tags
+        else:
+            idxs = np.where(np.array([self.m_tags] * len(tags)) == tags[:,None])[1] # 'numpy version' of idxs = [self.m_tags.index(tag) for tag in tags]
+            assert len(idxs) == len(tags) # sanity check (np.where will not return errors if correspondent idx does not exist)
+        
+        return sum((-1)**(i+1) * tags_et(subset, self.m) # inclusion-exclusion principle
+                for i in range(1, len(idxs) + 1)
+                for subset in itertools.combinations(idxs, i))
+
+    def with_one_without_many(self, with_tags, without_tags):
+        assert len(with_tags) == 1 and len(without_tags) >= 1
+        return tags_or(with_tags + without_tags) - tags_or(without_tags)
+
+    def with_many_without_one(self, with_tags, without_tags):
+        assert len(with_tags) >= 1 and len(without_tags) == 1
+        return tags_et(with_tags) - tags_et(with_tags + without_tags)
 
 def crazysum(n, s, k):
     return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
