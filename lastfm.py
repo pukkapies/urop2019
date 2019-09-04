@@ -658,14 +658,19 @@ class Matrix():
 
     def matrix(self, lastfm, dim=3, tags=None, save_to=None):
 
+        # initialize matrix tags
         if tags is None:
             tags = lastfm.get_tags()
         else:
             tags = [tag for tag in tags if tag in lastfm.get_tags()] # possibly purge inexistent tags
         
-        matrix = sparse.DOK((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (perfect for easy creation, awful for calculations)
+        # initialize matrix
+        matrix = sparse.DOK((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (for easy creation, awful for calculations)
 
+        # compute total number of steps to completion (see http://www.iosrjournals.org/iosr-jm/papers/Vol8-issue3/A0830110.pdf)
         n_steps = crazysum(n=len(tags), s=3, k=dim-1)
+
+        # check whether a progress bar is needed
         verbose = n_steps > 5000
         if verbose:
             progbar = Progbar(n_steps) # instantiate progress bar
@@ -678,8 +683,7 @@ class Matrix():
                 tids = tids.intersection(tids_list.pop()) # intersections performed from shortest list to longest
             return len(tids) # how many tids have all tags
         
-        # recursively iterate count_intersect_tags dim times; and avoid combinatorial repetitions such as 'rock AND pop AND folk' vs. 'rock AND folk AND pop' vs. 'folk AND pop AND rock'
-        def count_intersect_tags_recursive(tags_idxs, dim):
+        def count_intersect_tags_recursive(tags_idxs, dim): # recursively iterate count_intersect_tags dim times; avoid repetitions such as 'rock AND pop AND folk' vs. 'rock AND folk AND pop' vs. 'folk AND pop AND rock'
             if dim>=1:
                 for i in range(tags_idxs[-1] + 1):
                     count_intersect_tags_recursive(tags_idxs + (i, ), dim-1)
@@ -688,17 +692,16 @@ class Matrix():
                 if verbose:
                     progbar.add(1)
         
+        # instantiate recursive loop
         for i in range(len(tags)):
-            count_intersect_tags_recursive((i, ), dim-1) # instantiate recursive loop
+            count_intersect_tags_recursive((i, ), dim-1)
         
         matrix = matrix.to_coo() # convert to coordinate matrix
         
         if save_to is not None:
-            sparse.save_npz(save_to, matrix) # default to compress (that is, sparse) format
+            sparse.save_npz(save_to, matrix) # default to compressed format (i.e. sparse format)
         
         return matrix, tags
 
 def crazysum(n, s, k):
-    ''' Returns sum of first n s-gonal k-dimensional nubers (see http://www.iosrjournals.org/iosr-jm/papers/Vol8-issue3/A0830110.pdf). '''
-
     return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
