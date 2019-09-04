@@ -8,7 +8,7 @@ page should contain all the options you might possibly need. You will first need
 provide the output of that script as an input argument for this one.
 
 IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
-set the directory in which the 7Digital mp3 files are stored.
+set the directory in which the 7Digital .mp3 files are stored.
 
 
 Functions
@@ -26,7 +26,7 @@ Functions
     Produce a dataframe with 7digitalid's and tid's of all tracks in the dataset.
 
 - df_merge
-    Produce a dataframe with 7digitalid's, tid's and paths of mp3 files on the server.
+    Produce a dataframe with 7digitalid's, tid's and paths of .mp3 files on the server.
 
 - df_purge_mismatches
     Remove mismatches from previously generated dataset.
@@ -100,7 +100,7 @@ def extract_ids_from_summary():
         return df_summary
 
 def df_merge(track_summary_df: pd.DataFrame, merged_df: pd.DataFrame):
-    ''' Produce a dataframe with 7digitalid's, tid's and paths of mp3 files on the server. '''
+    ''' Produce a dataframe with 7digitalid's, tid's and paths of .mp3 files on the server. '''
 
 
     df = pd.merge(track_summary_df, merged_df, on='track_7digitalid', how='inner')
@@ -197,7 +197,7 @@ def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, d
         The entries are the ones specified by the given parameters.
     '''
 
-    print("Fetching mp3 files from input dataframe...", end=" ", flush=True)
+    print("Fetching .mp3 files from input dataframe...", end=" ", flush=True)
     merged_df = df_merge(extract_ids_from_summary(), df)
     print("done")
 
@@ -205,11 +205,11 @@ def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, d
     merged_df = df_purge_mismatches(merged_df)
     print("done")
 
-    print("Purging faulty mp3 files...")
-    print("    Checking mp3 files which have size 0...", end=" ", flush=True)
+    print("Purging faulty .mp3 files...")
+    print("    Checking .mp3 files which have size 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_1(merged_df)
     print("done")
-    print("    Checking mp3 files which can't be opened and have length 0...", end=" ", flush=True)
+    print("    Checking .mp3 files which can't be opened and have length 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
@@ -227,11 +227,11 @@ def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, d
 
 if __name__ == "__main__":
     
-    description = "Script to merge the list of mp3 files obtained with track_fetch.py with the MSD summary file, remove unwanted entries such as mismatches, faulty files or duplicates, and output a csv file with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'."
+    description = "Script to merge the list of .mp3 files obtained with track_fetch.py with the MSD summary file, remove unwanted entries such as mismatches, faulty files or duplicates, and output a .csv file with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'."
     epilog = "Example: python track_wrangle.py /data/track_on_boden.csv ./wrangl.csv --discard-no-tag"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="input csv filename or path")
-    parser.add_argument("output", help="output csv filename or path")
+    parser.add_argument("input", help="input .csv filename or path")
+    parser.add_argument("output", help="output .csv filename or path")
     parser.add_argument("--path-h5", help="set path to msd_summary_file.h5")
     parser.add_argument("--path-db", help="set path to tags database")
     parser.add_argument("--path-txt-dupl", help="set path to duplicates info file")
@@ -271,7 +271,7 @@ if __name__ == "__main__":
 
     df = ultimate_output(df, lastfm, args.discard_no_tag, args.discard_dupl)
     
-    # create output csv file
+    # create output .csv file
     with open(output, 'a') as f:
         # insert comment line displaying options used
         comment = '# python'

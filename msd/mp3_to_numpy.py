@@ -13,8 +13,8 @@ This script performs the following operations:
     see create_folder_structure.
 
 - saving information on silence: 
-    no_sound() saves the information about silence in npz files, 
-    as well as the converted arrays and sampling rate of the original mp3 to 
+    no_sound() saves the information about silence in .npz files, 
+    as well as the converted arrays and sampling rate of the original .mp3 file to 
     speed up the loading process in the future.
 
 - progress check: 
@@ -33,11 +33,11 @@ Functions
     Copy the folder structure under mp3_root_dir to npz_root_dir.
 
 - mp3_path_to_npz_path
-    Convert the path of a mp3 file into the path of the corresponding npz file.
+    Convert the path of a .mp3 file into the path of the corresponding .npz file.
 
 - savez
-    Convert a mp3 files into three numpy arrays as an npz file:
-    1. loaded mp3 arrays;
+    Convert a .mp3 files into three numpy arrays as an .npz file:
+    1. loaded .mp3 arrays;
     2. sample rate;
     3. start and end positoin of arrays when volume of track is above 60dB (non-silent).
                                  
@@ -45,7 +45,7 @@ Functions
     Apply savez() to the tracks provided provided by the input dataframe.
                                          
 - no_sound_count                    
-    Count the number of mp3 files that have been correctly saved as npz files.
+    Count the number of .mp3 files that have been correctly saved as .npz files.
 '''
 
 import argparse
@@ -84,17 +84,17 @@ def create_folder_structure():
             print("WARNING directory " + structure + " already exits! Are you sure it is empty?")
 
 def mp3_path_to_npz_path(path):
-    ''' Given the path of an mp3 file, returns the path of the npz file associated with it.
+    ''' Given the path of an .mp3 file, returns the path of the .npz file associated with it.
     
     Parameters
     ----------
     path : str
-        The path of the mp3 file.
+        The path of the .mp3 file.
 
     Returns
     -------
     str
-        The path of the npz file.
+        The path of the .npz file.
     
     Examples
     --------
@@ -113,26 +113,24 @@ def savez(path, path_npz):
     Parameters
     ----------
     path:
-        The path of the mp3 file.
+        The path of the .mp3 file.
     path_npz:
-        The path to the future npz file.
+        The path to the future .npz file.
         
     Notes 
-    -------
+    -----
     The created .npz file is of the form ['array', 'sr', 'split']
         'array': 
-            The loaded mp3 files in numpy-array form by library -- librosa.
-            The array represent the mp3s in its original sampling rate, and 
-            multi-channel is preserved. (each row represents one channel)
+            The loaded .mp3 files in numpy-array form by library -- librosa (here multi-channel is preserved).
             
         'sr':
-            The sampling rate of the mp3 file.
+            The sampling rate of the .mp3 file.
             
         'split':
-            All the sections of the track which is non-silent (>=60dB). The
-            information is saved in the form: n*2 numpy.ndarray, and each row
-            represent one section -- starting position and ending position of 
-            array respectively.
+            The sections of the track which is non-silent (>=60dB). 
+            The information is saved in the form: n*2 numpy.ndarray, and each row
+            represent one section (start position and end position of
+            array, respectively).
     '''
 
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
@@ -145,9 +143,7 @@ def no_sound(df, start=0, end=None, verbose=True):
     Parameters
     ----------
         df: pd.DataFrame
-            The input dataframe that stores the path of mp3s that will be converted to npz files.
-            Recommendation: df = ultimate_output(df_fetch, discard_no_tag=True),
-            where df_fetch is the dataframe from track_fetch.
+            The input dataframe that stores the path of mp3s that will be converted to .npz files (e.g. df = ultimate_output(df_fetch, discard_no_tag=True)).
     
         start: int
             The index of the starting point in the dataframe.
@@ -160,12 +156,11 @@ def no_sound(df, start=0, end=None, verbose=True):
          
     Notes 
     -----
-    
-    npz files:
-        The npz file is of the form ['array', 'sr', 'split']
+    .npz files:
+        The .npz file is of the form ['array', 'sr', 'split']
         'array': 
-            The loaded mp3 files in numpy-array form by librosa.
-            The array represent the mp3 files in their original sample rate, and 
+            The loaded .mp3 files in numpy-array form by librosa.
+            The array represent the .mp3 files in their original sample rate, and 
             multi-channel is preserved (each row represents a channel).
             
         'sr':
@@ -205,15 +200,15 @@ def no_sound_count(df, final_check=False):
     Parameters
     ----------
     df: pd.DataFrame
-        The input dataframe that stores the path of mp3 files that will be converted to npz files.
+        The input dataframe that stores the path of .mp3 files that will be converted to .npz files.
     
     final_check: bool
-        If True, return a list of path of the tracks that has not been converted to npz files.
+        If True, return a list of path of the tracks that has not been converted to .npz files.
         
     Returns
     -------
     l: list
-        The list of path of the tracks whose mp3 has not been loaded and saved correctly.  
+        The list of path of the tracks whose .mp3 has not been loaded and saved correctly.  
     '''
     
     count = 0
@@ -235,12 +230,12 @@ def no_sound_count(df, final_check=False):
         
 if __name__ == "__main__":
 
-    description= "Script to convert mp3 files into waveform NumPy arrays."
+    description= "Script to convert .mp3 files into waveform NumPy arrays."
     epilog= "Example: python mp3_to_numpy.py ./tracks_on_boden.csv --root-dir-npz /data/np_songs/"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="input csv filename or path")
-    parser.add_argument("--root-dir-npz", help="set directory to save npz files")
-    parser.add_argument("--root-dir-mp3", help="set directory to find mp3 files")
+    parser.add_argument("input", help="input .csv filename or path")
+    parser.add_argument("--root-dir-npz", help="set directory to save .npz files")
+    parser.add_argument("--root-dir-mp3", help="set directory to find .mp3 files")
 
     args = parser.parse_args()
     

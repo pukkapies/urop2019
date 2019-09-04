@@ -171,14 +171,14 @@ if __name__ == "__main__":
     description = "Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track."
     epilog = "Example: python clean_lastfm.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="input db filename or path, or csv folder path")
+    parser.add_argument("input", help="input db filename or path, or .csv folder path")
     parser.add_argument("output", help="output db filename or path")
     parser.add_argument('--val', type=float, help="discard tags with val less than or equal to specified threshold")
     parser.add_argument('--supp-txt-path', help="set supplementary txt folder path")
     
     args = parser.parse_args()
     
-    # if user provided a csv folder, load csv into LastFm2Pandas; otherwise, load db into LastFm
+    # if user provided a .csv folder, load .csv into LastFm2Pandas; otherwise, load db into LastFm
     if os.path.isdir(args.input):
         lastfm = LastFm2Pandas.from_csv(args.input)
     else:

@@ -7,19 +7,19 @@ This file can be run as a script. To do so, just type 'python track_fetch.py' in
 page should contain all the options you might possibly need.
 
 IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
-set the directory in which the 7Digital mp3 files are stored.
+set the directory in which the 7Digital .mp3 files are stored.
 
 
 Functions
 ---------
 - set_mp3_root_dir
-    Tell the script where mp3 files are stored.
+    Tell the script where .mp3 files are stored.
 
 - find_tracks
-    Performs an os.walk to find all the mp3 files within mp3_root_dir.
+    Performs an os.walk to find all the .mp3 files within mp3_root_dir.
 
 - find_tracks_with_7dids
-    Finds all mp3 files within mp3_root dir and extracts the 7digitalid's from mp3 filenames.
+    Finds all .mp3 files within mp3_root dir and extracts the 7digitalid's from .mp3 filenames.
 
 - check_size
     Extend the columns of the given dataframe to identify the size of the tracks.
@@ -48,7 +48,7 @@ def set_mp3_root_dir(new_root_dir):
     mp3_root_dir = os.path.expanduser(new_root_dir)
 
 def find_tracks(abs_path = False):
-    ''' Finds all the mp3 files within mp3_root_dir. 
+    ''' Finds all the .mp3 files within mp3_root_dir. 
     
     Parameters
     ----------
@@ -58,7 +58,7 @@ def find_tracks(abs_path = False):
     Returns
     -------
     paths : list
-        Contains paths (str) to all mp3 files in mp3_root_dir.
+        Contains paths (str) to all .mp3 files in mp3_root_dir.
     
     '''
 
@@ -73,7 +73,7 @@ def find_tracks(abs_path = False):
     return paths
 
 def find_tracks_with_7dids(abs_path = False):
-    ''' Finds all the mp3 files within mp3_root_dir and extracts 7digitalid from their names
+    ''' Finds all the .mp3 files within mp3_root_dir and extracts 7digitalid from their names
     
     Parameters
     ----------
@@ -105,7 +105,7 @@ def check_size(df):
         A dataframe that has one extra column:
         
         'file_size': float
-            The file size of the mp3 file.
+            The file size of the .mp3 file.
         
     
     '''
@@ -137,7 +137,7 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
         A dataframe that has two extra columns if add_length and add_channels are True:
         
         'length': float
-            The duration in seconds of the mp3 tracks.
+            The duration in seconds of the .mp3 tracks.
             
         NOTE: an empty cell is returned to the corresponding rows for 'clip_length' 
         and 'channels' if the script cannot read the size of the tracks or cannot 
@@ -182,12 +182,12 @@ def check_mutagen_info(df, verbose = True, debug: int = None):
 
 if __name__ == "__main__":
     
-    description = "Script to search for mp3 files within mp3_root_dir and output a csv file with (optionally) the following columns: 'track_7digitalID', 'file_path', 'file_size', 'channels', 'clip_length'."
+    description = "Script to search for .mp3 files within mp3_root_dir and output a .csv file with (optionally) the following columns: 'track_7digitalID', 'file_path', 'file_size', 'channels', 'clip_length'."
     epilog = "Example: python track_fetch.py /data/tracks_on_boden.csv --root-dir /data/songs/ --verbose"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("output", help="output filename or path")
     parser.add_argument("-v", "--verbose", action="store_true", help="show progress")
-    parser.add_argument("--root-dir", help="set directory to find mp3 files")
+    parser.add_argument("--root-dir", help="set directory to find .mp3 files")
     parser.add_argument("--abs", action="store_true", dest="abs_path", help="use absolute paths in output file")
     parser.add_argument("--no-size", action="store_false", dest="use_os", help="do not calculate tracks size")
     parser.add_argument("--no-mut-length", action="store_false", dest="mutg_length", help="do not use mutagen to check tracks number of channels")
@@ -225,7 +225,7 @@ if __name__ == "__main__":
         if not args.mutg_channels:
             df.drop('channels', axis=1, inplace=True)
     
-    # create output csv file
+    # create output .csv file
     with open(output, 'a') as f:
         # insert comment line displaying options used
         comment = '# python'
