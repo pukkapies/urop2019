@@ -19,12 +19,20 @@ to the database on Boden.
 Classes
 -------
 - LastFm
-    Open a connection to the db file and provide methods to perform queries on it.
+    Open a connection to the .db file and provide methods to perform queries on it.
     This class is faster to init, but some queries (expecially on the tid_tag table) might take some time to perform.
 
 - LastFm2Pandas
-    Read the database into three pandas dataframes and prodive methods to retrieve information from them.
+    Read the database into three pandas dataframes and provide methods to perform queries on it.
     This class is slower to init, since the whole database is loaded into memory, but consequently queries are much faster. This class also contain some additional "advanced" methods.
+
+- Matrix
+    Read the database from either LastFm or LastFm2Pandas, and perform numerical analyses of how tags are distributed among tracks.
+
+Functions
+---------
+- crazysum
+    Compute the sum of the first n s-gonal numbers in n-dimensions.
 '''
 
 import itertools
@@ -643,17 +651,73 @@ class LastFm2Pandas():
         return self.pop
 
 class Matrix():
+    ''' Reads the last.fm database from either LastFm2Pandas (or LastFm, but it would be slower). Provides methods to perform numerical analyses of how tags are distributed among tracks. 
+    
+    Methods
+    -------
+    '''
+
     def __init__(self, lastfm, tags, dim=3, save_to=None, load_from=None):
+        '''
+        Parameters
+        ----------
+        lastfm: LastFm, LastFm2Pandas
+            Instance of tags database. Using LastFm2Pandas is strongly recommended here.
+
+        tags: list
+            List of tags to use. If None, all the tags will be used.
+
+        save_to: str
+            Filename or full path of the .npz file to save matrix and matrix tags. Use to load_from in the future.
+        
+        dim: int
+            The dimension of the matrix.
+
+        load_from: str
+            Filename or full path of the .npz file to load matrix and matrix tags.
+        '''
+
         if load_from is None:
             self.m, self.m_tags = self.matrix(lastfm, tags=tags, dim=dim, save_to=save_to)
         else:
             self.m, self.m_tags = self.matrix_load(load_from)
         
     @classmethod
-    def load_from(cls, path):
+    def load_from(cls, path): # skip the queue, and load from a previously saved file
         return cls(None, None, load_from=path)
 
     def matrix(self, lastfm, tags=None, dim=3, save_to=None):
+        ''' Compute a n-dimensional matrix where the (i_1, ... ,i_n)-th entry contains the number of tracks having all the i_1-th, ..., i_n-th tags (where the i's are the indexes in self.m_tags).
+
+        Notes
+        -----
+        To optimize performance, values are computed only with indexes in increasing order (which means, we only compute the number of tracks having tag-0 
+        and tag-1, not vice-versa). This is something to keep in mind when indexing the matrix.
+        
+        To optimize memory, the matrix is saved in sparse format. DOK is the preferred sparse format for building and indexing, while COO is the preferred
+        sparse format to perform mathematical operations).
+
+        The dimension of the matrix captures the kind of queries which you will be able to perform. A matrix of dim=2 on tracks=['rock', 'pop', 'hip-hop'] will
+        capture how many tracks have tags rock and pop, or pop and hip-hop, but not rock, pop and hip-hop at the same time.
+        
+        A matrix of dim=len(tags) will fully describe the database (or the subset of the database having the given tags).
+        A matrix of dim>len(tags) will be rather pointless (but we won't prevent you from doing it).
+
+        Parameters
+        ----------
+        lastfm: LastFm, LastFm2Pandas
+            Instance of tags database. Using LastFm2Pandas is strongly recommended here.
+
+        tags: list
+            List of tags to use. If None, all the tags will be used.
+
+        dim: int
+            The dimension of the matrix.
+
+        save_to: str
+            Filename or full path of the .npz file to save matrix and matrix tags. Use to load_from in the future.
+        '''
+
         # initialize matrix tags
         if tags is None:
             tags = lastfm.get_tags()
@@ -698,13 +762,15 @@ class Matrix():
             # save matrix
             sparse.save_npz(save_to, matrix) # default to compressed format (i.e. sparse format)
 
-            # save matrix tags
+            # save matrix tags in serialized format
             with open(os.path.splitext(save_to)[0] + '.nfo', 'wb') as f:
                 pickle.dump(tags, f)
         
         return matrix, tags
 
     def matrix_load(self, path):
+        ''' Load a previously saved matrix from a .npz file (containing the matrix) and a .nfo file (containing the matrix tags). '''
+
         # load matrix
         matrix = sparse.load_npz(os.path.splitext(path)[0] + '.npz')
 
@@ -715,7 +781,14 @@ class Matrix():
         return matrix, tags
 
     def tags_et(self, tags):
-    
+        ''' Computes how many tracks have all the tags in 'tags'. Provides an easier way to index the matrix.
+        
+        Parameters
+        ----------
+        tags: list 
+            List of tags.
+        '''
+
         tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
         
         assert len(tags) <= len(self.m.shape)
@@ -731,7 +804,14 @@ class Matrix():
         return self.m[tuple(idxs)]
 
     def tags_or(self, tags):
+        ''' Computes how many tracks have at least one of the tags in 'tags'.
         
+        Parameters
+        ----------
+        tags: list 
+            List of tags.
+        '''
+
         tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
         
         assert len(tags) <= len(self.m.shape)
@@ -747,14 +827,38 @@ class Matrix():
                 for subset in itertools.combinations(idxs, i))
 
     def with_one_without_many(self, with_tags, without_tags):
+        ''' Computes how many tracks have at the tag 'with_tags', but not either of the tags in 'without_tags'.
+        
+        Parameters
+        ----------
+        with_tags: list 
+            List of tags the tracks in the output list will have.
+        
+        without_tags: list 
+            List of tags the tracks in the output list will not have.
+        '''
+
         assert len(with_tags) == 1 and len(without_tags) >= 1
         return self.tags_or(with_tags + without_tags) - self.tags_or(without_tags)
 
     def with_many_without_one(self, with_tags, without_tags): # when with_one_without_one is needed, this function should be preferred
+        ''' Computes how many tracks have all the tags in 'with_tags', but not the tag 'without_tags'.
+        
+        Parameters
+        ----------
+        with_tags: list 
+            List of tags the tracks in the output list will have.
+        
+        without_tags: list 
+            List of tags the tracks in the output list will not have.
+        '''
+
         assert len(with_tags) >= 1 and len(without_tags) == 1
         return self.tags_et(with_tags) - self.tags_et(with_tags + without_tags)
 
     def correlation_matrix_2d(self):
+        ''' Returns a 2-dimensional matrix whose values indicate the correlation between 2 tags. '''
+
         l = len(self.m_tags)
         matrix = np.zeros((l, )*2)
         for i in range(l):
@@ -764,6 +868,8 @@ class Matrix():
         return matrix
 
     def correlation_matrix_3d(self):
+        ''' Returns a 3-dimensional matrix whose values indicate the correlation between 3 tags. '''
+
         l = len(self.m_tags)
         matrix = np.zeros((l, )*3)
         for i in range(l):
