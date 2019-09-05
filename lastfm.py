@@ -833,7 +833,7 @@ class Matrix():
                 for subset in itertools.combinations(idxs, i))
 
     def with_one_without_many(self, with_tags, without_tags):
-        ''' Computes how many tracks have at the tag 'with_tags', but not either of the tags in 'without_tags'.
+        ''' Computes how many tracks have at the tag 'with_tags', but not any of the tags in 'without_tags'.
         
         Parameters
         ----------
