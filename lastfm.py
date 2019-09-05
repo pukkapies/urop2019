@@ -789,6 +789,9 @@ class Matrix():
             List of tags.
         '''
 
+        if isinstance(tags, (str, int)):
+            tags = [tags]
+
         tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
         
         assert len(tags) <= len(self.m.shape), 'too many tags provided; try with a matrix of higher dimension'
@@ -811,6 +814,9 @@ class Matrix():
         tags: list 
             List of tags.
         '''
+
+        if isinstance(tags, (str, int)):
+            tags = [tags]
 
         tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
         
@@ -838,6 +844,9 @@ class Matrix():
             List of tags the tracks in the output list will not have.
         '''
 
+        if isinstance(with_tags, (str, int)):
+            with_tags = [with_tags]
+
         assert len(with_tags) == 1 and len(without_tags) >= 1
         return self.tags_or(with_tags + without_tags) - self.tags_or(without_tags)
 
@@ -852,6 +861,9 @@ class Matrix():
         without_tags: list 
             List of tags the tracks in the output list will not have.
         '''
+
+        if isinstance(without_tags, (str, int)):
+            without_tags = [without_tags]
 
         assert len(with_tags) >= 1 and len(without_tags) == 1
         return self.tags_et(with_tags) - self.tags_et(with_tags + without_tags)
