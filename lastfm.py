@@ -791,13 +791,13 @@ class Matrix():
 
         tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
         
-        assert len(tags) <= len(self.m.shape)
+        assert len(tags) <= len(self.m.shape), 'too many tags provided; try with a matrix of higher dimension'
         
         if tags.dtype == int:
             idxs = tags
         else:
             idxs = np.where(np.array([self.m_tags] * len(tags)) == tags[:,None])[1] # 'numpy version' of idxs = [self.m_tags.index(tag) for tag in tags]
-            assert len(idxs) == len(tags) # sanity check (np.where will not return errors if correspondent idx does not exist)
+            assert len(idxs) == len(tags), 'some of the tags you inserted might not exist in the matrix' # sanity check (np.where will not return errors if correspondent idx does not exist)
             
         idxs = sorted(idxs, reverse=True) # matrix is sparse, idxs needs to be ordered
         idxs.extend([idxs[-1]] * (len(self.m.shape)-len(idxs))) # match matrix shape if less idxs are provided
@@ -814,13 +814,13 @@ class Matrix():
 
         tags = np.array(list(set(tags))) # remove duplicates; convert to np.ndarray
         
-        assert len(tags) <= len(self.m.shape)
+        assert len(tags) <= len(self.m.shape), 'too many tags provided; try with a matrix of higher dimension'
         
         if tags.dtype == int:
             idxs = tags
         else:
             idxs = np.where(np.array([self.m_tags] * len(tags)) == tags[:,None])[1] # 'numpy version' of idxs = [self.m_tags.index(tag) for tag in tags]
-            assert len(idxs) == len(tags) # sanity check (np.where will not return errors if correspondent idx does not exist)
+            assert len(idxs) == len(tags), 'some of the tags you inserted might not exist in the matrix' # sanity check (np.where will not return errors if correspondent idx does not exist)
         
         return sum((-1)**(i+1) * self.tags_et(subset) # inclusion-exclusion principle
                 for i in range(1, len(idxs) + 1)
@@ -857,10 +857,17 @@ class Matrix():
         return self.tags_et(with_tags) - self.tags_et(with_tags + without_tags)
 
     def correlation_matrix_2d(self):
-        ''' Returns a 2-dimensional matrix whose values indicate the correlation between 2 tags. '''
-
+        ''' Returns a 2-dimensional matrix whose values indicate the correlation between 2 tags. 
+        
+        Notes
+        -----
+        Each j,j-th entry indicates the percentage of tracks with the i-th tag which ALSO have the j-th tag.
+        If there are 40.000 'alternative' tracks, and 30.000 of those are also 'rock', assuming that
+        'alternative' is the 2-nd tag and 'rock' is the 4-th tag within self.m_tags, then correlation_matrix[2,4] will be 0.75.
+        '''
         l = len(self.m_tags)
-        matrix = np.zeros((l, )*2)
+        assert l >= 2, 'you need to have at least a 2-dimensional matrix'
+        matrix = np.zeros((l, )*2) # initialize output matrix
         for i in range(l):
             for j in range(l):
                 tot = self.tags_et([i])
@@ -868,10 +875,18 @@ class Matrix():
         return matrix
 
     def correlation_matrix_3d(self):
-        ''' Returns a 3-dimensional matrix whose values indicate the correlation between 3 tags. '''
+        ''' Returns a 3-dimensional matrix whose values indicate the correlation between 3 tags. 
+        
+        Notes
+        -----
+        Each j,j,k-th entry indicates the percentage of tracks with the i-th tag which ALSO have either the j-th tag or the k-th tag.
+        If there are 40.000 'alternative' tracks, and 30.000 of those are either 'rock' or 'alternative rock', assuming that
+        'alternative' is the 2-nd tag, 'rock' is the 4-th tag and 'alternative rock' is the 5-th tag within self.m_tags, then correlation_matrix[2,4,5] will be 0.75.
+        '''
 
         l = len(self.m_tags)
-        matrix = np.zeros((l, )*3)
+        assert l >= 3, 'you need to have at least a 3-dimensional matrix'
+        matrix = np.zeros((l, )*3) # initialize output matrix
         for i in range(l):
             for j in range(l):
                 for k in range(l):
@@ -880,6 +895,17 @@ class Matrix():
         return matrix
 
     def are_equivalent(self, threshold=0.8, verbose=False):
+        ''' Reads the 2-dimensional correlation matrix to present a human-readable outline of the tags which are arguably equivalent.
+
+        Parameters
+        ----------
+        threshold: float
+            The proportion of correlation above which two tags are considered equivalent.
+        
+        verbose: bool
+            If True, interpret the matrix nicely.
+        '''
+
         correlation = self.correlation_matrix_2d()
         matrix = np.where((correlation > threshold) & np.transpose(correlation > threshold), correlation, 0)
         np.fill_diagonal(matrix, 0)
@@ -891,6 +917,17 @@ class Matrix():
         return matrix
 
     def all_tag_is(self, threshold=0.7, verbose=False):
+        ''' Reads the 2-dimensional correlation matrix to present a human-readable outline of the tags which are for the most part sub-tags of another.
+        
+        Parameters
+        ----------
+        threshold: float
+            The proportion of correlation above which two tags are considered one a subset of the other.
+        
+        verbose: bool
+            If True, interpret the matrix nicely.
+        '''
+
         correlation = self.correlation_matrix_2d()
         matrix = np.where((correlation > threshold), correlation, 0)
         np.fill_diagonal(matrix, 0)
@@ -902,6 +939,17 @@ class Matrix():
         return matrix
 
     def all_tag_is_either(self, threshold=0.7, verbose=False):
+        ''' Reads the 3-dimensional correlation matrix to present a human-readable outline of the tags which are for the most part contained in the union of two other tags.
+        
+        Parameters
+        ----------
+        threshold: float
+            The proportion of correlation above which two tags are considered one a subset of the union of the other two.
+        
+        verbose: bool
+            If True, interpret the matrix nicely.
+        '''
+
         correlation = self.correlation_matrix_3d()
         matrix = np.where((correlation > threshold), correlation, 0)
         for i in range(len(self.m_tags)):
@@ -910,8 +958,10 @@ class Matrix():
         if verbose:
             count = 0
             for x, y, z in zip(*np.where(matrix>0)):
+                if y == z:
+                    continue # this values are captured by all_tag_is()
                 count+=1
-                print('{0:>3}. {1:3.1f}% of {2} is either {3} or {4}\n'.format(count, correlation[x,y,z]*100, self.m_tags[x], self.m_tags[y], self.m_tags[z]))
+                print('{0:>3}. {1:3.1f}% of {2} is either {3}\n{5}or {4}\n'.format(count, correlation[x,y,z]*100, self.m_tags[x], self.m_tags[y], self.m_tags[z], ' ' * (22 + len(self.m_tags[x]))))
         return matrix
 
 def crazysum(n, s, k):
