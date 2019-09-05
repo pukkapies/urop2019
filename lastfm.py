@@ -756,11 +756,9 @@ class Matrix():
         for i in range(len(tags)):
             count_intersect_tags_recursive((i, ), dim-1)
         
-        matrix = matrix.to_coo() # convert to coordinate matrix
-        
         if save_to is not None:
             # save matrix
-            sparse.save_npz(save_to, matrix) # default to compressed format (i.e. sparse format)
+            sparse.save_npz(save_to, matrix.to_coo()) # default to compressed format (i.e. sparse format)
 
             # save matrix tags in serialized format
             with open(os.path.splitext(save_to)[0] + '.nfo', 'wb') as f:
@@ -773,6 +771,7 @@ class Matrix():
 
         # load matrix
         matrix = sparse.load_npz(os.path.splitext(path)[0] + '.npz')
+        matrix = sparse.DOK(matrix) # convert to dict-of-keys for faster indexing
 
         # load matrix tags
         with open (os.path.splitext(path)[0] + '.nfo', 'rb') as f:
