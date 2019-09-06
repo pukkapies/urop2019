@@ -131,3 +131,105 @@ have no tags. This reduces the number of tracks from 1,000,000 to 500,000+.
 
 For more information on how you can customise the procedures, 
 see the documentation in the corresponding scripts.
+
+### Tags
+#### Make Queries
+`lastfm.py` contains two classes, `LastFm`, `LastFm2Pandas` that each of them contains 
+all the basic tools for querying the Lastfm database. The former directly queries 
+the database by SQL, whereas the latter converts the database into csv files and 
+queries the data using the Pandas library. In some of the functions in latter sections, 
+it may have a `lastfm` input parameter and require to be set as an instance of one
+of the classes. 
+
+**Example:**
+To use `LastFm`,
+
+```python
+lf = lastfm.LastFm(‘/srv/data/msd/lastfm/SQLITE/lastfm_tags.db’)
+```
+To use `LastFm2Pandas` (generate dataframe directly from database)
+
+```python
+lf = lastfm.LastFm2Pandas(from_sql=‘/srv/data/msd/lastfm/SQLITE/lastfm_tags.db’)
+```
+To use `LastFm2Pandas` from converted csv,
+
+```python
+# generate csv
+lastfm.LastFm(‘/srv/data/msd/lastfm/SQLITE/lastfm_tags.db’).db_to_csv(output_dir=’/srv/data/urop’)
+# create class instance
+lf = lastfm.LastFm2Pandas(from_csv='/srv/data/urop')
+```
+
+Note that the major difference between the two classes is that 
+`LastFm` is quicker to initiate, but some queries might take some time to 
+perform, whereas `LastFm2Pandas` may take longer to initiate due to the whole 
+dataset being loaded to the memory. However, it contains some more advanced methods, and
+it is quick to initialise if database is converted into csv files in advance.
+
+
+To explore the Million Song Dataset summary file, `metadata.py` contains 
+basic tools to query the `msd_summary_file.h5` file. 
+
+#### Filtering
+
+In the Lastfm database, there are more than 500,000 different tags. 
+To ensure that the training algorithm can learn from more sensible tags, 
+the tags are cleaned using `lastfm_cleaning_utils.py`. The exact mechanisms 
+of how it works can be found in the documentation of the script. 
+In brief, the tags are divided into two categories: 
+
+1. genre tags 
+
+2. vocal tags (male, female, rap, instrumental) 
+
+In our experiment, in 1., we first obtained a list of tags from the Lastfm 
+database which have appeared for more than 2000 times. We manually filtered out 
+the tags that we considered as non-genre tags and feed genre tags to the algorithm 
+`generate_genre_df()`. For each genre tag, the algorithm 
+searched for other similar tags from the 500,000 tags 
+pool (tags which have occurrence ≥ 10). A new dataset was finally generated with 
+the left-column --- the manually chosen tags, the right column 
+--- similar matching tags from the pool. In 2), We obtained a long list 
+of potentially matching tags for each of the four vocal tags. 
+We then manually seperate the 'real' matching tags from the rest for each of the lists. 
+The lists were fed into `generate_vocal_df()` and a dataset with a similar 
+structure as 1) was produced. In the end, the function `generate_final_df()` combined 
+the two datasets as a final dataset which was passed to the `lastfm_clean.py`. 
+
+The `.txt` files containing the lists of tags we used in our experiment can be found in 
+the folder `~/msd/config`. Hence, if you prefer to use our dataset, you may simply 
+generate this by:
+
+```python
+generate_final_df(from_csv_path=’/srv/data/urop’, threshold=2000, sub_threshold=10, combine_list=[[‘rhythm and blues’, ‘rnb’], [‘funky’, ‘funk’]], drop_list=[‘2000’, ‘00’, ‘90’, ‘80’, ‘70’, ‘60’])
+```
+
+if you are interested to view the dataset. Otherwise, `lastfm_clean.py` will automatically 
+generate this dataset and transform it into a clean Lastfm database. 
+
+Note that `lastfm_cleaning_utils` allows a great deal of customisation. 
+Please see (small readme) for more details.
+
+`lastfm_cleaning.py` creates a new database file using the cleaned tags 
+from lastfm_cleaning_utils.py. The database has the same structure as the 
+`lastfm_tags.db` database, and can be queried by `lastfm.py`.
+
+**Example:**
+
+```
+python lastfm_cleaning.py /srv/data/msd/lastfm/SQLITE/lastfm_tags.db /srv/data/urop/clean_lastfm.db --val ?? 
+```
+
+To summeraise, `metadata.py` was used to convert between TID and 7digitalid as the `.mp3` 
+files were named by 7digitalid whilst tag information was linked to the TID. 
+THIS SCRIPT WAS NEVER USED??
+
+`lastfm.py` was used throughout the project whenever tag information is needed to be fetched. 
+In our experiment, `lastfm_cleaning` and `lastfm_cleaning_utils` were used once together 
+in order to generate the `clean_lastfm.db` containing 155 clean tags. We stored 
+more tags than we would probably need, but this was better than potentially 
+having to regenerate the TFRecord files.
+
+
+
