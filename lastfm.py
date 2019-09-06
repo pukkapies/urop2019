@@ -681,7 +681,7 @@ class Matrix():
     - correlation_matrix_3d
         Produce a 3-dimensional matrix showing how 3 tags are correlated.
 
-    - plot_correlation
+    - correlation_plot
         Plot a correlation matrix.
 
     - are_equivalent
@@ -935,7 +935,7 @@ class Matrix():
         if plot:
             plt_matrix = np.copy(matrix)
             np.fill_diagonal(plt_matrix, 0)
-            self.plot_correlation(plt_matrix) # corrrelation of tag with itself is always 1
+            self.correlation_plot(plt_matrix) # corrrelation of tag with itself is always 1
         
         return matrix
 
@@ -981,17 +981,17 @@ class Matrix():
                 assert isinstance(plot, int), 'plot must have type either bool or int'
                 idx = plot
                 tag = self.m_tags[idx]
-                self.plot_correlation(*get_plt_matrix(self, matrix), title=tag)
+                self.correlation_plot(*get_plt_matrix(self, matrix), title=tag)
 
             # plot correlation for all
             else:
                 for idx in range(len(self.m_tags)):
                     tag = self.m_tags[idx]
-                    self.plot_correlation(*get_plt_matrix(self, matrix), title=tag)
+                    self.correlation_plot(*get_plt_matrix(self, matrix), title=tag)
         
         return matrix
 
-    def plot_correlation(self, correlation_matrix, tags=None, title=None):
+    def correlation_plot(self, correlation_matrix, tags=None, title=None):
         ''' Plot a 2-dimensional correlation matrix graphically. 
         
         Parameters
