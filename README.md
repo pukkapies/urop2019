@@ -199,12 +199,7 @@ the left-column --- the manually chosen tags, the right column
 
 In 2. 
 
-⋅⋅⋅We obtained a long list 
-of potentially matching tags for each of the four vocal tags. 
-We then manually seperate the 'real' matching tags from the rest for each of the lists. 
-The lists were fed into `generate_vocal_df()` and a dataset with a similar 
-structure as 1) was produced. In the end, the function `generate_final_df()` combined 
-the two datasets as a final dataset which was passed to the `lastfm_clean.py`. 
+⋅⋅* We obtained a long list of potentially matching tags for each of the four vocal tags. We then manually seperate the 'real' matching tags from the rest for each of the lists. The lists were fed into `generate_vocal_df()` and a dataset with a similar structure as 1) was produced. In the end, the function `generate_final_df()` combined the two datasets as a final dataset which was passed to the `lastfm_clean.py`. 
 
 The `.txt` files containing the lists of tags we used in our experiment can be found in 
 the folder `~/msd/config`. Hence, if you prefer to use our dataset, you may simply 
