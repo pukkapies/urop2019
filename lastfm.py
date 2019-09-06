@@ -41,12 +41,11 @@ import os
 import pickle
 import sqlite3
 
-import pandas as pd
-import numpy as np
-import sparse
-
 import matplotlib.pyplot as plt
-import matplotlib as mpl
+import matplotlib
+import numpy as np
+import pandas as pd
+import sparse
 
 from utils import MyProgbar
 
@@ -680,8 +679,6 @@ class Matrix():
             Filename or full path of the .npz file to load matrix and matrix tags.
         '''
         
-        self.lastfm = lastfm
-        
         if load_from is None:
             self.m, self.m_tags = self.matrix(lastfm, tags=tags, dim=dim, save_to=save_to)
         else:
@@ -732,7 +729,7 @@ class Matrix():
         # initialize matrix
         matrix = sparse.DOK((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (for easy creation, awful for calculations)
 
-        # compute total number of steps to completion (see http://www.iosrjournals.org/iosr-jm/papers/Vol8-issue3/A0830110.pdf)
+        # compute total number of steps to comatplotlibetion (see http://www.iosrjournals.org/iosr-jm/papers/Vol8-issue3/A0830110.pdf)
         n_steps = crazysum(n=len(tags), s=3, k=dim-1)
 
         # check whether a progress bar is needed
@@ -874,7 +871,7 @@ class Matrix():
         assert len(with_tags) >= 1 and len(without_tags) == 1
         return self.tags_et(with_tags) - self.tags_et(with_tags + without_tags)
 
-    def correlation_matrix_2d(self):
+    def correlation_matrix_2d(self, plot=False):
         ''' Returns a 2-dimensional matrix whose values indicate the correlation between 2 tags. 
         
         Notes
@@ -882,17 +879,32 @@ class Matrix():
         Each i,j-th entry indicates the percentage of tracks with the i-th tag which ALSO have the j-th tag.
         If there are 40.000 'alternative' tracks, and 30.000 of those are also 'rock', assuming that
         'alternative' is the 2-nd tag and 'rock' is the 4-th tag within self.m_tags, then correlation_matrix[2,4] will be 0.75.
+
+        Parameters
+        ----------
+        plot: bool 
+            If True, display the correlation matrix graphically.
         '''
+
         l = len(self.m_tags)
+        
         assert l >= 2, 'you need to have at least a 2-dimensional matrix'
+        
         matrix = np.zeros((l, )*2) # initialize output matrix
+        
         for i in range(l):
             for j in range(l):
                 tot = self.tags_et([i])
                 matrix[i,j] = 1 - (self.with_many_without_one(with_tags=[i], without_tags=[j]) / tot)
+        
+        if plot:
+            plt_matrix = np.copy(matrix)
+            np.fill_diagonal(plt_matrix, 0)
+            self.plot_correlation(plt_matrix) # corrrelation of tag with itself is always 1
+        
         return matrix
 
-    def correlation_matrix_3d(self):
+    def correlation_matrix_3d(self, plot=False):
         ''' Returns a 3-dimensional matrix whose values indicate the correlation between 3 tags. 
         
         Notes
@@ -900,17 +912,72 @@ class Matrix():
         Each i,j,k-th entry indicates the percentage of tracks with the i-th tag which ALSO have either the j-th tag or the k-th tag.
         If there are 40.000 'alternative' tracks, and 30.000 of those are either 'rock' or 'alternative rock', assuming that
         'alternative' is the 2-nd tag, 'rock' is the 4-th tag and 'alternative rock' is the 5-th tag within self.m_tags, then correlation_matrix[2,4,5] will be 0.75.
+        
+        Parameters
+        ----------
+        plot: bool, int
+            If True, display the correlation matrix graphically for all tags. 
+            If not False, an int might be specified. In that case, only the correlation for the i-th tag will be displayed.
+            If False, do nothing.
         '''
 
         l = len(self.m_tags)
+        
         assert l >= 3, 'you need to have at least a 3-dimensional matrix'
+        
         matrix = np.zeros((l, )*3) # initialize output matrix
+        
         for i in range(l):
             for j in range(l):
                 for k in range(l):
                     tot = self.tags_et([i])
                     matrix[i,j,k] = 1 - (self.with_one_without_many(with_tags=[i], without_tags=[j,k]) / tot)
+        
+        if plot is not False:
+            def get_plt_matrix(self, matrix): 
+                plt_matrix = np.copy(matrix[idx,:,:])
+                plt_matrix = np.delete(plt_matrix, idx, 0)
+                plt_matrix = np.delete(plt_matrix, idx, 1) # corrrelation of tag with itself is always 1
+                tags = np.delete(self.m_tags, idx)
+                return plt_matrix, tags
+
+            # plot correlation for idx-th tag only
+            if plot is not True:
+                assert isinstance(plot, int), 'plot must have type either bool or int'
+                idx = plot
+                tag = self.m_tags[idx]
+                self.plot_correlation(*get_plt_matrix(self, matrix), title=tag)
+
+            # plot correlation for all
+            else:
+                for idx in range(len(self.m_tags)):
+                    tag = self.m_tags[idx]
+                    self.plot_correlation(*get_plt_matrix(self, matrix), title=tag)
+        
         return matrix
+
+    def plot_correlation(self, correlation_matrix, tags=None, title=None):
+        ''' Plot a 2-dimensional correlation matrix graphically. '''
+        
+        if tags is not None:
+            assert len(tags) == correlation_matrix.shape[0] # check whether a valid list of tags has been provided
+        else:
+            tags = self.m_tags
+
+        fig, ax = plt.subplots(figsize=[10,10])
+        im = ax.imshow(correlation_matrix, cmap=matplotlib.cm.Blues)
+        ax.set_xticks(np.arange(len(tags)))
+        ax.set_yticks(np.arange(len(tags)))
+        ax.set_xticklabels(tags, rotation='vertical')
+        ax.set_yticklabels(tags)
+        ax.set_aspect('auto')
+
+        if title:
+            plt.title(title,fontweight="bold")
+
+        cbar = fig.colorbar(im)
+        cbar.ax.set_ylabel('correlation')
+        plt.show()
 
     def are_equivalent(self, threshold=0.8, verbose=False):
         ''' Reads the 2-dimensional correlation matrix to present a human-readable outline of the tags which are arguably equivalent.
@@ -981,36 +1048,6 @@ class Matrix():
                 count+=1
                 print('{0:>3}. {1:3.1f}% of {2} is either {3}\n{5}or {4}\n'.format(count, correlation[x,y,z]*100, self.m_tags[x], self.m_tags[y], self.m_tags[z], ' ' * (22 + len(self.m_tags[x]))))
         return matrix
-
-    def plot(self, matrix, tags, which_tag=None):
-        
-        dim = len(matrix.shape)
-        
-        if isinstance(tags, int):
-            tags = self.lastfm.tag_num_to_tag(tags)
-            
-        if isinstance(which_tag, int):
-            which_tag = self.lastfm.tag_num_to_tag(which_tag)
-    
-        if dim == 3:
-            assert which_tag is not None
-            matrix = matrix[:,:,which_tag]
-        
-        fig, ax = plt.subplots(figsize=[10,10])
-        im = ax.imshow(matrix, cmap=mpl.cm.Blues)
-        ax.set_xticks(np.arange(len(tags)));
-        ax.set_yticks(np.arange(len(tags)));
-        ax.set_xticklabels(tags, rotation='vertical');
-        ax.set_yticklabels(tags);
-        
-        if dim == 3:
-            ax.set_title(which_tag)
-            
-        cbar = fig.colorbar(im);
-        cbar.ax.set_ylabel('correlation')
-        ax.set_aspect('auto')
-        plt.show()
-
     
 def crazysum(n, s, k):
     return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
