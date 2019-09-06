@@ -35,15 +35,15 @@ The silent information are processed and interpreted by track_wrangle_silence, a
 (user customisation)
 
 Example:
-python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital 
+`python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital `
 
 will create a .csv that contains the information of tracks mentioned above.
 
-python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital
+`python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital`
 
 will generate npz files mentioned above.
 
-python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 --filter-max-silence ?
+`python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 --filter-max-silence ?`
 
 ### Database 
 The raw HDF5 Million Song Dataset file, which contains three smaller datasets, are converted into multiple Pandas dataframes. The relevant information are then extracted and merged. According to the MSD website, there are mismatches between these datasets. For more details, see http://millionsongdataset.com/blog/12-2-12-fixing-matching-errors/ . To deal with this issue, track_wrangle.py takes a txt file containing a list of tids which could not be trusted and remove the corresponding rows of data based on the list. Furthermore, MSD also provides txt file containing a list of tracks that contains duplicates. track_wrangle.py by default keeps one version of duplicate tracks according to the list and remove the rest. 
@@ -56,22 +56,19 @@ For more information about how these functions are used, see (the smaller readme
 (user customisation)
 
 Example
-python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 
-/srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt 
+`python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt` 
 
 Alternatively, to save storage space and time, the following order of code execution was used instead:
 
-python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital 
+`python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital`
 
-python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 
-/srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt --discard-dupl False
+`python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt --discard-dupl False`
 
-python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital
+`python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital`
 
-python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 --filter-max-silence ?
+`python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 --filter-max-silence ?`
 
-python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 
-/srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt 
+`python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt` 
 
 With this order of execution, wrangle.ly will remove tracks which have no tags. This reduces the number of tracks from 1,000,000 to 500,000+.
 
