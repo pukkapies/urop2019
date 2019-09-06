@@ -188,7 +188,7 @@ In our experiment:
 
 In 1. 
 
-⋅⋅⋅We first obtained a list of tags from the Lastfm 
+* We first obtained a list of tags from the Lastfm 
 database which have appeared for more than 2000 times. We manually filtered out 
 the tags that we considered as non-genre tags and feed genre tags to the algorithm 
 `generate_genre_df()`. For each genre tag, the algorithm 
