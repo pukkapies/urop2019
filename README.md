@@ -134,7 +134,7 @@ see the documentation in the corresponding scripts.
 
 ### Tags
 #### Make Queries
-`lastfm.py` contains two classes, `LastFm`, `LastFm2Pandas` that each of them contains 
+`lastfm.py` contains two classes, `LastFm`, `LastFm2Pandas`, that each of them contains 
 all the basic tools for querying the Lastfm database. The former directly queries 
 the database by SQL, whereas the latter converts the database into csv files and 
 queries the data using the Pandas library. In some of the functions in latter sections, 
@@ -142,6 +142,7 @@ it may have a `lastfm` input parameter and require to be set as an instance of o
 of the classes. 
 
 **Example:**
+
 To use `LastFm`,
 
 ```python
@@ -183,14 +184,22 @@ In brief, the tags are divided into two categories:
 
 2. vocal tags (male, female, rap, instrumental) 
 
-In our experiment, in 1., we first obtained a list of tags from the Lastfm 
+In our experiment: 
+
+In 1., 
+
+...We first obtained a list of tags from the Lastfm 
 database which have appeared for more than 2000 times. We manually filtered out 
 the tags that we considered as non-genre tags and feed genre tags to the algorithm 
 `generate_genre_df()`. For each genre tag, the algorithm 
 searched for other similar tags from the 500,000 tags 
 pool (tags which have occurrence ≥ 10). A new dataset was finally generated with 
 the left-column --- the manually chosen tags, the right column 
---- similar matching tags from the pool. In 2), We obtained a long list 
+--- similar matching tags from the pool. 
+
+In 2., 
+
+...We obtained a long list 
 of potentially matching tags for each of the four vocal tags. 
 We then manually seperate the 'real' matching tags from the rest for each of the lists. 
 The lists were fed into `generate_vocal_df()` and a dataset with a similar 
