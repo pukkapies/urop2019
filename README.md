@@ -38,7 +38,7 @@ audio, or even how to make use of our codes to carry out your experiment very ea
 
 ## Data Cleaning
 ### Audio
-Firstly, by `track_fetch.py`, the directory which contains all the tracks is thoroughly 
+Firstly, by `fetcher.py`, the directory which contains all the tracks is thoroughly 
 scanned. The info: file path, duration,  number of channels, file size are captured and 
 stored in a Pandas dataframe. The audio files that cannot be opened correctly are removed 
 from the dataframe.  
@@ -49,9 +49,9 @@ are then analysed to extract the location of any silent sections respectively (s
 documentation in the script for more details). The silent information, the arrays, and the 
 sampling rate of each track are optionally stored as an npz file in the given directory. 
 
-The silent information is processed and interpreted by `track_wrangle_silence.py`, 
+The silent information is processed and interpreted by `wrangler_silence.py`, 
 and the results, e.g. effective_clip_length, max_silence_length are appended to 
-the dataframe. `track_wrangle_silence` provides functions that can filter out tracks 
+the dataframe. `wrangler_silence` provides functions that can filter out tracks 
 based on their silent information. In our experient, tracks with ??????????????????? 
 
 
@@ -81,10 +81,10 @@ The raw HDF5 Million Song Dataset file, which contains three smaller datasets,
 are converted into multiple Pandas dataframes. The relevant information is then 
 extracted and merged. According to the MSD website, there are mismatches between 
 these datasets. For more details, see [here](http://millionsongdataset.com/blog/12-2-12-fixing-matching-errors/). 
-To deal with this issue, track_wrangle.py takes a '.txt' file with a list 
+To deal with this issue, `wrangler.py` takes a '.txt' file with a list 
 of tids which could not be trusted, and remove the corresponding rows 
 of data based on the list. Furthermore, MSD also provides `.txt` file 
-with a list of tracks that have duplicates. `track_wrangle.py` by default 
+with a list of tracks that have duplicates. `wrangler.py` by default 
 keeps one version of the duplicate tracks of each song according to the list 
 and remove the rest. 
 
