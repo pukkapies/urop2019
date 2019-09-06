@@ -43,7 +43,7 @@ import sqlite3
 
 import pandas as pd
 import numpy as np
-import sparse
+from scipy import sparse
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -730,7 +730,7 @@ class Matrix():
             tags = [tag for tag in tags if tag in lastfm.get_tags()] # possibly purge inexistent tags
         
         # initialize matrix
-        matrix = sparse.DOK((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (for easy creation, awful for calculations)
+        matrix = sparse.dok_matrix((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (for easy creation, awful for calculations)
 
         # compute total number of steps to completion (see http://www.iosrjournals.org/iosr-jm/papers/Vol8-issue3/A0830110.pdf)
         n_steps = crazysum(n=len(tags), s=3, k=dim-1)
@@ -761,7 +761,7 @@ class Matrix():
         for i in range(len(tags)):
             count_intersect_tags_recursive((i, ), dim-1)
         
-        matrix = matrix.to_coo() # convert to coordinate matrix
+        matrix = matrix.tocoo() # convert to coordinate matrix
         
         if save_to is not None:
             # save matrix
