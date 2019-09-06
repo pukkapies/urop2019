@@ -59,23 +59,21 @@ based on their silent information. In our experient, tracks with ???????????????
 
 This will create a .csv that contains the information of tracks mentioned above.
 
-`python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital`
+```
+python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital
+```
 
 This will generate npz files mentioned above.
 
 ```
-python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 
-/srv/data/msd/7digital
+python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital
 ```
 
 This will expand the fetch.csv generated above to include some interpretations 
 of the silent information.
 
 ```
-python wrangler_silence.py /srv/data/urop2019/fetch.csv 
-/srv/data/urop2019/wrangle_silence.csv --root-dir-npz 
-/srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital 
---min-size ? --filter-tot-silence 15 --filter-max-silence ?
+python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 --filter-max-silence ?
 ```
 
 ### Database 
@@ -102,10 +100,7 @@ For more information about how these functions are used, see ????(the smaller re
 **Example**
 
 ```
-python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv 
---path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db 
-/srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? 
---path-txt-mism /srv/data/msd/sid_mismatches.txt
+python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt
 ```
 
 Alternatively, to save storage space and time, the following order of code 
@@ -116,30 +111,19 @@ python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital
 ```
 
 ```
-python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv 
---path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db 
-/srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? 
---path-txt-mism /srv/data/msd/sid_mismatches.txt --discard-dupl False
+python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt --discard-dupl False
 ```
 
 ```
-python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv 
---root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 
-/srv/data/msd/7digital
+python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital
 ```
 
 ```
-python wrangler_silence.py /srv/data/urop2019/fetch2.csv 
-/srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz 
---root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 
---filter-max-silence ?
+python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 --filter-max-silence ?
 ```
 
 ```
-python wrangle.py /srv/data/urop2019/wrangle_silence.csv 
-/srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 
---path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? 
---path-txt-mism /srv/data/msd/sid_mismatches.txt
+python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt
 ```
 
 With this order of execution, `wrangle.py` will remove tracks which 
