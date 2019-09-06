@@ -186,9 +186,9 @@ In brief, the tags are divided into two categories:
 
 In our experiment: 
 
-In 1., 
+In 1. 
 
-...We first obtained a list of tags from the Lastfm 
+⋅⋅⋅We first obtained a list of tags from the Lastfm 
 database which have appeared for more than 2000 times. We manually filtered out 
 the tags that we considered as non-genre tags and feed genre tags to the algorithm 
 `generate_genre_df()`. For each genre tag, the algorithm 
@@ -197,9 +197,9 @@ pool (tags which have occurrence ≥ 10). A new dataset was finally generated wi
 the left-column --- the manually chosen tags, the right column 
 --- similar matching tags from the pool. 
 
-In 2., 
+In 2. 
 
-...We obtained a long list 
+⋅⋅⋅We obtained a long list 
 of potentially matching tags for each of the four vocal tags. 
 We then manually seperate the 'real' matching tags from the rest for each of the lists. 
 The lists were fed into `generate_vocal_df()` and a dataset with a similar 
