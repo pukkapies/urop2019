@@ -19,7 +19,7 @@ to the database on Boden.
 Classes
 -------
 - LastFm
-    Open a connection to the .db file and provide methods to perform queries on it.
+    Read the databsdr and provide methods to perform queries on it.
     This class is faster to init, but some queries (expecially on the tid_tag table) might take some time to perform.
 
 - LastFm2Pandas
@@ -53,7 +53,7 @@ from utils import MyProgbar
 DEFAULT = '/srv/data/msd/lastfm/SQLITE/lastfm_tags.db'
 
 class LastFm():
-    ''' Opens a SQLite connection to the last.fm database. Provides methods to perform advanced queries on it.
+    ''' Reads the last.fm database and provides methods to perform advanced queries on it.
 
     Methods
     -------
@@ -332,7 +332,7 @@ class LastFm():
         return pop
 
 class LastFm2Pandas():
-    ''' Reads the last.fm database into pandas dataframes. Provides methods to perform advanced queries on it.
+    ''' Reads the last.fm database into different pandas dataframes and provides methods to perform advanced queries on it.
 
     Methods
     -------
@@ -1008,7 +1008,7 @@ class Matrix():
         cbar.ax.set_ylabel('correlation')
         ax.set_aspect('auto')
         plt.show()
-    
+
     
 def crazysum(n, s, k):
     return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
