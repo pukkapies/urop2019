@@ -30,7 +30,7 @@ Step 2: Generate five txt files (non_genre_list.txt, male_list.txt, female_list.
 
 ```python
 generate_genre_txt(popularity, threshold=2000)
-generate_vocal_txt(df: pd.DataFrame, tag_list = ['rap', 'instrumental', 'male', 'female'], percentage_list=[90, 90, 90, 80]).
+generate_vocal_txt(df: pd.DataFrame, tag_list = ['rap', 'instrumental', 'male', 'female'], percentage_list=[90, 90, 90, 80])
 ```
 
 Use ` set_txt_path()` to set the default path to store the files.
