@@ -783,7 +783,7 @@ class Matrix():
 
         return matrix, tags
 
-    def tags_et(self, tags):
+    def tags_and(self, tags):
         ''' Computes how many tracks have all the tags in 'tags'. Provides an easier way to index the matrix.
         
         Parameters
@@ -831,7 +831,7 @@ class Matrix():
             idxs = np.where(np.array([self.m_tags] * len(tags)) == tags[:,None])[1] # 'numpy version' of idxs = [self.m_tags.index(tag) for tag in tags]
             assert len(idxs) == len(tags), 'some of the tags you inserted might not exist in the matrix' # sanity check (np.where will not return errors if correspondent idx does not exist)
         
-        return sum((-1)**(i+1) * self.tags_et(subset) # inclusion-exclusion principle
+        return sum((-1)**(i+1) * self.tags_and(subset) # inclusion-exclusion principle
                 for i in range(1, len(idxs) + 1)
                 for subset in itertools.combinations(idxs, i))
 
@@ -869,7 +869,7 @@ class Matrix():
             without_tags = [without_tags]
 
         assert len(with_tags) >= 1 and len(without_tags) == 1
-        return self.tags_et(with_tags) - self.tags_et(with_tags + without_tags)
+        return self.tags_and(with_tags) - self.tags_and(with_tags + without_tags)
 
     def correlation_matrix_2d(self, plot=False):
         ''' Returns a 2-dimensional matrix whose values indicate the correlation between 2 tags. 
@@ -894,7 +894,7 @@ class Matrix():
         
         for i in range(l):
             for j in range(l):
-                tot = self.tags_et([i])
+                tot = self.tags_and([i])
                 matrix[i,j] = 1 - (self.with_many_without_one(with_tags=[i], without_tags=[j]) / tot)
         
         if plot:
@@ -930,7 +930,7 @@ class Matrix():
         for i in range(l):
             for j in range(l):
                 for k in range(l):
-                    tot = self.tags_et([i])
+                    tot = self.tags_and([i])
                     matrix[i,j,k] = 1 - (self.with_one_without_many(with_tags=[i], without_tags=[j,k]) / tot)
         
         if plot is not False:
