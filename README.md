@@ -63,16 +63,16 @@ This will create a .csv that contains the information of tracks mentioned above.
 
 This will generate npz files mentioned above.
 
-`python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 
-/srv/data/msd/7digital`
+```python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 
+/srv/data/msd/7digital```
 
 This will expand the fetch.csv generated above to include some interpretations 
 of the silent information.
 
-`python wrangler_silence.py /srv/data/urop2019/fetch.csv 
+```python wrangler_silence.py /srv/data/urop2019/fetch.csv 
 /srv/data/urop2019/wrangle_silence.csv --root-dir-npz 
 /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital 
---min-size ? --filter-tot-silence 15 --filter-max-silence ?`
+--min-size ? --filter-tot-silence 15 --filter-max-silence ?```
 
 ### Database 
 The raw HDF5 Million Song Dataset file, which contains three smaller datasets, 
@@ -97,34 +97,34 @@ For more information about how these functions are used, see ????(the smaller re
 
 **Example**
 
-`python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv 
+```python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv 
 --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db 
 /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? 
---path-txt-mism /srv/data/msd/sid_mismatches.txt` 
+--path-txt-mism /srv/data/msd/sid_mismatches.txt```
 
 Alternatively, to save storage space and time, the following order of code 
 execution was used instead:
 
-`python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital`
+```python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital```
 
-`python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv 
+```python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv 
 --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db 
 /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? 
---path-txt-mism /srv/data/msd/sid_mismatches.txt --discard-dupl False`
+--path-txt-mism /srv/data/msd/sid_mismatches.txt --discard-dupl False```
 
-`python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv 
+```python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv 
 --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 
-/srv/data/msd/7digital`
+/srv/data/msd/7digital```
 
-`python wrangler_silence.py /srv/data/urop2019/fetch2.csv 
+```python wrangler_silence.py /srv/data/urop2019/fetch2.csv 
 /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz 
 --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 
---filter-max-silence ?`
+--filter-max-silence ?```
 
-`python wrangle.py /srv/data/urop2019/wrangle_silence.csv 
+```python wrangle.py /srv/data/urop2019/wrangle_silence.csv 
 /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 
 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? 
---path-txt-mism /srv/data/msd/sid_mismatches.txt` 
+--path-txt-mism /srv/data/msd/sid_mismatches.txt```
 
 With this order of execution, `wrangle.py` will remove tracks which 
 have no tags. This reduces the number of tracks from 1,000,000 to 500,000+.
