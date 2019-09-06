@@ -657,6 +657,41 @@ class Matrix():
     
     Methods
     -------
+    - matrix
+        Compute a n-dimensional matrix, where the (i_1, ..., i_n)-th entry represents the number of tracks with all the i-th's tags.
+    
+    - matrix_load
+        Load a pre-computed matrix (saved as a .npz and a .nfo file).
+
+    - tags_and
+        Return the number of tracks which have the first tag, AND the second tag, ..., AND the n-th tag.
+
+    - tags_or
+        Return the number of tracks which have the first tag, OR the second tag, ..., OR the n-th tag.
+
+    - with_one_without_many
+        Compute the number of tracks which have one tag, but not any of some others.
+
+    - with_many_without_one
+        Compute the number of tracks which have all of some tags, but not one other.
+
+    - correlation_matrix_2d
+        Produce a 2-dimensional matrix showing how 2 tags are correlated.
+
+    - correlation_matrix_3d
+        Produce a 3-dimensional matrix showing how 3 tags are correlated.
+
+    - plot_correlation
+        Plot a correlation matrix.
+
+    - are_equivalent
+        Analyze which tags are arguably equivalent.
+
+    - all_tag_is
+        Analyze which tags are for the most part contained into another.
+
+    - all_tag_is_either
+        Analyze which tags are for the most part contained into the union of other two tags.
     '''
 
     def __init__(self, lastfm, tags, dim=3, save_to=None, load_from=None):
