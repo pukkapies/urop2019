@@ -992,7 +992,21 @@ class Matrix():
         return matrix
 
     def plot_correlation(self, correlation_matrix, tags=None, title=None):
-        ''' Plot a 2-dimensional correlation matrix graphically. '''
+        ''' Plot a 2-dimensional correlation matrix graphically. 
+        
+        Parameters
+        ----------
+        correlation_matrix: np.ndarray
+            The 2-dimensional correlation matrix to plot.
+        
+        tags: list
+            If not None, use this list of tags instead of self.m_tags. Its length must be compatible
+            with the shape of correlation_matrix. Useful when removing 'trivial entries' (that is, where correlation of tag
+            with itself is 1) from the original matrix.
+        
+        title: str
+            If not None, display title.
+        '''
         
         if tags is not None:
             assert len(tags) == correlation_matrix.shape[0] # check whether a valid list of tags has been provided
