@@ -43,7 +43,10 @@ import sqlite3
 
 import pandas as pd
 import numpy as np
-import sparse
+from scipy import sparse
+
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from utils import MyProgbar
 
@@ -676,7 +679,9 @@ class Matrix():
         load_from: str
             Filename or full path of the .npz file to load matrix and matrix tags.
         '''
-
+        
+        self.lastfm = lastfm
+        
         if load_from is None:
             self.m, self.m_tags = self.matrix(lastfm, tags=tags, dim=dim, save_to=save_to)
         else:
@@ -725,7 +730,7 @@ class Matrix():
             tags = [tag for tag in tags if tag in lastfm.get_tags()] # possibly purge inexistent tags
         
         # initialize matrix
-        matrix = sparse.DOK((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (for easy creation, awful for calculations)
+        matrix = sparse.dok_matrix((len(tags), )*dim, dtype=np.int32) # sparse dict-of-keys matrix (for easy creation, awful for calculations)
 
         # compute total number of steps to completion (see http://www.iosrjournals.org/iosr-jm/papers/Vol8-issue3/A0830110.pdf)
         n_steps = crazysum(n=len(tags), s=3, k=dim-1)
@@ -832,7 +837,7 @@ class Matrix():
                 for subset in itertools.combinations(idxs, i))
 
     def with_one_without_many(self, with_tags, without_tags):
-        ''' Computes how many tracks have at the tag 'with_tags', but not either of the tags in 'without_tags'.
+        ''' Computes how many tracks have at the tag 'with_tags', but not any of the tags in 'without_tags'.
         
         Parameters
         ----------
@@ -872,7 +877,7 @@ class Matrix():
         
         Notes
         -----
-        Each j,j-th entry indicates the percentage of tracks with the i-th tag which ALSO have the j-th tag.
+        Each i,j-th entry indicates the percentage of tracks with the i-th tag which ALSO have the j-th tag.
         If there are 40.000 'alternative' tracks, and 30.000 of those are also 'rock', assuming that
         'alternative' is the 2-nd tag and 'rock' is the 4-th tag within self.m_tags, then correlation_matrix[2,4] will be 0.75.
         '''
@@ -890,7 +895,7 @@ class Matrix():
         
         Notes
         -----
-        Each j,j,k-th entry indicates the percentage of tracks with the i-th tag which ALSO have either the j-th tag or the k-th tag.
+        Each i,j,k-th entry indicates the percentage of tracks with the i-th tag which ALSO have either the j-th tag or the k-th tag.
         If there are 40.000 'alternative' tracks, and 30.000 of those are either 'rock' or 'alternative rock', assuming that
         'alternative' is the 2-nd tag, 'rock' is the 4-th tag and 'alternative rock' is the 5-th tag within self.m_tags, then correlation_matrix[2,4,5] will be 0.75.
         '''
@@ -975,5 +980,35 @@ class Matrix():
                 print('{0:>3}. {1:3.1f}% of {2} is either {3}\n{5}or {4}\n'.format(count, correlation[x,y,z]*100, self.m_tags[x], self.m_tags[y], self.m_tags[z], ' ' * (22 + len(self.m_tags[x]))))
         return matrix
 
+    def plot(self, matrix, tags, which_tag=None):
+        
+        dim = len(matrix.shape)
+        
+        if isinstance(tags, int):
+            tags = self.lastfm.tag_num_to_tag(tags)
+            
+        if isinstance(which_tag, int):
+            which_tag = self.lastfm.tag_num_to_tag(which_tag)
+    
+        if dim == 3:
+            assert which_tag is not None
+            matrix = matrix[:,:,which_tag]
+        
+        fig, ax = plt.subplots(figsize=[10,10])
+        im = ax.imshow(matrix, cmap=mpl.cm.Blues)
+        ax.set_xticks(np.arange(len(tags)));
+        ax.set_yticks(np.arange(len(tags)));
+        ax.set_xticklabels(tags, rotation='vertical');
+        ax.set_yticklabels(tags);
+        
+        if dim == 3:
+            ax.set_title(which_tag)
+            
+        cbar = fig.colorbar(im);
+        cbar.ax.set_ylabel('correlation')
+        ax.set_aspect('auto')
+        plt.show()
+    
+    
 def crazysum(n, s, k):
     return int((math.factorial(n+k-1)/(math.factorial(n-1)*math.factorial(k+1)))*((n-1)*s+k+3-2*n))
