@@ -275,7 +275,7 @@ from the `.tfrecord` files. Its main feature is to create 3 datasets for
 train/val/test by parsing the `.tfrecord` files and extracting a 15s window 
 of the audio and then normalizing the data. If waveform is used, the normalization 
 is simple batch normalization, but if log mel-spectrogram  is used, we normalized 
-with respect to the spectrograms themselves REFERENCE. The file will also create 
+with respect to the spectrograms themselves (Pons, et al., 2018). The file will also create 
 mini-batches of a chosen size.
 
 Again we have left a lot of room for customization. There are functions to exclude 
@@ -316,11 +316,11 @@ train_dataset, valid_dataset = projectname_input.generate_datasets(tfrecords, au
 ### Model and Configuration
 
 
-The model we used was designed by REFERENCE. See 
+The model we used was designed by (Pons, et al., 2018). See 
 [here](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. 
-In our experiment, as mentioned above, we have followed REFERENCE and convert the audio files 
+In our experiment, as mentioned above, we have followed (Pons, et al., 2018) and convert the audio files 
 into **waveform** and **log mel-spectrogram** respectively for training. Since the model pipeline 
-written by REFERENCE is only compatible with TensorFlow 1.x, we have rewritten the model with TensorFlow 2.0 
+written by (Pons, et al., 2018) is only compatible with TensorFlow 1.x, we have rewritten the model with TensorFlow 2.0 
 syntax in `projectname.py`.
 
 In brief, `projectname.py` contains a frontend for waveform and log mel-spectrogram respectively and a backend model. 
@@ -329,7 +329,7 @@ be used in the training algorithm.
 
 In the training phase, parameters are supplied by a json file, instead of being specified as input parameters of 
 the training loop functions. You may generate the json file with the default parameters (
-from our experiment with training parameters suggested by REFERENCE) using the `create_config_json` function.
+from our experiment with training parameters suggested by (Pons, et al., 2018)) using the `create_config_json` function.
 
 **Example:**
 
@@ -385,7 +385,7 @@ To perform a simple training with default settings in waveform for ten epochs on
 ```
 python training.py waveform, --root-dir /srv/data/urop/tfrecords-waveform --config-path /srvdata/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --epochs 10 --cuda 0 1
 ```
-Yoy may control all the parameters within the config.json file.
+You may control all the parameters within the config.json file.
 
 If you prefer to use `training_gradtape.py`, it works the same way as above to 
 start the training.
@@ -422,6 +422,31 @@ training.train(train_dataset, valid_dataset, frontend='waveform', strategy=strat
 ```
 If you prefer to use `training_gradtape.py`, do exactly the same procedure as above
 except replacing `training` with `training_gradtape`.
+
+
+## Evaluation Tools
+`test_model.py` is the script containing the evaluation tools. There is a `test_model()` function which 
+simply tests the model's performance on the test dataset from a certain checkpoint. The `predict()` function 
+takes an audio array, in the waveform or the log mel-spectrogram format, and uses the model on consecutive 15s 
+windows of the input audio to returns the average prediction as tags in string form.
+
+(example?)
+
+## Results
+(our experiments, possibly with some graphs, and further analysis?)
+
+## Reference
+Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
+
+
+## Contact/Getting Help
+(emails?...)
+
+
+
+
+
+
 
 
 
