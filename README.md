@@ -467,6 +467,20 @@ windows of the input audio to returns the average prediction as tags in string f
 (example?)
 
 ## Results
+
+Waveform with the following parameters:
+
+(parameters)
+
+![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/log-mel-top50.png)
+
+log mel-spectrogram with the following parameters:
+
+(parameters)
+
+![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform-top50.png)
+
+
 (our experiments, possibly with some graphs, and further analysis?)
 
 ## Reference
