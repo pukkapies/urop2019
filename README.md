@@ -1,13 +1,14 @@
-# urop2019
+# urop2019 -- Projectname
 
 Summer UROP 2019 project repository.
+
+This project aims to develop a neural network music audio autotagger, i.e. this network will 
+take a music audio file and predict a list of tags that are relevant to that audio.
 
 ## Table of Contents
 (make a fancy table of contents)
 
 ## Introduction
-This project aims to develop a neural network music audio autotagger, i.e. this network will 
-take a music audio file and predict a list of tags that are relevant to that audio.
 
 This project makes use of the freely-available [Million Song Dataset]( http://millionsongdataset.com), 
 and the [Last.fm](http://millionsongdataset.com/lastfm/) dataset. The former provides a link between 
