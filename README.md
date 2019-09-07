@@ -309,7 +309,7 @@ top_tags = lf.popularity()['tags'][:10].tolist()
 
 #create datasets
 tfrecords = ['/srv/data/urop/tfrecords-waveform/waveform_1.tfrecord', '/srv/data/urop/tfrecords-waveform/waveform_2.tfrecord']
-train, val = projectname_input.generate_datasets(tfrecords, audio_format='waveform', split=[1,1,0], which=[True, True, False], with_tags=top_tags, merge_tags=['pop', 'alternative'])
+train_dataset, valid_dataset = projectname_input.generate_datasets(tfrecords, audio_format='waveform', split=[1,1,0], which=[True, True, False], with_tags=top_tags, merge_tags=['pop', 'alternative'])
 ```
 
 ## Training
@@ -337,7 +337,19 @@ from our experiment with training parameters suggested by REFERENCE) using the `
 projectname.create_config_json('/srv/data/urop/config.json')
 ```
 
-A list of available parameters and their properties can be found in the documentation within 'projectname.py'.
+A list of available parameters and their properties can be found in the documentation within 'projectname.py'. 
+In short, it contains five categories of parameters:
+
+1. **model**: any network-related parameters.
+
+2. **optimizer**: name and learning rate of the optimiser.
+
+3. **tags**: customised tags for dataset input pipeline.
+
+4. **tfrecords**: parameters used when generating the tfrecords.
+
+5. **config**: any parameters related to the training algorithm and the dataset input pipeline.
+
 (need more doc on projectname.py!!)
 
 If you wish to change any parameters, e.g. change learning rate to 0.005 and batch 
