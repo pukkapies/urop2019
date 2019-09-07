@@ -90,7 +90,7 @@ and remove the rest.
 
 The dataframe from above is merged with the dataframe 
 produced by the audio section above followed by 
-removing unnecessary columns to produce the ‘ultimate’ dataframe. 
+removing unnecessary columns to produce the 'ultimate' dataframe. 
 This dataframe acts as a clean dataset containing all the essential information 
 about the tracks and will be used throughout the project.
 
@@ -146,18 +146,18 @@ of the classes.
 To use `LastFm`,
 
 ```python
-lf = lastfm.LastFm(‘/srv/data/msd/lastfm/SQLITE/lastfm_tags.db’)
+lf = lastfm.LastFm('/srv/data/msd/lastfm/SQLITE/lastfm_tags.db')
 ```
 To use `LastFm2Pandas` (generate dataframe directly from database)
 
 ```python
-lf = lastfm.LastFm2Pandas(from_sql=‘/srv/data/msd/lastfm/SQLITE/lastfm_tags.db’)
+lf = lastfm.LastFm2Pandas(from_sql='/srv/data/msd/lastfm/SQLITE/lastfm_tags.db')
 ```
 To use `LastFm2Pandas` from converted csv,
 
 ```python
 # generate csv
-lastfm.LastFm(‘/srv/data/msd/lastfm/SQLITE/lastfm_tags.db’).db_to_csv(output_dir=’/srv/data/urop’)
+lastfm.LastFm('/srv/data/msd/lastfm/SQLITE/lastfm_tags.db').db_to_csv(output_dir='/srv/data/urop')
 # create class instance
 lf = lastfm.LastFm2Pandas(from_csv='/srv/data/urop')
 ```
@@ -199,14 +199,18 @@ the left-column --- the manually chosen tags, the right column
 
 In 2. 
 
-* We obtained a long list of potentially matching tags for each of the four vocal tags. We then manually seperate the 'real' matching tags from the rest for each of the lists. The lists were fed into `generate_vocal_df()` and a dataset with a similar structure as 1) was produced. In the end, the function `generate_final_df()` combined the two datasets as a final dataset which was passed to the `lastfm_clean.py`. 
+* We obtained a long list of potentially matching tags for each of the four vocal tags. 
+We then manually seperate the 'real' matching tags from the rest for each of the lists. 
+The lists were fed into `generate_vocal_df()` and a dataset with a similar structure as 
+1. was produced. In the end, the function `generate_final_df()` combined the two 
+datasets as a final dataset which was passed to the `lastfm_clean.py`. 
 
 The `.txt` files containing the lists of tags we used in our experiment can be found in 
 the folder `~/msd/config`. Hence, if you prefer to use our dataset, you may simply 
 generate this by:
 
 ```python
-generate_final_df(from_csv_path=’/srv/data/urop’, threshold=2000, sub_threshold=10, combine_list=[[‘rhythm and blues’, ‘rnb’], [‘funky’, ‘funk’]], drop_list=[‘2000’, ‘00’, ‘90’, ‘80’, ‘70’, ‘60’])
+generate_final_df(from_csv_path='/srv/data/urop', threshold=2000, sub_threshold=10, combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], drop_list=['2000', '00', '90', '80', '70', '60'])
 ```
 
 if you are interested to view the dataset. Otherwise, `lastfm_clean.py` will automatically 
@@ -234,6 +238,80 @@ In our experiment, `lastfm_cleaning` and `lastfm_cleaning_utils` were used once 
 in order to generate the `clean_lastfm.db` containing 155 clean tags. We stored 
 more tags than we would probably need, but this was better than potentially 
 having to regenerate the TFRecord files.
+
+
+## Data Input Pipeline
+### Tfrecords
+To store the necessary information we need in training, we used the `.tfrecord` 
+file format. The `preprocessing.py` script does exactly this. In each entry of 
+the `.tfrecord` file, it stores the audio as an array in the formats of either 
+waveform or log mel-spectrogram. It will also store the TID to identify each 
+track as well as the tags from the `clean_lastfm.db` database in a one-hot vector format.
+
+`preprocessing.py` leaves quite a lot of room for user customisation. It will 
+accept audio as `.mp3` files, or as `.npz` files where each entry contains the 
+audio as an array and the sample rate. The user can choose the sample rate to 
+store the data in as well as the number of mel bins when storing the audios in 
+the log mel-spectrogram form. It is also possible to specify the number of  
+`.tfrecord` files to split the data between.
+
+In our case, we used 96 mel bins, a sample rate of 16kHz and split the data 
+into 100 .`tfrecord` files. We also had the data stored as `.npz` files, since 
+we have loaded the `.mp3` files as numpy for silence analysis and stored them 
+in a previous section. However, we would recommend users to convert directly 
+from `.mp3` files as the `.npz` files need a lot of storage. 
+
+Example:
+
+```
+python preprocessing.py waveform /srv/data/urop/tfrecords-waveform --root-dir /srv/data/urop2019/npz --tag-path /srv/data/urop/clean_lastfm.db --csv-path /srv/data/urop/ultimate.csv --sr 16000 --num-files 100 --start-stop 1 1
+```
+
+Note that it is recommended to use tmux split screens to speed up the process.
+
+### Dataset Preparation
+`projectname_input.py` was used to create ready-to-use TensorFlow datasets 
+from the `.tfrecord` files. Its main feature is to create 3 datasets for 
+train/val/test by parsing the `.tfrecord` files and extracting a 15s window 
+of the audio and then normalizing the data. If waveform is used, the normalization 
+is simple batch normalization, but if log mel-spectrogram  is used, we normalized 
+with respect to the spectrograms themselves REFERENCE. The file will also create 
+mini-batches of a chosen size.
+
+Again we have left a lot of room for customization. There are functions to exclude 
+certain TIDs from the dataset, to merge certain tags, e.g. rap and hip hop, and a 
+function to only include some tags. The user can also choose the size of the windows 
+mentioned above and whether they are to be extracted from a random position or centred 
+on the audio array. 
+
+Note that the data input pipeline is optimised following 
+the [official guideline](https://www.tensorflow.org/beta/guide/data_performance) 
+from TensorFlow 2.0.
+
+Datasets will automatically be input to the training algorithm. To manually generate 
+a dataset from one or more tfrecord files, you may use the generate_datasets() function 
+in projectname_input.py
+
+**Example:**
+
+If you want to create a train, a validation dataset from one tfrecord file 
+respectively, with top 10 tags from the popularity dataset based on the new 
+`clean_lastfm.db` (ranking before tags merge), with 'pop', and 'alternative' 
+merged, this is how you may do it,
+
+```python
+import projectname_input
+import lastfm
+
+#get top ten tags
+lf = lastfm.LastFm('/srv/data/urop/clean_lastfm.db')
+top_tags = lf.popularity()['tags'][:10].tolist()
+
+#create datasets
+tfrecords = ['/srv/data/urop/tfrecords-waveform/waveform_1.tfrecord', '/srv/data/urop/tfrecords-waveform/waveform_2.tfrecord']
+train, val = projectname_input.generate_datasets(tfrecords, audio_format='waveform', split=[1,1,0], which=[True, True, False], with_tags=top_tags, merge_tags=['pop', 'alternative'])
+```
+
 
 
 
