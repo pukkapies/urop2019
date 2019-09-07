@@ -8,35 +8,20 @@ take a music audio file and predict a list of tags that are relevant to that aud
 ## Table of Contents
 
 * Introduction
-
 * Prerequisites
-
 * Data Cleaning
-
     * Audio
-
     * Database
-
     * Tags
-
 * Data Input Pipeline
-
     * TFRecords
-
     * Dataset Preparation
-
 * Training
-
     * Model and Configuration
-
     * Training loops
-
 * Evaluation tools
-
 * Results
-
 * Reference 
-
 * Contact / Getting Help
 
 (add hyperlinks when Davide agrees with the names)
