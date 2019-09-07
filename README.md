@@ -211,7 +211,7 @@ In 1.
 
 * We first obtained a list of tags from the Lastfm 
 database which have appeared for more than 2000 times. We manually filtered out 
-the tags that we considered as non-genre tags and feed genre tags to the algorithm 
+the tags that we considered as non-genre tags and fed the genre tags to the algorithm 
 `generate_genre_df()`. For each genre tag, the algorithm 
 searched for other similar tags from the 500,000 tags 
 pool (tags which have occurrence ≥ 10). A new dataset was finally generated with 
@@ -459,13 +459,13 @@ Waveform with the following parameters:
 
 (parameters)
 
-![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/log-mel-top50.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform-top50.png)
 
 log mel-spectrogram with the following parameters:
 
 (parameters)
 
-![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform-top50.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/log-mel-top50.png)
 
 
 (need the result from the test script)
