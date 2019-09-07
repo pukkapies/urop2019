@@ -312,6 +312,40 @@ tfrecords = ['/srv/data/urop/tfrecords-waveform/waveform_1.tfrecord', '/srv/data
 train, val = projectname_input.generate_datasets(tfrecords, audio_format='waveform', split=[1,1,0], which=[True, True, False], with_tags=top_tags, merge_tags=['pop', 'alternative'])
 ```
 
+## Training
+### Model and Configuration
+
+
+The model we used was designed by REFERENCE. See 
+[here](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. 
+In our experiment, as mentioned above, we have followed REFERENCE and convert the audio files 
+into **waveform** and **log mel-spectrogram** respectively for training. Since the model pipeline 
+written by REFERENCE is only compatible with TensorFlow 1.x, we have rewritten the model with TensorFlow 2.0 
+syntax in `projectname.py`.
+
+In brief, `projectname.py` contains a frontend for waveform and log mel-spectrogram respectively and a backend model. 
+The `build_model()` function combines a frontend and the backend to produce a complete neural network that will 
+be used in the training algorithm.
+
+In the training phase, parameters are supplied by a json file, instead of being specified as input parameters of 
+the training loop functions. You may generate the json file with the default parameters (
+from our experiment with training parameters suggested by REFERENCE) using the `create_config_json` function.
+
+**Example:**
+
+```python
+projectname.create_config_json('/srv/data/urop/config.json')
+```
+
+A list of available parameters and their properties can be found in the documentation within 'projectname.py'.
+(need more doc on projectname.py!!)
+
+If you wish to change any parameters, e.g. change learning rate to 0.005 and batch 
+size to 32, you may simply do:
+
+```python
+projectname.create_config_json('/srv/data/urop/config2.json', 'learning_rate'=0.005, 'batch_size'=32)
+```
 
 
 
