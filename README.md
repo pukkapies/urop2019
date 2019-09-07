@@ -483,6 +483,7 @@ log mel-spectrogram with the following parameters:
 ![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform-top50.png)
 
 
+(need the result from the test script)
 (our experiments, possibly with some graphs, and further analysis?)
 
 ## Reference
