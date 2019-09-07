@@ -13,23 +13,23 @@ take a music audio file and predict a list of tags that are relevant to that aud
 
 * Data Cleaning
 
- * Audio
+    * Audio
 
- * Database
+    * Database
 
- * Tags
+    * Tags
 
 * Data Input Pipeline
 
- * TFRecords
+    * TFRecords
 
- * Dataset Preparation
+    * Dataset Preparation
 
 * Training
 
- * Model and Configuration
+    * Model and Configuration
 
- * Training loops
+    * Training loops
 
 * Evaluation tools
 
