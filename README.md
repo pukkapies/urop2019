@@ -6,7 +6,38 @@ This project aims to develop a neural network music audio autotagger, i.e. this 
 take a music audio file and predict a list of tags that are relevant to that audio.
 
 ## Table of Contents
-(make a fancy table of contents)
+
+* Introduction
+
+* Prerequisites
+
+* Data Cleaning
+
+⋅⋅* Audio
+
+⋅⋅* Database
+
+⋅⋅* Tags
+
+* Data Input Pipeline
+
+--* TFRecords
+
+--* Dataset Preparation
+
+* Training
+
+--* Model and Configuration
+
+--* Training loops
+
+* Evaluation tools
+
+* Results
+
+* Reference 
+
+* Contact / Getting Help
 
 ## Introduction
 
@@ -440,7 +471,7 @@ windows of the input audio to returns the average prediction as tags in string f
 Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
 
 
-## Contact/Getting Help
+## Contact / Getting Help
 (emails?...)
 
 
