@@ -66,6 +66,8 @@ In the following sections, we will present to you in more details on what we hav
 and a brief tutorial of how you may our codes to make genre predictions to your piece of 
 audio, or even how to make use of our codes to carry out your experiment very easily.
 
+If you are interested to see our experiment result, click here (hyperlink to results)
+
 
 ## Prerequisites
 (hardware and software info that we used)
