@@ -359,5 +359,69 @@ size to 32, you may simply do:
 projectname.create_config_json('/srv/data/urop/config2.json', 'learning_rate'=0.005, 'batch_size'=32)
 ```
 
+### Training Loops
+
+We have written two separate scripts for the training algorithm, `training.py` 
+and `'training_gradtape.py`. The major difference between the two is that 
+the former uses `model.fit` in Keras, whereas the latter contains a custom 
+training loop which performs optimisation by `tf.GradientTape()`. Therefore, 
+if you want to implement some special features from Keras such as callbacks, 
+you may easily amend the codes of `training.py` to achieve that. Otherwise, 
+since the training loop in `training_gradtape.py` is produced from scratch 
+(it only relies on `tf.GradientTape()`, you may edit the codes of the function 
+`train()`  to implement more advanced features. 
+
+If you simply want to train the model with default settings, both of the scripts 
+would work.
+
+Note that both scripts use MirroredStrategy and assume you have one or more GPUs 
+available. On the other hand, both scripts use the TensorBoard and checkpoints, and 
+early stopping can be optionally enabled. The training algorithm in 'training.py' 
+also contains the Keras callback ReduceLROnPlateau as an input option.
+
+**Example**
+To perform a simple training with default settings in waveform for ten epochs on GPU 0,1, 
+
+```
+python training.py waveform, --root-dir /srv/data/urop/tfrecords-waveform --config-path /srvdata/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --epochs 10 --cuda 0 1
+```
+Yoy may control all the parameters within the config.json file.
+
+If you prefer to use `training_gradtape.py`, it works the same way as above to 
+start the training.
+
+Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt
+and recover from the last epoch (works for both scripts). Please refer to the documentation 
+of the corresponding script for more details on how to do this with 
+the `--resume-time` parameter. 
+
+If you want to perform the model training with more flexibility in choosing 
+the training dataset and validation dataset, you may follow the instruction on 
+data input pipeline to generate the datasets and do the following:
+
+```python
+import os
+import tensorflow as tf
+import training
+# initiate strategy
+strategy = tf.distribute.MirroredStrategy()
+
+# wrap the datasets
+train_dataset = strategy.experimental_distribute_dataset(train_dataset)
+valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
+
+#set GPUs
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+
+#parse config
+config, config_optim = training.parse_config('/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db')
+
+# train
+training.train(train_dataset, valid_dataset, frontend='waveform', strategy=strategy, config=config, config_optim=config_optim, epochs=10)
+```
+If you prefer to use `training_gradtape.py`, do exactly the same procedure as above
+except replacing `training` with `training_gradtape`.
+
 
 
