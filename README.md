@@ -39,6 +39,8 @@ take a music audio file and predict a list of tags that are relevant to that aud
 
 * Contact / Getting Help
 
+(add hyperlinks when Davide agrees with the names)
+
 ## Introduction
 
 This project makes use of the freely-available [Million Song Dataset]( http://millionsongdataset.com), 
