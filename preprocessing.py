@@ -318,7 +318,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    # set seed in case interval is specified in order to enable parallel execution
+    # set seed in case interval is specified, in order to enable parallel execution
     if args.start_stop:
         np.random.seed(1)
 
@@ -332,13 +332,9 @@ if __name__ == '__main__':
     if not os.path.isdir(args.output):
         os.makedirs(args.output)
 
-    # create base_name variable, for naming the .tfrecord files
-    if args.format == "log-mel-spectrogram":
-        base_name = os.path.join(args.output, args.format + "_")
-    else:
-        base_name = os.path.join(args.output, "waveform_")
+    base_name = os.path.join(args.output, args.format + "_") # to name the output .tfrecord files
     
-    # if split is specified, save to three files (for training, testing and validating)
+    # if split is specified, save to three files (for training, validating and testing)
     if args.split: 
         # scaling up split
         tot = len(df)
