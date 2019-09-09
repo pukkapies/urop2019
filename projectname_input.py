@@ -62,8 +62,6 @@ import os
 import numpy as np
 import tensorflow as tf
 
-default_tfrecord_root_dir = '/srv/data/urop/tfrecords'
-
 def _parse_features(example, features_dict, shape):
     ''' Parses the serialized tf.Example. '''
 
@@ -254,7 +252,7 @@ def _batch_tuplification(features_dict):
     ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. '''
     return (features_dict['audio'], features_dict['tags'])
 
-def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -266,8 +264,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         Specifies the feature audio format.
 
     split: tuple
-        Specifies the number of train/validation/test files to use when reading the .tfrecord files.
-        If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
 
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
@@ -326,11 +323,8 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
 
     if split is not None:
-        if np.sum(split) == 100:
-            split = np.cumsum(split) * len(tfrecords) // 100
-        else:
-            assert np.sum(split) <= len(tfrecords) , 'split exceeds the number of available .tfrecord files'
-            split = np.cumsum(split)
+        assert len(tfrecords) >= sum(split) , 'too few .tfrecord files to apply split'
+        split = np.cumsum(split)
         tfrecords_split = np.split(tfrecords, split)
         tfrecords_split = tfrecords_split[:-1] # discard last 'empty' split
     else:
@@ -400,7 +394,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -409,8 +403,7 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         Directory containing the .tfrecord files.
 
     split: tuple
-        Specifies the number of train/validation/test files to use when reading the .tfrecord files.
-        If values add up to 100, they will be treated as percentages; otherwise, they will be treated as actual number of files to parse.
+        Specifies the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
 
     which_split: tuple
         Applies boolean mask to the datasets obtained with split. Specifies which datasets are actually returned.
