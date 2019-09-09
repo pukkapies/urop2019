@@ -276,33 +276,19 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
             # resample audio array into 'sample_rate' and convert into 'audio_format'
             processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, n_mels=n_mels)
             
-            # create the tf.Example
+            # load the tf.Example
             example = get_example(processed_array, tid, encoded_tags)
             
-            # save to disk
+            # save the tf.Example into a .tfrecord file
             writer.write(example.SerializeToString())
     
-
-        # try to re-handle exceptions (sometimes it works!!); otherwise, skip
+        # print exceptions
         if set(df.columns) == {'track_id', 'npz_path'}:
             return
         else:
-            for exception in exceptions:
-                print("Handling exception {}...".format(exception['path']), end=" ", flush=True)
-                try:
-                    array, sr = librosa.core.load(exception['path'], sr=None)
-                except:
-                    print("FAIL. Skipping...")
-                    continue
-                print("SUCCESS!")
-                unsampled_audio = {'array': array, 'sr': sr}
-
-                # resample audio array into 'sample_rate' and convert into 'audio_format'
-                processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, n_mels=n_mels)
-                
-                # create and save a tf.Example
-                example = get_example(processed_array, exception['tid'], exception['encoded_tags'])
-                writer.write(example.SerializeToString())
+            print('Could not process the following tracks:')
+            for i, exception in enumerate(exceptions):
+                print(" {:3d}. {} {}".format(i, exception["tid"] + exception["path"]))
             return
 
 if __name__ == '__main__':
