@@ -6,7 +6,7 @@ Notes
 This file can be run as a script, for more information on possible arguments type 
 audio_processing -h in the terminal.
 
-The script can output .tfrecord files in two different ways, depending on arguments:
+The script can output .tfrecord files in two different ways, depfilename_suffix on arguments:
 if --split TRAIN/VAL/TEST is set then 3 .tfrecord files will be created. A train, validation and test file.
 TRAIN, VAL, TEST can be either integer or floats and they dictate what proportion of entries will be saved in each file.
 Example: python audio_processing --split 0.9/0.05/0.05 will save 90% of entries to the train file and 5% each 
@@ -332,7 +332,7 @@ if __name__ == '__main__':
     if not os.path.isdir(args.output):
         os.makedirs(args.output)
 
-    # create base name variable, for naming the .tfrecord files
+    # create base_name variable, for naming the .tfrecord files
     if args.format == "log-mel-spectrogram":
         base_name = os.path.join(args.output, args.format + "_")
     else:
@@ -344,17 +344,21 @@ if __name__ == '__main__':
         tot = len(df)
         split = np.cumsum(args.split) * tot // np.sum(args.split)
 
-
-        # split the DataFrame according to train/val/test split
+        # split the dataframe according to train/val/test split
         df1 = df[:split[0]]
         df2 = df[split[0]:split[1]]
         df3 = df[split[1]:]
 
-        # create + save the three .tfrecord files
-        ending = str(args.split[0]) + '-' + str(args.split[1]) + '-' + str(args.split[2]) + ".tfrecord" 
-        save_example_to_tfrecord(df1, base_name + "train_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
-        save_example_to_tfrecord(df2, base_name + "validation_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
-        save_example_to_tfrecord(df3, base_name + "test_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
+        # create and save the three .tfrecord files
+        filename = ('train_', 'validation_', 'test+')
+        filename_suffix = str(args.split[0]) + '-' + str(args.split[1]) + '-' + str(args.split[2]) + ".tfrecord" 
+
+        for i, df in enumerate((df1, df2, df3)):
+            save_example_to_tfrecord(df, base_name + filename[i] + filename_suffix, audio_format=args.format, 
+                                     root_dir=args.root_dir, tag_path=args.tag_path, 
+                                     multitag=args.tag_path_multi,
+                                     sample_rate=args.sr, n_mels=args.mels,
+                                     verbose=args.verbose)
 
     # otherwise, save to args.num_files equal-sized files
     else:
@@ -362,37 +366,53 @@ if __name__ == '__main__':
         if args.start_stop:
             start, stop = args.start_stop
             for num_file in range(start-1, stop):
-                name = base_name + str(num_file+1) + ".tfrecord"
-                print("Now writing to: " + name)
+                filename = base_name + str(num_file+1) + ".tfrecord"
+                print("Now writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
+                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                        root_dir=args.root_dir, tag_path=args.tag_path, 
+                                        multitag=args.tag_path_multi,
+                                        sample_rate=args.sr, n_mels=args.mels,
+                                        verbose=args.verbose)
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             if stop >= args.num_files:
                 stop = args.num_files-1
-                name = base_name + str(args.num_files) + ".tfrecord"
-                print("Now writing to: " + name)
+                filename = base_name + str(args.num_files) + ".tfrecord"
+                print("Now writing to: " + filename)
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
-
+                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                        root_dir=args.root_dir, tag_path=args.tag_path, 
+                                        multitag=args.tag_path_multi,
+                                        sample_rate=args.sr, n_mels=args.mels,
+                                        verbose=args.verbose)
+        
         # otherwise, create all files at once
         else:
             for num_file in range(args.num_files - 1):
-                name = base_name + str(num_file+1) + ".tfrecord"
-                print("Now writing to: " + name)
+                filename = base_name + str(num_file+1) + ".tfrecord"
+                print("Now writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
-            
+                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                        root_dir=args.root_dir, tag_path=args.tag_path, 
+                                        multitag=args.tag_path_multi,
+                                        sample_rate=args.sr, n_mels=args.mels,
+                                        verbose=args.verbose)
+
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
-            name = base_name + str(args.num_files) + ".tfrecord"
-            print("Now writing to: " + name)
+            filename = base_name + str(args.num_files) + ".tfrecord"
+            print("Now writing to: " + filename)
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             # create and save to the .tfrecord file
-            save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
+            save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                     root_dir=args.root_dir, tag_path=args.tag_path, 
+                                     multitag=args.tag_path_multi,
+                                     sample_rate=args.sr, n_mels=args.mels,
+                                     verbose=args.verbose)
