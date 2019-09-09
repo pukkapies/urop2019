@@ -60,11 +60,13 @@ import tensorflow as tf
 from lastfm import LastFm
 from lastfm import LastFm2Pandas
 
+from utils import MyProgbar
+
 def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
     ''' Processesing array and applying desired audio format 
     
     The array is processed by the following steps:
-    1. Convert to mono (if not already);
+    1. Convert to mono (if not mono already);
     2. Resample to desired sample rate;
     3. Convert audio array to desired audio format.
 
@@ -103,15 +105,16 @@ def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
     
     return array
 
-def get_encoded_tags(tid, fm, n_tags):
+def get_encoded_tags(fm, tid, n_tags):
     ''' Given a tid gets the tags and encodes them with a one-hot encoding 
     
     Parameters
     ----------
-    tid: str
-
     fm: LastFm, LastFm2Pandas
         Any instance of the tags database.
+
+    tid: str
+        The track tid.
 
     n_tags: int
         The number of tag entries in the database.
@@ -234,10 +237,12 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
 
         df.reset_index(drop=True, inplace=True)
 
+        if verbose:
+            progbar = MyProgbar(len(df)) # create an instance of the progress bar
+
         for i, cols in df.iterrows():
-            if verbose and i % 10 == 9:
-                print("{:3d} tracks saved. Last 10 tracks took {:6.4f} s".format(i+1, time.time()-start_loop))
-                start_loop = time.time()
+            if verbose:
+                progbar.add(1) # update progress bar
 
             # unpack cols
             tid, path = cols
@@ -271,11 +276,12 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
             # resample audio array into 'sample_rate' and convert into 'audio_format'
             processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, n_mels=n_mels)
             
-            # create and save a tf.Example
+            # create the tf.Example
             example = get_example(processed_array, tid, encoded_tags)
+            
+            # save to disk
             writer.write(example.SerializeToString())
     
-        print("{} tracks saved in {:10.4f} s".format(i, time.time()-start))
 
         # try to re-handle exceptions (sometimes it works!!); otherwise, skip
         if set(df.columns) == {'track_id', 'npz_path'}:
