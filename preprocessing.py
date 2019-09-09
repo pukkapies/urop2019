@@ -212,7 +212,7 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
         The number of mels in the mel-spectrogram.
     
     multitag: list
-        If not None, encode multiple tags at the same time (feature names will be 'tag-0', 'tag-1' etc.)
+        If not None, encode multiple tags at the same time (provide as list of filenames; feature names will be 'tag-0', 'tag-1' etc.)
 
     verbose: bool
         If True, print progress.
@@ -295,10 +295,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("format", choices=["waveform", "log-mel-spectrogram"], help="output format of audio")
     parser.add_argument("output", help="directory to save .tfrecord files in")
-    parser.add_argument("--root-dir", help="set path to directory containing the .npz files, defaults to path on Boden", default='/srv/data/msd/7digital/')
-    parser.add_argument("--csv-path", help="set path to .csv file, defaults to path on Boden", default='/srv/data/urop/ultimate.csv')
-    parser.add_argument("--tag-path", help="set path to 'clean' tags database, defaults to path on Boden", default='/srv/data/urop/clean_lastfm.db')
-    parser.add_argument("--tag-path-multi", help="encode multiple tags databases at the same time (supply as list of .db files, use --tag-path as root directory)", nargs='+')
+    parser.add_argument("--root-dir", help="set path to directory containing the .npz files (defaults to path on Boden)", default='/srv/data/msd/7digital/')
+    parser.add_argument("--csv-path", help="set path to .csv file (defaults to path on Boden)", default='/srv/data/urop/ultimate.csv')
+    parser.add_argument("--tag-path", help="set path to 'clean' tags database (defaults to path on Boden)", default='/srv/data/urop/clean_lastfm.db')
+    parser.add_argument("--tag-path-multi", help="set path to multiple 'clean' tags databases", nargs='+')
     parser.add_argument("--mels", help="set num of mels to use to encode audio as log-mel-spectrogram, defaults to 128", type=int, default=128)
     parser.add_argument("--sr", help="set sample rate to use to encode audio, defaults to 16kHz", type=int, default=16000)
     parser.add_argument("-n", "--num-files", help="number of files to split the data into, defaults to 100", type=int, default=100)
@@ -309,8 +309,11 @@ if __name__ == '__main__':
     mode.add_argument("-i", "--start-stop", help="specify which interval of files to process (inclusive, starts from 1), use in combination with --n-tfrecords, supply as START STOP", type=int, nargs=2)
 
     args = parser.parse_args()
+
+    if args.tag_path_multi:
+        args.tag_path = os.path.commonpath(args.tag_path_multi) # tag_paths is interpreted as a root directory when multiple databases are specified
     
-    # set seed in case interval is specified, in order to enable parallel execution
+    # set seed in order to enable parallel execution
     if args.start_stop:
         np.random.seed(1)
 
