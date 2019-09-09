@@ -136,32 +136,34 @@ def get_encoded_tags(tid, fm, n_tags):
     return encoded_tags
 
 def _bytes_feature(value):
-    ''' Creates a BytesList Feature '''
+    ''' Creates a BytesList Feature. '''
 
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 def _float_feature(value):
-    ''' Creates a FloatList Feature '''
+    ''' Creates a FloatList Feature. '''
 
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
 def _int64_feature(value):
-    ''' Creases a IntList Feature '''
+    ''' Creases a Int64List Feature. '''
 
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
 def get_example(array, tid, encoded_tags):
-    ''' Gets a tf.train.Example object
+    ''' Gets a tf.train.Example object.
     
     Parameters
     ----------
     array: ndarray
-        The ndarray containing audio data.
+        A ndarray containing audio data.
 
     tid: str
+        The track tid.
 
     encoded_tags: ndarray
-        The ndarray containing the encoded tags as a one-hot vector.
+        A ndarray containing the encoded tags as a one-hot vector (might be a two-dimensional array, if multiple tags 
+        databases are being processed at the same time).
     
     Returns
     -------
@@ -169,17 +171,17 @@ def get_example(array, tid, encoded_tags):
         Contains array, tid and encoded_tags as features.
     '''
 
-    example = tf.train.Example(
-            features=tf.train.Features(
-                feature={
-                    'audio': _float_feature(array.flatten()),
-                    'tid': _bytes_feature(bytes(tid, 'utf8')),
-                    'tags': _int64_feature(encoded_tags)
-            }))
+    feature_dict = {'audio': _float_feature(array.flatten()), 'tid': _bytes_feature(bytes(tid, 'utf8'))} 
 
-    return example
+    if len(encoded_tags.shape) == 1:
+        feature_dict['tag'] = _int64_feature(encoded_tags)
+    else:
+        for i, encoded_tags in enumerate(encoded_tags):
+            feature_dict['tag_' + str(i)] = _int64_feature(encoded_tags)
 
-def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, n_mels=96, verbose=True):
+    return tf.train.Example(features=tf.train.Features(feature=feature_dict))
+
+def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, n_mels=96, multitag=None, verbose=True):
     ''' Creates and saves a TFRecord file.
 
     Parameters
@@ -205,6 +207,9 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
 
     n_mels: int
         The number of mels in the mel-spectrogram.
+    
+    multitag: list
+        If not None, encode multiple tags at the same time (feature names will be 'tag-0', 'tag-1' etc.)
 
     verbose: bool
         If True, print progress.
@@ -215,8 +220,14 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
         start_loop = time.time()
 
         # tags encoded outside the loop for efficiency
-        fm = LastFm(tag_path)
-        n_tags = len(fm.get_tag_nums())
+        if not multitag:
+            fm = LastFm(tag_path)
+            n_tags = len(fm.get_tag_nums())
+        else:
+            fm = [LastFm(os.path.join(tag_path, path)) for path in multitag]
+            n_tags = [len(fm.get_tag_nums()) for fm in fm]
+            assert all(x == n_tags[0] for x in n_tags), 'all databases need to have the same number of tags'
+            n_tags = n_tags[0] # cast back to int
 
         # initialize
         exceptions = []
@@ -232,7 +243,10 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
             tid, path = cols
 
             # encode tags
-            encoded_tags = get_encoded_tags(tid, fm, n_tags)
+            if not multitag:
+                encoded_tags = get_encoded_tags(tid, fm, n_tags)
+            else:
+                encoded_tags = np.array([get_encoded_tags(tid, fm, n_tags) for fm in fm]) # convert to ndarray to ensure consistency with one-dimensional case
             
             # skip tracks which dont have any "clean" tags    
             if encoded_tags.size == 0:
@@ -288,11 +302,12 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("format", choices=["waveform", "log-mel-spectrogram"], help="output format of audio")
-    parser.add_argument("output", help="directory to save .tfrecords files in")
+    parser.add_argument("output", help="directory to save .tfrecord files in")
     parser.add_argument("--root-dir", help="set path to directory containing the .npz files, defaults to path on Boden", default='/srv/data/msd/7digital/')
-    parser.add_argument("--tag-path", help="set path to 'clean' tags database, defaults to path on Boden", default='/srv/data/urop/clean_lastfm.db')
     parser.add_argument("--csv-path", help="set path to .csv file, defaults to path on Boden", default='/srv/data/urop/ultimate.csv')
-    parser.add_argument("--mels", help="set num of mels to use to encode audio as log-mel-spec, defaults to 96", type=int, default=96)
+    parser.add_argument("--tag-path", help="set path to 'clean' tags database, defaults to path on Boden", default='/srv/data/urop/clean_lastfm.db')
+    parser.add_argument("--tag-path-multi", help="encode multiple tags databases at the same time (supply as list of .db files, use --tag-path as root directory)", nargs='+')
+    parser.add_argument("--mels", help="set num of mels to use to encode audio as log-mel-spectrogram, defaults to 128", type=int, default=128)
     parser.add_argument("--sr", help="set sample rate to use to encode audio, defaults to 16kHz", type=int, default=16000)
     parser.add_argument("-n", "--num-files", help="number of files to split the data into, defaults to 100", type=int, default=100)
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -336,10 +351,10 @@ if __name__ == '__main__':
         df3 = df[split[1]:]
 
         # create + save the three .tfrecord files
-        ending = str(args.split[0]) + '-'+str(args.split[1]) + '-'+str(args.split[2]) + ".tfrecord" 
-        save_example_to_tfrecord(df1, base_name + "train_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
-        save_example_to_tfrecord(df2, base_name + "validation_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
-        save_example_to_tfrecord(df3, base_name + "test_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+        ending = str(args.split[0]) + '-' + str(args.split[1]) + '-' + str(args.split[2]) + ".tfrecord" 
+        save_example_to_tfrecord(df1, base_name + "train_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
+        save_example_to_tfrecord(df2, base_name + "validation_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
+        save_example_to_tfrecord(df3, base_name + "test_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
 
     # otherwise, save to args.num_files equal-sized files
     else:
@@ -352,7 +367,7 @@ if __name__ == '__main__':
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             if stop >= args.num_files:
@@ -362,7 +377,7 @@ if __name__ == '__main__':
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
 
         # otherwise, create all files at once
         else:
@@ -372,7 +387,7 @@ if __name__ == '__main__':
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
             
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             name = base_name + str(args.num_files) + ".tfrecord"
@@ -380,4 +395,4 @@ if __name__ == '__main__':
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             # create and save to the .tfrecord file
-            save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+            save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, multitag=args.tag_path_multi, verbose=args.verbose)
