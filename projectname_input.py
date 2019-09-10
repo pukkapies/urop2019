@@ -252,7 +252,7 @@ def _batch_tuplification(features_dict):
     ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. '''
     return (features_dict['audio'], features_dict['tags'])
 
-def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -323,7 +323,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
 
     if split is not None:
-        assert len(tfrecords) >= sum(split) , 'too few .tfrecord files to apply split'
+        assert tfrecords.size >= sum(split) , 'too few .tfrecord files to apply split'
         split = np.cumsum(split)
         tfrecords_split = np.split(tfrecords, split)
         tfrecords_split = tfrecords_split[:-1] # discard last 'empty' split
@@ -333,7 +333,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     datasets = []
 
     for files_list in tfrecords_split:
-        if len(files_list) > 1: # read files in parallel (number of parallel threads specified by cycle_length)
+        if files_list.size > 1: # read files in parallel (number of parallel threads specified by cycle_length)
             files = tf.data.Dataset.from_tensor_slices(files_list)
             dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=cycle_length, block_length=1, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         else:
@@ -394,7 +394,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=2, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
