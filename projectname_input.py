@@ -454,4 +454,9 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
             tfrecords.append(os.path.abspath(os.path.join(tfrecords_dir, file)))
 
-    return generate_datasets(tfrecords, audio_format, split, which_split, sample_rate, batch_size, cycle_length, shuffle, buffer_size, window_size, random, with_tids, with_tags, merge_tags, num_tags, repeat, as_tuple)
+    return generate_datasets(tfrecords, audio_format, split=split, whici_split=which_split, 
+                             sample_rate=sample_rate, batch_size=batch_size, cycle_length=cycle_length, 
+                             shuffle=shuffle, buffer_size=buffer_size, 
+                             window_size=window_size, random=random, 
+                             with_tids=with_tids, with_tags=with_tags, merge_tags=merge_tags, num_tags=num_tags, 
+                             repeat=repeat, as_tuple=as_tuple)
