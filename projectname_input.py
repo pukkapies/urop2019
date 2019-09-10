@@ -47,7 +47,7 @@ Functions
 - _batch_normalization
     Ensure zero mean and unit variance within a batch.
 
-- _batch_tuplification
+- _tuplify
     Transform features from dict to tuple.
 
 - generate_datasets
@@ -271,17 +271,20 @@ def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, rand
     return features_dict
 
 def _spect_normalization(features_dict):
-    mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2], keepdims=True)
-    features_dict['audio'] = tf.divide(tf.subtract(features_dict['audio'], mean), tf.sqrt(variance+tf.constant(0.000001)))
+    ''' Normalizes the log-mel-spectrograms within a batch. '''
+
+    mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2], keep_dims=True)
+    features_dict['audio'] = tf.nn.batch_normalization(features_dict['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
     return features_dict
 
 def _batch_normalization(features_dict):
-    ''' Normalizes a batch to ensure zero mean and unit variance. '''
+    ''' Normalizes a batch. '''
+
     mean, variance = tf.nn.moments(features_dict['audio'], axes=[0])
     features_dict['audio'] = tf.nn.batch_normalization(features_dict['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
     return features_dict
 
-def _batch_tuplification(features_dict, which_tags=None):
+def _tuplify(features_dict, which_tags=None):
     ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. 
     
     Parameters
@@ -439,7 +442,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         
         # convert features from dict into tuple
         if as_tuple:
-            dataset = dataset.map(lambda x: _batch_tuplification(x, which_tags=default_tags_db), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(lambda x: _tuplify(x, which_tags=default_tags_db), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         dataset = dataset.repeat(repeat)
         dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
