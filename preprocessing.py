@@ -249,9 +249,9 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
 
             # encode tags
             if not multitag:
-                encoded_tags = get_encoded_tags(tid, fm, n_tags)
+                encoded_tags = get_encoded_tags(fm, tid, n_tags)
             else:
-                encoded_tags = np.array([get_encoded_tags(tid, fm, n_tags) for fm in fm]) # convert to ndarray to ensure consistency with one-dimensional case
+                encoded_tags = np.array([get_encoded_tags(fm, tid, n_tags) for fm in fm]) # convert to ndarray to ensure consistency with one-dimensional case
             
             # skip tracks which dont have any "clean" tags    
             if encoded_tags.size == 0:
@@ -310,8 +310,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # sanity check
     if args.tag_path_multi:
+        args.tag_path_multi = [os.path.expanduser(path) for path in args.tag_path_multi]
         args.tag_path = os.path.commonpath(args.tag_path_multi) # tag_paths is interpreted as a root directory when multiple databases are specified
+        args.tag_path_multi = [os.path.relpath(path, start=args.tag_path) for path in args.tag_path_multi]
     
     # set seed in order to enable parallel execution
     if args.start_stop:
@@ -358,7 +361,7 @@ if __name__ == '__main__':
             start, stop = args.start_stop
             for num_file in range(start-1, stop):
                 filename = base_name + str(num_file+1) + ".tfrecord"
-                print("Now writing to: " + filename)
+                print("Writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save
@@ -372,7 +375,7 @@ if __name__ == '__main__':
             if stop >= args.num_files:
                 stop = args.num_files-1
                 filename = base_name + str(args.num_files) + ".tfrecord"
-                print("Now writing to: " + filename)
+                print("Writing to: " + filename)
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 # create and save to the .tfrecord file
@@ -386,7 +389,7 @@ if __name__ == '__main__':
         else:
             for num_file in range(args.num_files - 1):
                 filename = base_name + str(num_file+1) + ".tfrecord"
-                print("Now writing to: " + filename)
+                print("Writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save to the .tfrecord file
@@ -398,7 +401,7 @@ if __name__ == '__main__':
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             filename = base_name + str(args.num_files) + ".tfrecord"
-            print("Now writing to: " + filename)
+            print("Writing to: " + filename)
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             # create and save to the .tfrecord file
