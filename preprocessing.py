@@ -177,14 +177,14 @@ def get_example(array, tid, encoded_tags):
     feature_dict = {'audio': _float_feature(array.flatten()), 'tid': _bytes_feature(bytes(tid, 'utf8'))} 
 
     if len(encoded_tags.shape) == 1:
-        feature_dict['tag'] = _int64_feature(encoded_tags)
+        feature_dict['tags'] = _int64_feature(encoded_tags)
     else:
         for i, encoded_tags in enumerate(encoded_tags):
-            feature_dict['tag_' + str(i)] = _int64_feature(encoded_tags)
+            feature_dict['tags_' + str(i)] = _int64_feature(encoded_tags)
 
     return tf.train.Example(features=tf.train.Features(feature=feature_dict))
 
-def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, n_mels=96, multitag=None, verbose=True):
+def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, n_mels=96, multitag=False, verbose=False):
     ''' Creates and saves a TFRecord file.
 
     Parameters
@@ -212,17 +212,13 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
         The number of mels in the mel-spectrogram.
     
     multitag: list
-        If not None, encode multiple tags at the same time (provide as list of filenames; feature names will be 'tag-0', 'tag-1' etc.)
+        If True, encode multiple tags at the same time (provide as list of filenames; feature names will be 'tags-0', 'tags-1' etc.)
 
     verbose: bool
         If True, print progress.
     '''
 
     with tf.io.TFRecordWriter(output_path) as writer:
-        start = time.time()
-        start_loop = time.time()
-
-        # tags encoded outside the loop for efficiency
         if not multitag:
             fm = LastFm(tag_path)
             n_tags = len(fm.get_tag_nums())
