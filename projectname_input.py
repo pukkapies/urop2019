@@ -77,7 +77,7 @@ def _merge(features_dict, tags):
     features_dict: dict
         Dict of features (as provided by .map).
 
-    merge_tags: list or list-like
+    tags: list or list-like
         List of lists of tags to be merged. Writes 1 for all tags in the hot-encoded vector whenever at least one tag of the list is present.
 
     Examples
@@ -88,22 +88,32 @@ def _merge(features_dict, tags):
     >>> _merge(features, merge_tags=[[0, 1], [3, 4]])
     features['tags']: [1, 1, 1, 0, 0] 
     '''
-    tags = tf.dtypes.cast(tags, tf.int64)
-    n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
-    feature_tags = tf.dtypes.cast(features_dict['tags'], tf.bool)
+    tags_databases = len(features_dict) - 2 # check if multiple databases have been provided
     
+    tags = tf.dtypes.cast(tags, tf.int64)
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
     vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
     tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
     tags = tf.sparse.to_dense(tags)
     tags = tf.dtypes.cast(tags, tf.bool)
-    # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
-    features_dict['tags'] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
-    features_dict['tags'] = tf.cast(features_dict['tags'], tf.int64)
+    
+    def _fn(tag_str): # avoid repetitions of code by defining a handy function
+        n_tags = tf.cast(tf.shape(features_dict[tag_str]), tf.int64)
+        feature_tags = tf.dtypes.cast(features_dict[tag_str], tf.bool)
+        # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
+        features_dict[tag_str] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
+        features_dict[tag_str] = tf.cast(features_dict[tag_str], tf.int64)
+
+    if tags_databases > 1:
+        for i in range(tags_databases):
+            _fn('tags_' + str(i))
+    else:
+        _fn('tags')
+
     return features_dict
 
-def _tag_filter(features_dict, tags):
+def _tag_filter(features_dict, tags, which_tags=None):
     ''' Removes unwanted tids from the dataset based on given tags (use with tf.data.Dataset.filter).
     
     Parameters
@@ -113,11 +123,21 @@ def _tag_filter(features_dict, tags):
 
     tags: list or list-like
         List containing tag idxs (as int) to be "allowed" in the output dataset.
-    '''
-    tags = tf.dtypes.cast(tags, dtype=tf.int64)
-    n_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
 
-    feature_tags = tf.math.equal(tf.unstack(features_dict['tags']), tf.constant(1, dtype=tf.int64)) # bool tensor where True/False correspond to has/doesn't have tag
+    which_tags: int
+        If not None, specifies the database to filter on (when multiple databases are provided).
+    '''
+
+    tags = tf.dtypes.cast(tags, dtype=tf.int64)
+    
+    if which_tags is None:
+        dict_key = 'tags'
+    else:
+        assert isinstance(which_tags, int), 'which_tags must be an integer'
+        dict_key = 'tags_' + str(which_tags)
+    
+    n_tags = tf.cast(tf.shape(features_dict[dict_key]), tf.int64)
+    feature_tags = tf.math.equal(tf.unstack(features_dict[dict_key]), tf.constant(1, dtype=tf.int64)) # bool tensor where True/False correspond to has/doesn't have tag
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
     vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
     tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=n_tags)
@@ -137,6 +157,7 @@ def _tid_filter(features_dict, tids):
     tids: list or list-like
         List containing tids (as strings) to be "allowed" in the output dataset.
     '''
+
     tids = tf.constant(tids, tf.string)
     return tf.math.reduce_any(tf.math.equal(tids, features_dict['tid']))
 
@@ -151,9 +172,21 @@ def _tag_filter_hotenc_mask(features_dict, tags):
     tags: list or list-like
         List containing tag idxs used for filtering with _tag_filter.
     '''
+    
+    tags_databases = len(features_dict) - 2 # check if multiple databases have been provided
+    
     tags = tf.dtypes.cast(tags, dtype=tf.int64)
     idxs = tf.subtract(tf.sort(tags), tf.constant(1, dtype=tf.int64))
-    features_dict['tags'] = tf.gather(features_dict['tags'], idxs)
+
+    def _fn(tag_str): # avoid repetitions of code by defining a handy function
+        features_dict[tag_str] = tf.gather(features_dict[tag_str], idxs)
+    
+    if tags_databases > 1:
+        for i in range(tags_databases):
+            _fn('tags_' + str(i))
+    else:
+        _fn('tags')
+
     return features_dict
 
 def _window_waveform(features_dict, sample_rate, window_size=15, random=False):
@@ -248,11 +281,25 @@ def _batch_normalization(features_dict):
     features_dict['audio'] = tf.nn.batch_normalization(features_dict['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
     return features_dict
 
-def _batch_tuplification(features_dict):
-    ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. '''
-    return (features_dict['audio'], features_dict['tags'])
+def _batch_tuplification(features_dict, which_tags=None):
+    ''' Transforms a batch into (audio, tags) tuples, ready for training or evaluation with Keras. 
+    
+    Parameters
+    ----------
+    features_dict: dict
+        Dict of features (as provided by .filter).
 
-def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=None, as_tuple=True):
+    which_tags: int
+        If not None, specifies the database to use (when multiple databases are provided).
+    '''
+    
+    if which_tags is None:
+        return (features_dict['audio'], features_dict['tags'])
+    else:
+        assert isinstance(which_tags, int), 'which_tags must be an integer'
+        return (features_dict['audio'], features_dict['tags_' + str(which_tags)])
+
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, n_mels=96, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, n_tags=155, n_tags_databases=1, default_tags_db=None, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -289,9 +336,18 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
 
     random: bool
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
+
+    n_mels: int
+        The number of mels in the mel-spectrogram.
     
-    num_tags: int
-        Specifies the total number of tags.
+    n_tags: int
+        The total number of tags.
+    
+    n_tags_databases: int
+        The total number of tags databases used.
+    
+    default_tags_db: int
+        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
 
     with_tids: list
         If not None, contains the tids to be trained on.
@@ -309,13 +365,18 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         If True, discards tid's and transforms features into (audio, tags) tuples.
     '''
 
-    AUDIO_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (96, -1)} # set audio tensors dense shape
+    assert isinstance(n_mels, int), 'n_mels must be an integer'
 
-    AUDIO_FEATURES_DESCRIPTION = {
-        'audio': tf.io.VarLenFeature(tf.float32),
-        'tid': tf.io.FixedLenFeature((), tf.string),
-        'tags': tf.io.FixedLenFeature((num_tags, ), tf.int64)
-    }
+    AUDIO_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (n_mels, -1)} # set audio tensors dense shape
+
+    AUDIO_FEATURES_DESCRIPTION = {'audio': tf.io.VarLenFeature(tf.float32), 'tid': tf.io.FixedLenFeature((), tf.string)} # tags will be added just below
+
+    # check if multiple databases have been provided
+    if n_tags_databases == 1:
+        AUDIO_FEATURES_DESCRIPTION['tags'] = tf.io.FixedLenFeature((n_tags, ), tf.int64)
+    else:
+        for i in range(n_tags_databases):
+            AUDIO_FEATURES_DESCRIPTION['tags_' + str(i)] = tf.io.FixedLenFeature((n_tags, ), tf.int64)
 
     assert audio_format in ('waveform', 'log-mel-spectrogram') , 'invalid audio format'
     
@@ -352,10 +413,10 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
                 for tags in merge_tags:
                       dataset = dataset.map(lambda x: _merge(x, tags))
                     
-            dataset = dataset.filter(lambda x: _tag_filter(x, with_tags)).map(lambda y: _tag_filter_hotenc_mask(y, with_tags))
+            dataset = dataset.filter(lambda x: _tag_filter(x, tags=with_tags, which_tags=default_tags_db)).map(lambda y: _tag_filter_hotenc_mask(y, tags=with_tags))
                         
         if with_tids is not None:
-            dataset = dataset.filter(lambda x: _tid_filter(x, with_tids))
+            dataset = dataset.filter(lambda x: _tid_filter(x, tids=with_tids))
         
         # slice into audio windows
         
@@ -375,7 +436,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         
         # convert features from dict into tuple
         if as_tuple:
-            dataset = dataset.map(_batch_tuplification, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            dataset = dataset.map(lambda x: _batch_tuplification(x, which_tags=default_tags_db), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         dataset = dataset.repeat(repeat)
         dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
@@ -394,7 +455,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, repeat=1, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, n_mels=96, batch_size=32, cycle_length=1, shuffle=True, buffer_size=10000, window_size=15, random=False, with_tids=None, with_tags=None, merge_tags=None, n_tags=155, n_tags_databases=1, default_tags_db=None, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -429,8 +490,17 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
     random: bool
         Specifies how the window is to be extracted. If True, slices the window randomly (default is pick from the middle).
     
-    num_tags: int
-        Specifies the total number of tags.
+    n_mels: int
+        The number of mels in the mel-spectrogram.
+    
+    n_tags: int
+        The total number of tags.
+    
+    n_tags_databases: int
+        The total number of tags databases used.
+    
+    default_tags_db: int
+        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
 
     with_tids: list
         If not None, contains the tids to be trained on.
@@ -454,9 +524,9 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         if file.endswith(".tfrecord") and file.split('_')[0] == audio_format:
             tfrecords.append(os.path.abspath(os.path.join(tfrecords_dir, file)))
 
-    return generate_datasets(tfrecords, audio_format, split=split, whici_split=which_split, 
-                             sample_rate=sample_rate, batch_size=batch_size, cycle_length=cycle_length, 
-                             shuffle=shuffle, buffer_size=buffer_size, 
+    return generate_datasets(tfrecords, audio_format, split=split, which_split=which_split, 
+                             sample_rate=sample_rate, n_mels=n_mels, 
+                             batch_size=batch_size, cycle_length=cycle_length, shuffle=shuffle, buffer_size=buffer_size, 
                              window_size=window_size, random=random, 
-                             with_tids=with_tids, with_tags=with_tags, merge_tags=merge_tags, num_tags=num_tags, 
+                             with_tids=with_tids, with_tags=with_tags, merge_tags=merge_tags, n_tags=n_tags, n_tags_databases=n_tags_databases, 
                              repeat=repeat, as_tuple=as_tuple)
