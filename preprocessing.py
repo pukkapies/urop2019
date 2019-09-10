@@ -62,7 +62,7 @@ from lastfm import LastFm2Pandas
 
 from utils import MyProgbar
 
-def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
+def process_array(array, audio_format, sr_in, sr_out = 16000, num_mels = 96):
     ''' Processesing array and applying desired audio format 
     
     The array is processed by the following steps:
@@ -84,7 +84,7 @@ def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
     sr_out: int
         The sample rate of the output processed audio.
 
-    n_mels: int
+    num_mels: int
         The number of mels in the mel-spectrogram.
 
     Returns
@@ -101,7 +101,7 @@ def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
     array = librosa.resample(array, sr_in, sr_out)
     
     if audio_format == "log-mel-spectrogram":
-        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, sr_out, n_mels=n_mels))
+        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, sr_out, num_mels=num_mels))
     
     return array
 
@@ -184,7 +184,7 @@ def get_example(array, tid, encoded_tags):
 
     return tf.train.Example(features=tf.train.Features(feature=feature_dict))
 
-def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, n_mels=96, multitag=False, verbose=False):
+def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, num_mels=96, multitag=False, verbose=False):
     ''' Creates and saves a TFRecord file.
 
     Parameters
@@ -208,7 +208,7 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
     sample_rate: int
         The sample rate to use when serializing the audio.
 
-    n_mels: int
+    num_mels: int
         The number of mels in the mel-spectrogram.
     
     multitag: list
@@ -270,7 +270,7 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
                 unsampled_audio = {'array': array, 'sr': sr}
 
             # resample audio array into 'sample_rate' and convert into 'audio_format'
-            processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, n_mels=n_mels)
+            processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, num_mels=num_mels)
             
             # load the tf.Example
             example = get_example(processed_array, tid, encoded_tags)
@@ -347,7 +347,7 @@ if __name__ == '__main__':
             save_example_to_tfrecord(df, base_name + filename[i] + filename_suffix, audio_format=args.format, 
                                      root_dir=args.root_dir, tag_path=args.tag_path, 
                                      multitag=args.tag_path_multi,
-                                     sample_rate=args.sr, n_mels=args.mels,
+                                     sample_rate=args.sr, num_mels=args.mels,
                                      verbose=args.verbose)
 
     # otherwise, save to args.num_files equal-sized files
@@ -364,7 +364,7 @@ if __name__ == '__main__':
                 save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
                                         root_dir=args.root_dir, tag_path=args.tag_path, 
                                         multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, n_mels=args.mels,
+                                        sample_rate=args.sr, num_mels=args.mels,
                                         verbose=args.verbose)
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
@@ -378,7 +378,7 @@ if __name__ == '__main__':
                 save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
                                         root_dir=args.root_dir, tag_path=args.tag_path, 
                                         multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, n_mels=args.mels,
+                                        sample_rate=args.sr, num_mels=args.mels,
                                         verbose=args.verbose)
         
         # otherwise, create all files at once
@@ -392,7 +392,7 @@ if __name__ == '__main__':
                 save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
                                         root_dir=args.root_dir, tag_path=args.tag_path, 
                                         multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, n_mels=args.mels,
+                                        sample_rate=args.sr, num_mels=args.mels,
                                         verbose=args.verbose)
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
@@ -404,5 +404,5 @@ if __name__ == '__main__':
             save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
                                         root_dir=args.root_dir, tag_path=args.tag_path, 
                                         multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, n_mels=args.mels,
+                                        sample_rate=args.sr, num_mels=args.mels,
                                         verbose=args.verbose)
