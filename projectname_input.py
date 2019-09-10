@@ -371,10 +371,15 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
 
     # check if multiple databases have been provided
     if num_tags_databases == 1:
+        # add standard feature 'tags'
         AUDIO_FEATURES_DESCRIPTION['tags'] = tf.io.FixedLenFeature((num_tags, ), tf.int64)
     else:
+        # add feature 'tags_i' for each i-th tags database provided
         for i in range(num_tags_databases):
             AUDIO_FEATURES_DESCRIPTION['tags_' + str(i)] = tf.io.FixedLenFeature((num_tags, ), tf.int64)
+        
+        # if default_tags_db has not been provided, default to 0 (otherwise as_tuple would raise error)
+        default_tags_db = default_tags_db or 0
 
     assert audio_format in ('waveform', 'log-mel-spectrogram') , 'invalid audio format'
     
@@ -526,5 +531,5 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
                              sample_rate=sample_rate, num_mels=num_mels, 
                              batch_size=batch_size, cycle_length=cycle_length, shuffle=shuffle, buffer_size=buffer_size, 
                              window_size=window_size, random=random, 
-                             with_tids=with_tids, with_tags=with_tags, merge_tags=merge_tags, num_tags=num_tags, num_tags_databases=num_tags_databases, 
+                             with_tids=with_tids, with_tags=with_tags, merge_tags=merge_tags, num_tags=num_tags, num_tags_databases=num_tags_databases, default_tags_db=default_tags_db,
                              repeat=repeat, as_tuple=as_tuple)
