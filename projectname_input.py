@@ -365,8 +365,6 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         If True, discards tid's and transforms features into (audio, tags) tuples.
     '''
 
-    assert isinstance(num_mels, int), 'num_mels must be an integer'
-
     AUDIO_SHAPE = {'waveform': (-1, ), 'log-mel-spectrogram': (num_mels, -1)} # set audio tensors dense shape
 
     AUDIO_FEATURES_DESCRIPTION = {'audio': tf.io.VarLenFeature(tf.float32), 'tid': tf.io.FixedLenFeature((), tf.string)} # tags will be added just below
