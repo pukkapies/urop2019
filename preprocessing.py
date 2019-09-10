@@ -101,7 +101,7 @@ def process_array(array, audio_format, sr_in, sr_out = 16000, num_mels = 96):
     array = librosa.resample(array, sr_in, sr_out)
     
     if audio_format == "log-mel-spectrogram":
-        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, sr_out, num_mels=num_mels))
+        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, sr_out, n_mels=num_mels))
     
     return array
 
@@ -291,7 +291,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("format", choices=["waveform", "log-mel-spectrogram"], help="output format of audio")
     parser.add_argument("output", help="directory to save .tfrecord files in")
-    parser.add_argument("--root-dir", help="set path to directory containing the .npz files (defaults to path on Boden)", default='/srv/data/msd/7digital/')
+    parser.add_argument("--root-dir", help="set path to directory containing the .npz or .mp3 files (defaults to path on Boden)", default='/srv/data/msd/7digital/')
     parser.add_argument("--csv-path", help="set path to .csv file (defaults to path on Boden)", default='/srv/data/urop/ultimate.csv')
     parser.add_argument("--tag-path", help="set path to 'clean' tags database (defaults to path on Boden)", default='/srv/data/urop/clean_lastfm.db')
     parser.add_argument("--tag-path-multi", help="set path to multiple 'clean' tags databases", nargs='+')
