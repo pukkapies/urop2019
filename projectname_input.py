@@ -273,7 +273,7 @@ def _window_log_mel_spectrogram(features_dict, sample_rate, window_size=15, rand
 def _spect_normalization(features_dict):
     ''' Normalizes the log-mel-spectrograms within a batch. '''
 
-    mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2], keep_dims=True)
+    mean, variance = tf.nn.moments(features_dict['audio'], axes=[1,2], keepdims=True)
     features_dict['audio'] = tf.nn.batch_normalization(features_dict['audio'], mean, variance, offset = 0, scale = 1, variance_epsilon = .000001)
     return features_dict
 
