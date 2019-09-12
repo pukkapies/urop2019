@@ -377,8 +377,6 @@ In short, it contains five categories of parameters:
 
 5. **config**: any parameters related to the training algorithm and the dataset input pipeline.
 
-(need more doc on projectname.py!!)
-
 If you wish to change any parameters, e.g. change learning rate to 0.005 and batch 
 size to 32, you may simply do:
 
