@@ -1022,7 +1022,8 @@ class Matrix():
         else:
             tags = self.m_tags
 
-        fig, ax = plt.subplots(figsize=[10,10])
+        res = correlation_matrix.shape[0]//10
+        fig, ax = plt.subplots(figsize=[res,res])
         im = ax.imshow(correlation_matrix, cmap=matplotlib.cm.Blues)
         ax.set_xticks(np.arange(len(tags)))
         ax.set_yticks(np.arange(len(tags)))
