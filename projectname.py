@@ -98,8 +98,8 @@ def create_config_json(config_path, **kwargs):
     }
 
     optimizer = {
-        'name': 'SGD',
-        'learning_rate': 0.01,
+        'name': 'Adam',
+        'learning_rate': 0.001,
     }
 
     tags = {
@@ -141,7 +141,7 @@ def create_config_json(config_path, **kwargs):
     for key, value in kwargs.items():
         substitute_into_dict(key, value)
     
-    if not os.path.isfile(config_path):
+    if not config_path[-5:] =='.json':
         config_path = os.path.join(os.path.abspath(config_path),'config.json')
     
     with open(config_path, 'w') as f:
