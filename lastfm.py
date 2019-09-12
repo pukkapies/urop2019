@@ -414,7 +414,7 @@ class LastFm2Pandas():
         conn.close()
 
     def tid_to_tid_num(self, tid, order=False):
-        ''' Returns tid_num(s) given tid(s)
+        ''' Returns tid_num(s) given tid(s).
         
         Parameters
         ----------
@@ -443,7 +443,7 @@ class LastFm2Pandas():
         return self.tids.loc[self.tids.tid.isin(tid)].index.tolist()
 
     def tid_num_to_tid(self, tid_num, order=False):
-        ''' Returns tid(s) given tid_num(s)
+        ''' Returns tid(s) given tid_num(s).
         
         Parameters
         ----------
@@ -471,7 +471,7 @@ class LastFm2Pandas():
         return self.tids.loc[self.tids.index.isin(tid_num), 'tid'].values
 
     def tid_num_to_tag_nums(self, tid_num):
-        ''' Returns tag_nums given tid_num(s)
+        ''' Returns tag_nums given tid_num(s).
         
         Parameters
         ----------
@@ -495,7 +495,7 @@ class LastFm2Pandas():
         return pd.Series(tag_nums, index=tid_num)
 
     def tid_num_to_tags(self, tid_num):
-        ''' Gets tags for given tid_num(s) 
+        ''' Gets tags for given tid_num(s).
         
         Parameters
         ----------
@@ -519,7 +519,7 @@ class LastFm2Pandas():
         return tag_nums.map(self.tag_num_to_tag)
 
     def tag_num_to_tag(self, tag_num, order=False):
-        ''' Returns tag(s) given tag_num(s) 
+        ''' Returns tag(s) given tag_num(s).
 
         Parameters
         ----------
@@ -548,7 +548,7 @@ class LastFm2Pandas():
         return self.tags.loc[self.tags.index.isin(tag_num), 'tag'].values
 
     def tag_to_tag_num(self, tag, order=False):
-        ''' Returns tag_num(s) given tag(s)
+        ''' Returns tag_num(s) given tag(s).
 
         Parameters
         ----------
