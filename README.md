@@ -485,7 +485,7 @@ The parameters we have used can be found [here](https://github.com/pukkapies/uro
 ![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/logmelspectrogram_1.png)
 
 |                                         | AUC-ROC |  AUC-PR |
-| --------------------------------------- |:-------:| -------:|
+| --------------------------------------- |:-------:|:-------:|
 | Waveform (from us)                      |         |         |
 | Log mel-spectrogram (from us)           |         |         |
 | Waveform (Pons, et al., 2018)           | 87.41   | 28.53   |
