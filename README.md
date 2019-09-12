@@ -113,7 +113,7 @@ removing unnecessary columns to produce the 'ultimate' dataframe.
 This dataframe acts as a clean dataset containing all the essential information 
 about the tracks and will be used throughout the project.
 
-For more information about how these functions are used, see ????(the smaller readme)
+For more information about how these functions are used, see [here](https://github.com/pukkapies/urop2019/blob/all_readme/msd/README.md)
 
 
 **Example**
