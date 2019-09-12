@@ -455,17 +455,42 @@ windows of the input audio to returns the average prediction as tags in string f
 
 ## Results
 
-Waveform with the following parameters:
+**Experiment 1:**
+
+Below are our results trained from waveform and log mel-spectrogram respectively with the following 50 tags.
+
+Waveform:
+
+Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout',
+ 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 'folk', 'chill',
+ 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 'rock n roll', 'country',
+ 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop',
+ 'trance', 'trip-hop']
 
 The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform_config_1.json)
 
 ![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform_1.png)
 
+
 log mel-spectrogram with the following parameters:
+
+Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout',
+ 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 'folk', 'chill',
+ 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 'rock n roll', 'country',
+ 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop',
+ 'trance', 'trip-hop']
 
 The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/all_readme/results/logmelspectrogram_config_1.json)
 
 ![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/logmelspectrogram_1.png)
+
+|                                         | AUC-ROC |  AUC-PR |
+| --------------------------------------- |:-------:| -------:|
+| Waveform (from us)                      |         |         |
+| Log mel-spectrogram (from us)           |         |         |
+| Waveform (Pons, et al., 2018)           | 87.41   | 28.53   |
+| Log mel-spectrogram (Pons, et al., 2018)| 88.75   | 31.24   |
+
 
 
 (need the result from the test script)
