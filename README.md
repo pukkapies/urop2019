@@ -53,7 +53,15 @@ If you are interested to see our experiment result, click here (hyperlink to res
 
 
 ## Prerequisites
-(hardware and software info that we used)
+
+* Python 3.6
+* One or more CUDA-enabled GPUs
+* Mac or Linux environment
+* Libraries Required:
+    * [TensorFlow](https://www.tensorflow.org/beta) 2.0.0-rc0 GPU version or above
+    * [Librosa](https://github.com/librosa/librosa) 0.7.0 + ffmpeg
+    * [Mutagen](https://mutagen.readthedocs.io/en/latest/) 1.42.0
+    * Other common libraries 
 
 ## Data Cleaning
 ### Audio
@@ -490,18 +498,33 @@ The parameters we have used can be found [here](https://github.com/pukkapies/uro
 | Waveform (Pons, et al., 2018)           | 87.41   | 28.53   |
 | Log mel-spectrogram (Pons, et al., 2018)| 88.75   | 31.24   |
 
+In general, we can see that training the MSD dataset on log mel-spectrogram has a better 
+performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018).
+Note that (Pons, et al., 2018) suggests that when the size of the dataset is large enough, the
+quality difference between waveform and log mel-spectrogram model is insignificant (with 1,000,000 songs)
 
+On the other hand, in our experiment, we have cleaned the Last.fm database by
+removing tags which are more subjective or have vague meaning, which was not done in (Pons, et al., 2018). 
+According to the results above, the AUC-PR of both waveform and log 
+mel-spectrogram has significantly improved from (Pons, et al., 2018) respectively. In the
+meantime, the AUC-ROC scores of our experiments are comparable to those produced by
+(Pons, et al., 2018). We have, therefore, proven that training
+the model on cleaner tags with both waveform and log mel-spectrogram will improve the quality
+of the models. 
 
-(need the result from the test script)
-(our experiments, possibly with some graphs, and further analysis?)
+(any further analysis?)
 
 ## Reference
 Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
 
 
 ## Contact / Getting Help
-(emails?...)
 
+calle.sonne18@imperial.ac.uk
+
+chon.ho17@imperial.ac.uk
+
+davide.gallo18@imperial.ac.uk
 
 
 
