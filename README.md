@@ -472,7 +472,8 @@ The parameters we have used can be found [here](https://github.com/pukkapies/uro
 ![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform_1.png)
 
 
-log mel-spectrogram with the following parameters:
+
+Log mel-spectrogram:
 
 Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout',
  'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 'folk', 'chill',
