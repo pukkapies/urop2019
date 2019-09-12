@@ -141,8 +141,8 @@ def create_config_json(config_path, **kwargs):
     for key, value in kwargs.items():
         substitute_into_dict(key, value)
     
-    if not config_path[-5:] =='.json':
-        config_path = os.path.join(os.path.abspath(config_path),'config.json')
+    if not os.path.splitext(config_path)[1] == '.json':
+        config_path = os.path.join(config_path, 'config.json')
     
     with open(config_path, 'w') as f:
         d = {'model': model, 'optimizer': optimizer, 'tags': tags, 'tfrecords': tfrecords, 'config': config}
