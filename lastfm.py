@@ -59,31 +59,31 @@ class LastFm():
     - to_csv
         Convert the tags database into three different .csv files.
 
-    - tid_to_tid_num
+    - tid_to_tid_num_no_vec
         Get tid_num given tid.
 
-    - tid_num_to_tid
+    - tid_num_to_tid_no_vec
         Get tid given tid_num.
 
     - tid_num_to_tag_nums
         Get tag_num given tid_num.
 
-    - tag_num_to_tag
+    - tag_num_to_tag_no_vec
         Get tag given tag_num.
 
-    - tag_to_tag_num
+    - tag_to_tag_num_no_vec
         Get tag_num given tag.
 
-    - vec_tag_num_to_tag
+    - tag_num_to_tag
         Get tag given tag_num (vectorized version).
 
-    - vec_tag_to_tag_num
+    - tag_to_tag_num
         Get tag_num given tag (vectorized version).
 
-    - vec_tid_to_tid_num
+    - tid_to_tid_num
         Get tid_num given tid (vectorized version).
 
-    - vec_tid_num_to_tid
+    - tid_num_to_tid
         Get tid given tid_num (vectorized version).
 
     - get_tags
@@ -131,10 +131,10 @@ class LastFm():
         self.c = self.conn.cursor()
         self.path = path
 
-        self.vec_tag_num_to_tag = np.vectorize(self.tag_num_to_tag)
-        self.vec_tag_to_tag_num = np.vectorize(self.tag_to_tag_num)
-        self.vec_tid_num_to_tid = np.vectorize(self.tid_num_to_tid)
-        self.vec_tid_to_tid_num = np.vectorize(self.tid_to_tid_num)
+        self.tag_num_to_tag = np.vectorize(self.tag_num_to_tag_no_vec)
+        self.tag_to_tag_num = np.vectorize(self.tag_to_tag_num_no_vec)
+        self.tid_num_to_tid = np.vectorize(self.tid_num_to_tid_no_vec)
+        self.tid_to_tid_num = np.vectorize(self.tid_to_tid_num_no_vec)
 
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
@@ -165,14 +165,14 @@ class LastFm():
             df.to_csv(path, index_label=False)
         return
 
-    def tid_to_tid_num(self, tid):
+    def tid_to_tid_num_no_vec(self, tid):
         ''' Returns tid_num, given tid. '''
 
         q = "SELECT rowid FROM tids WHERE tid = ?"
         self._query(q, tid)
         return self.c.fetchone()[0]
 
-    def tid_num_to_tid(self, tid_num):
+    def tid_num_to_tid_no_vec(self, tid_num):
         ''' Returns tid, given tid_num. '''
 
         q = "SELECT tid FROM tids WHERE rowid = ?"
@@ -186,14 +186,14 @@ class LastFm():
         self._query(q, tid_num)
         return [i[0] for i in self.c.fetchall()]
         
-    def tag_num_to_tag(self, tag_num):
+    def tag_num_to_tag_no_vec(self, tag_num):
         ''' Returns tag given tag_num. '''
 
         q = "SELECT tag FROM tags WHERE rowid = ?"
         self._query(q, tag_num)
         return self.c.fetchone()[0]
 
-    def tag_to_tag_num(self, tag):
+    def tag_to_tag_num_no_vec(self, tag):
         ''' Returns tag_num given tag. '''
 
         q = "SELECT rowid FROM tags WHERE tag = ?"
@@ -246,8 +246,8 @@ class LastFm():
         ''' Gets tags for a given tid. '''
         
         tags = []
-        for tag_num in self.tid_num_to_tag_nums(self.tid_to_tid_num(tid)):
-            tags.append(self.tag_num_to_tag(tag_num))
+        for tag_num in self.tid_num_to_tag_nums(self.tid_to_tid_num_no_vec(tid)):
+            tags.append(self.tag_num_to_tag_no_vec(tag_num))
         return tags
 
     def query_tags_dict(self, tids): # pandas series would perform a bit faster here...
@@ -310,9 +310,9 @@ class LastFm():
         ''' Return all tids with a given tag. '''
         
         q = "SELECT tid FROM tid_tag WHERE tag = ?"
-        tag_num = self.tag_to_tag_num(tag)
+        tag_num = self.tag_to_tag_num_no_vec(tag)
         self._query(q, tag_num)
-        return [self.tid_num_to_tid(i[0]) for i in self.c.fetchall()]
+        return [self.tid_num_to_tid_no_vec(i[0]) for i in self.c.fetchall()]
         
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
@@ -323,7 +323,7 @@ class LastFm():
         
         # add tag to list of tuples
         for i, entry in enumerate(l):
-            l[i] = (self.tag_num_to_tag(entry[0]), ) + entry
+            l[i] = (self.tag_num_to_tag_no_vec(entry[0]), ) + entry
         
         # create df
         pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
