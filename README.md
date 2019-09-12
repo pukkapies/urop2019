@@ -7,24 +7,22 @@ take a music audio file and predict a list of tags that are relevant to that aud
 
 ## Table of Contents
 
-* Introduction
-* Prerequisites
-* Data Cleaning
-    * Audio
-    * Database
-    * Tags
-* Data Input Pipeline
-    * TFRecords
-    * Dataset Preparation
-* Training
-    * Model and Configuration
-    * Training loops
-* Evaluation tools
-* Results
-* Reference 
-* Contact / Getting Help
-
-(add hyperlinks when Davide agrees with the names)
+* [Introduction](https://github.com/pukkapies/urop2019/tree/all_readme#introduction)
+* [Prerequisites](https://github.com/pukkapies/urop2019/tree/all_readme#prerequisites)
+* [Data Cleaning](https://github.com/pukkapies/urop2019/tree/all_readme#data-cleaning)
+    * [Audio](https://github.com/pukkapies/urop2019/tree/all_readme#audio)
+    * [Database](https://github.com/pukkapies/urop2019/tree/all_readme#database)
+    * [Tags](https://github.com/pukkapies/urop2019/tree/all_readme#tags)
+* [Data Input Pipeline](https://github.com/pukkapies/urop2019/tree/all_readme#data-input-pipeline)
+    * [TFRecords](https://github.com/pukkapies/urop2019/tree/all_readme#tfrecords)
+    * [Dataset Preparation](https://github.com/pukkapies/urop2019/tree/all_readme#dataset-preparation)
+* [Training](https://github.com/pukkapies/urop2019/tree/all_readme#training)
+    * [Model and Configuration](https://github.com/pukkapies/urop2019/tree/all_readme#model-and-configuration)
+    * [Training loops](https://github.com/pukkapies/urop2019/tree/all_readme#training-loops)
+* [Evaluation tools](https://github.com/pukkapies/urop2019/tree/all_readme#evaluation-tools)
+* [Results](https://github.com/pukkapies/urop2019/tree/all_readme#results)
+* [Reference](https://github.com/pukkapies/urop2019/tree/all_readme#reference)
+* [Contact / Getting Help](https://github.com/pukkapies/urop2019/tree/all_readme#contact--getting-help)
 
 ## Introduction
 
