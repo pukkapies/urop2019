@@ -457,13 +457,13 @@ windows of the input audio to returns the average prediction as tags in string f
 
 Waveform with the following parameters:
 
-The parameters we have used can be found [here]()
+The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform_config_1.json)
 
 ![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform_1.png)
 
 log mel-spectrogram with the following parameters:
 
-The parameters we have used can be found [here]()
+The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/all_readme/results/logmelspectrogram_config_1.json)
 
 ![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/logmelspectrogram_1.png)
 
