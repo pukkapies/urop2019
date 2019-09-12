@@ -906,7 +906,7 @@ class Matrix():
         assert len(with_tags) >= 1 and len(without_tags) == 1
         return self.tags_and(with_tags) - self.tags_and(with_tags + without_tags)
 
-    def correlation_matrix_2d(self, plot=False):
+    def correlation_matrix_2d(self, plot=False, save_plot_to=None):
         ''' Returns a 2-dimensional matrix whose values indicate the correlation between 2 tags. 
         
         Notes
@@ -919,6 +919,9 @@ class Matrix():
         ----------
         plot: bool 
             If True, display the correlation matrix graphically.
+        
+        save_plot_to: str
+            If not None, save plot to the specified path. The format is inferred by the file extension. 
         '''
 
         l = len(self.m_tags)
@@ -935,11 +938,11 @@ class Matrix():
         if plot:
             plt_matrix = np.copy(matrix)
             np.fill_diagonal(plt_matrix, 0)
-            self.correlation_plot(plt_matrix) # corrrelation of tag with itself is always 1
+            self.correlation_plot(plt_matrix, save_to=save_plot_to) # corrrelation of tag with itself is always 1
         
         return matrix
 
-    def correlation_matrix_3d(self, plot=False):
+    def correlation_matrix_3d(self, plot=False, save_plot_to=None):
         ''' Returns a 3-dimensional matrix whose values indicate the correlation between 3 tags. 
         
         Notes
@@ -954,6 +957,9 @@ class Matrix():
             If True, display the correlation matrix graphically for all tags. 
             If not False, an int might be specified. In that case, only the correlation for the i-th tag will be displayed.
             If False, do nothing.
+        
+        save_plot_to: str
+            If not None, save plot to the specified path. The format is inferred by the file extension. 
         '''
 
         l = len(self.m_tags)
@@ -981,7 +987,7 @@ class Matrix():
                 assert isinstance(plot, int), 'plot must have type either bool or int'
                 idx = plot
                 tag = self.m_tags[idx]
-                self.correlation_plot(*get_plt_matrix(self, matrix), title=tag)
+                self.correlation_plot(*get_plt_matrix(self, matrix), title=tag, save_to=save_plot_to)
 
             # plot correlation for all
             else:
@@ -991,7 +997,7 @@ class Matrix():
         
         return matrix
 
-    def correlation_plot(self, correlation_matrix, tags=None, title=None):
+    def correlation_plot(self, correlation_matrix, tags=None, title=None, save_to=None):
         ''' Plot a 2-dimensional correlation matrix graphically. 
         
         Parameters
@@ -1006,6 +1012,9 @@ class Matrix():
         
         title: str
             If not None, display title.
+        
+        save_to: str
+            If not None, save plot to the specified path. The format is inferred by the file extension. 
         '''
         
         if tags is not None:
@@ -1027,6 +1036,10 @@ class Matrix():
         cbar = fig.colorbar(im)
         cbar.ax.set_ylabel('correlation')
         plt.show()
+
+        if save_to:
+            assert os.path.splitext(save_to)[1] != '', 'please enter a valid path'
+            plt.savefig(save_to)
 
     def are_equivalent(self, threshold=0.8, verbose=False):
         ''' Reads the 2-dimensional correlation matrix to present a human-readable outline of the tags which are arguably equivalent.
