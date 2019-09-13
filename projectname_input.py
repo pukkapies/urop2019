@@ -397,7 +397,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         for i in range(num_tags_db):
             AUDIO_FEATURES_DESCRIPTION['tags_' + str(i)] = tf.io.FixedLenFeature((num_tags, ), tf.int64)
 
-    assert audio_format in ('waveform', 'log-mel-spectrogram') , 'invalid audio format'
+    assert audio_format in ('waveform', 'log-mel-spectrogram'), 'please provide a valid audio format'
     
     tfrecords = np.array(tfrecords, dtype=np.unicode) # allow for single str as input
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
@@ -462,7 +462,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     
     if which_split is not None:
         if split is not None:
-            assert len(which_split) == len(split) , 'split and which_split must have the same length'
+            assert len(which_split) == len(split), 'split and which_split must have the same length'
             datasets = np.array(datasets)[np.array(which_split, dtype=np.bool)].tolist()
         else:
             datasets = datasets + [None] * (which_split.count(1) - 1) # useful when trying to unpack datasets, but split has not been provided
