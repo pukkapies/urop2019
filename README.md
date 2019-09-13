@@ -7,22 +7,22 @@ take a music audio file and predict a list of tags that are relevant to that aud
 
 ## Table of Contents
 
-* [Introduction](https://github.com/pukkapies/urop2019/tree/all_readme#introduction)
-* [Prerequisites](https://github.com/pukkapies/urop2019/tree/all_readme#prerequisites)
-* [Data Cleaning](https://github.com/pukkapies/urop2019/tree/all_readme#data-cleaning)
-    * [Audio](https://github.com/pukkapies/urop2019/tree/all_readme#audio)
-    * [Database](https://github.com/pukkapies/urop2019/tree/all_readme#database)
-    * [Tags](https://github.com/pukkapies/urop2019/tree/all_readme#tags)
-* [Data Input Pipeline](https://github.com/pukkapies/urop2019/tree/all_readme#data-input-pipeline)
-    * [TFRecords](https://github.com/pukkapies/urop2019/tree/all_readme#tfrecords)
-    * [Dataset Preparation](https://github.com/pukkapies/urop2019/tree/all_readme#dataset-preparation)
-* [Training](https://github.com/pukkapies/urop2019/tree/all_readme#training)
-    * [Model and Configuration](https://github.com/pukkapies/urop2019/tree/all_readme#model-and-configuration)
-    * [Training loops](https://github.com/pukkapies/urop2019/tree/all_readme#training-loops)
-* [Evaluation tools](https://github.com/pukkapies/urop2019/tree/all_readme#evaluation-tools)
-* [Results](https://github.com/pukkapies/urop2019/tree/all_readme#results)
-* [Reference](https://github.com/pukkapies/urop2019/tree/all_readme#reference)
-* [Contact / Getting Help](https://github.com/pukkapies/urop2019/tree/all_readme#contact--getting-help)
+* [Introduction](https://github.com/pukkapies/urop2019#introduction)
+* [Prerequisites](https://github.com/pukkapies/urop2019#prerequisites)
+* [Data Cleaning](https://github.com/pukkapies/urop2019#data-cleaning)
+    * [Audio](https://github.com/pukkapies/urop2019#audio)
+    * [Database](https://github.com/pukkapies/urop2019#database)
+    * [Tags](https://github.com/pukkapies/urop2019#tags)
+* [Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline)
+    * [TFRecords](https://github.com/pukkapies/urop2019#tfrecords)
+    * [Dataset Preparation](https://github.com/pukkapies/urop2019#dataset-preparation)
+* [Training](https://github.com/pukkapies/urop2019#training)
+    * [Model and Configuration](https://github.com/pukkapies/urop2019#model-and-configuration)
+    * [Training loops](https://github.com/pukkapies/urop2019#training-loops)
+* [Evaluation tools](https://github.com/pukkapies/urop2019#evaluation-tools)
+* [Results](https://github.com/pukkapies/urop2019#results)
+* [Reference](https://github.com/pukkapies/urop2019#reference)
+* [Contact / Getting Help](https://github.com/pukkapies/urop2019#contact--getting-help)
 
 ## Introduction
 
@@ -121,7 +121,7 @@ removing unnecessary columns to produce the 'ultimate' dataframe.
 This dataframe acts as a clean dataset containing all the essential information 
 about the tracks and will be used throughout the project.
 
-For more information about how these functions are used, see [here](https://github.com/pukkapies/urop2019/blob/all_readme/msd/README.md)
+For more information about how these functions are used, see [here](https://github.com/pukkapies/urop2019/blob/master/msd/README.md)
 
 
 **Example**
@@ -471,9 +471,9 @@ Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic'
  'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop',
  'trance', 'trip-hop']
 
-The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform_config_1.json)
+The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/results/waveform_config_1.json)
 
-![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/waveform_1.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/master/results/waveform_1.png)
 
 
 
@@ -485,9 +485,9 @@ Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic'
  'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop',
  'trance', 'trip-hop']
 
-The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/all_readme/results/logmelspectrogram_config_1.json)
+The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/results/logmelspectrogram_config_1.json)
 
-![alt text](https://github.com/pukkapies/urop2019/blob/all_readme/results/logmelspectrogram_1.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/master/results/logmelspectrogram_1.png)
 
 |                                         | AUC-ROC |  AUC-PR |
 | --------------------------------------- |:-------:|:-------:|
