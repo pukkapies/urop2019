@@ -306,8 +306,8 @@ if __name__ == '__main__':
     train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
                                                                                 sample_rate=config.sr, batch_size=config.batch, 
                                                                                 cycle_length=config.cycle_len, 
-                                                                                shuffle=config.shuffle, buffer_size=config.shuffle_buffer, 
-                                                                                num_tags=config.tot_tags, window_size=config.window_len, random=config.window_random, 
+                                                                                shuffle=config.shuffle, shuffle_buffer_size=config.shuffle_buffer, 
+                                                                                num_tags=config.tot_tags, window_size=config.window_len, window_random=config.window_random, 
                                                                                 with_tags=config.tags, merge_tags=config.tags_to_merge)
 
     # set up training strategy
