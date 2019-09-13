@@ -61,30 +61,30 @@ class LastFm():
 
     - sql_tag_num_to_tag
         Get tag given tag_num.
+    
+    - tag_num_to_tag
+        Get tag given tag_num (vectorized version).
 
     - sql_tag_to_tag_num
         Get tag_num given tag.
     
+    - tag_to_tag_num
+        Get tag_num given tag (vectorized version).
+    
     - sql_tid_to_tid_num
         Get tid_num given tid.
+    
+    - tid_to_tid_num
+        Get tid_num given tid (vectorized version).
 
     - sql_tid_num_to_tid
         Get tid given tid_num.
 
-    - tid_num_to_tag_nums
-        Get tag_num given tid_num.
-
-    - tag_num_to_tag
-        Get tag given tag_num (vectorized version).
-
-    - tag_to_tag_num
-        Get tag_num given tag (vectorized version).
-
-    - tid_to_tid_num
-        Get tid_num given tid (vectorized version).
-
     - tid_num_to_tid
         Get tid given tid_num (vectorized version).
+
+    - tid_num_to_tag_nums
+        Get tag_num given tid_num.
 
     - get_tags
         Return a list of all the tags.
@@ -164,6 +164,36 @@ class LastFm():
             df = pd.read_sql_query("SELECT * FROM " + table, self.conn)
             df.to_csv(path, index_label=False)
         return
+        
+    def sql_tag_num_to_tag(self, tag_num):
+        ''' Returns tag given tag_num. '''
+
+        q = "SELECT tag FROM tags WHERE rowid = ?"
+        self._query(q, tag_num)
+        return self.c.fetchone()[0]
+    
+    def tag_num_to_tag(self, tag_num):
+        ''' Returns tag given tag_num. '''
+
+        if isinstance(tag_num, int):
+            return self.sql_tag_num_to_tag(tag_num)
+        else:
+            return self.tag_num_to_tag_vec(tag_num)
+
+    def sql_tag_to_tag_num(self, tag):
+        ''' Returns tag_num given tag. '''
+        
+        q = "SELECT rowid FROM tags WHERE tag = ?"
+        self._query(q, tag)
+        return self.c.fetchone()[0]
+    
+    def tag_to_tag_num(self, tag):
+        ''' Returns tag_num given tag. '''
+
+        if isinstance(tag, str):
+                return self.sql_tag_to_tag_num(tag)
+        else:
+            return self.tag_to_tag_num_vec(tag)
 
     def sql_tid_to_tid_num(self, tid):
         ''' Returns tid_num, given tid. '''
@@ -201,36 +231,6 @@ class LastFm():
         q = "SELECT tag FROM tid_tag WHERE tid = ?"
         self._query(q, tid_num)
         return [i[0] for i in self.c.fetchall()]
-        
-    def sql_tag_num_to_tag(self, tag_num):
-        ''' Returns tag given tag_num. '''
-
-        q = "SELECT tag FROM tags WHERE rowid = ?"
-        self._query(q, tag_num)
-        return self.c.fetchone()[0]
-    
-    def tag_num_to_tag(self, tag_num):
-        ''' Returns tag given tag_num. '''
-
-        if isinstance(tag_num, int):
-            return self.sql_tag_num_to_tag(tag_num)
-        else:
-            return self.tag_num_to_tag_vec(tag_num)
-
-    def sql_tag_to_tag_num(self, tag):
-        ''' Returns tag_num given tag. '''
-        
-        q = "SELECT rowid FROM tags WHERE tag = ?"
-        self._query(q, tag)
-        return self.c.fetchone()[0]
-    
-    def tag_to_tag_num(self, tag):
-        ''' Returns tag_num given tag. '''
-
-        if isinstance(tag, str):
-                return self.sql_tag_to_tag_num(tag)
-        else:
-            return self.tag_to_tag_num_vec(tag)
 
     def get_tags(self):
         ''' Returns a list of all the tags. '''
