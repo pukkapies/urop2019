@@ -278,8 +278,8 @@ class LastFm():
         ''' Gets tags for a given tid. '''
         
         tags = []
-        for tag_num in self.tid_num_to_tag_nums(self.tid_to_tid_num_no_vec(tid)):
-            tags.append(self.tag_num_to_tag_no_vec(tag_num))
+        for tag_num in self.tid_num_to_tag_nums(self.tid_to_tid_num(tid)):
+            tags.append(self.tag_num_to_tag(tag_num))
         return tags
 
     def query_tags_dict(self, tids): # pandas series would perform a bit faster here...
@@ -342,9 +342,9 @@ class LastFm():
         ''' Return all tids with a given tag. '''
         
         q = "SELECT tid FROM tid_tag WHERE tag = ?"
-        tag_num = self.tag_to_tag_num_no_vec(tag)
+        tag_num = self.tag_to_tag_num(tag)
         self._query(q, tag_num)
-        return [self.tid_num_to_tid_no_vec(i[0]) for i in self.c.fetchall()]
+        return [self.tid_num_to_tid(i[0]) for i in self.c.fetchall()]
         
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
@@ -355,7 +355,7 @@ class LastFm():
         
         # add tag to list of tuples
         for i, entry in enumerate(l):
-            l[i] = (self.tag_num_to_tag_no_vec(entry[0]), ) + entry
+            l[i] = (self.tag_num_to_tag(entry[0]), ) + entry
         
         # create df
         pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
