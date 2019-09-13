@@ -170,32 +170,32 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     return tags
 
 if __name__ == '__main__':
-    config = parse_config('/home/calle', '/home/calle/clean_lastfm.db')[0]
-    model = load_from_checkpoint('log-mel-spectrogram', config, checkpoint_path='/home/calle/checkpoint/epoch-18') 
 
-    audio = get_audio('/home/calle/Downloads/gucci_gang.mp3', 'log-mel-spectrogram', config)
-    print(predict(model, audio, 'log-mel-spectrogram', config.tags, config.sr, cutoff=0.1, db_path='/home/calle/clean_lastfm.db'))
-    # loading model
-    # test(model, '/srv/data/urop/tfrecords-log-mel-spectrogram/', 'log-mel-spectrogram', (80, 10, 10), batch_size=128, with_tags=with_tags)
+    parser = argparse.ArgumentParser()     
+    parser.add_argument("config-path", help="Path to config JSON file")
+    parser.add_argument("checkpoint", help="Path to a checkpoint or directory of checkpoints")
+    parser.add_argument("audio-format", help="Model audio format")
+    parser.add_argument("mode", choices=["predict", "test"], help="Choose functionality of script, testing or predict")
+    parser.add_argument("--lastfm-path", help="Path to lastfm database", default="/home/calle/clean_lastfm.db")
+    parser.add_argument("--tfrecords-dir", help="Path to tfrecords directory, specify if test mode has been selected")
+    parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
+    parser.add_argument("--cutoff", help="Lower bound for what prediction values to print")
 
-    # AUDIO_FEATURES_DESCRIPTION = {
-    #     'audio': tf.io.VarLenFeature(tf.float32),
-    #     'tid': tf.io.FixedLenFeature((), tf.string),
-    #     'tags': tf.io.FixedLenFeature((155, ), tf.int64)
-    # }
+    args = parser.parse_args()
 
+    config = parse_config(args.config_path, args.lastfm_path)[0]
+    model = load_from_checkpoint(args.audio_format, config, checkpoint_path=args.checkpoint) 
 
-    # dataset = tf.data.TFRecordDataset('/srv/data/urop/tfrecords-log-mel-spectrogram/log-mel-spectrogram_1.tfrecord')
-    # dataset = dataset.map(lambda x: projectname_input._parse_features(x, AUDIO_FEATURES_DESCRIPTION, (96, -1)))
-    # dataset = dataset.filter(lambda x: projectname_input._tag_filter(x, config.tags)).map(lambda y: projectname_input._tag_filter_hotenc_mask(y, config.tags))
-
-    # fm = q_fm.LastFm('/srv/data/urop/clean_lastfm.db') 
-    # np.set_printoptions(formatter={'float': '{: 0.5f}'.format})
-
-    # for entry in dataset.take(40):
-    #     tid = entry['tid'].numpy().decode('utf-8')
-    #     print('TID: ', tid)
-    #     print('tags: ', [tag for tag in fm.query_tags(tid) if tag in fm.vec_tag_num_to_tag(config.tags)])
-    #     tg = entry['tags'].numpy()
-    #     pred = predict(model, entry['audio'], 'log-mel-spectrogram', config.tags, 16000, cutoff=0.1)
-    #     print('predicted tags: ', pred)
+    if args.mode == "test":
+        test(model, args.tfrecords_dir, args.audio_format, config.split, batch_size=config.batch_size, with_tags=config.tags)
+    else:
+        if not args.mp3_path:
+            raise ValueError("If predicting, must specify mp3 file(s) to predict")
+        elif os.path.isfile(args.mp3_path):
+            audio = get_audio(args.mp3_path, args.audio_format, args.config)
+            print("prediction: ", predict(model, audio, args.audio_format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+        else:
+            for path in os.listdir(args.mp3_path): 
+                audio = get_audio(path, args.audio_format, config)
+                print("file: ", path)
+                print(̈́"prediction: ", predict(model, audio, args.audio_format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
