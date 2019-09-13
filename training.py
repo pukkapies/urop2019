@@ -150,7 +150,11 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
         tf.keras.callbacks.TerminateOnNaN(),
     ]
 
-    if config.early_stop_min_delta is not None and config.early_stop_patience is not None:
+    if config.early_stop_patience is not None:
+        # if some parameters have not been provided, use default
+        config.early_stop_min_delta = config.early_stop_min_delta or 0
+        
+        # append callback
         callbacks.append(
             tf.keras.callbacks.EarlyStopping(
                 monitor = 'val_AUC-PR',
@@ -162,14 +166,20 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
             ),
         )
     
-    if config.reduceLRoP_min_delta is not None and config.reduceLRoP_patience is not None:
+    if config.reduceLRoP_patience is not None:
+        # if some parameters have not been provided, use default
+        config.reduceLRoP_factor = config.reduceLRoP_factor or 0.5
+        config.reduceLRoP_min_delta = config.reduceLRoP_min_delta or 0
+        config.reduceLRoP_min_lr = config.reduceLRoP_min_lr or 0
+
+        # append callback
         callbacks.append(
             tf.keras.callbacks.ReduceLROnPlateau(
-                monitor = 'val_loss',
-                mode = 'min',
-                min_delta = config.reduceLRoP_min_delta,
-                min_lr = 0.00001,
+                monitor = 'val_AUC-PR',
+                mode = 'max',
                 factor = config.reduceLRoP_factor,
+                min_delta = config.reduceLRoP_min_delta,
+                min_lr = config.reduceLRoP_min_lr,
                 patience = config.reduceLRoP_patience,
                 verbose = 1,
             ),

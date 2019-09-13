@@ -242,18 +242,15 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
 
                 tf.print('Val- Epoch', epoch, ': loss', tf.multiply(val_loss.result(), num_replica), ';ROC_AUC', val_metrics_1.result(), '; PR_AUC', val_metrics_2.result())
                 
-                # early stopping
-                if (config.early_stop_min_delta) or (config.early_stop_patience):
+                # early stopping callback
+                if config.early_stop_patience is not None:
                     
-                    if not config.early_stop_min_delta:
-                        config.early_stop_min_d = 0.
-                   
-                    if not config.early_stop_patience:
-                        config.early_stop_patience = 1
+                    # if some parameters have not been provided, use default
+                    config.early_stop_min_delta = config.early_stop_min_delta or 0.
                     
                     if os.path.isfile(os.path.join(log_dir, 'early_stopping.npy')):
                         cumerror = int(np.load(os.path.join(log_dir, 'early_stopping.npy')))
-                    
+
                     if val_metrics_2.result() > (max_metric + config.early_stop_min_delta):
                         max_metric = val_metrics_2.result()
                         cumerror = 0
@@ -271,7 +268,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
                 val_metrics_2.reset_states()
                 val_loss.reset_states()
                     
-            elif (config.early_stop_min_delta) or (config.early_stop_patience):
+            elif config.early_stop_patience is not None:
                 raise RuntimeError('EarlyStopping requires a validation dataset')
 
             checkpoint_path = os.path.join(log_dir, 'epoch'+str(epoch.numpy()))
