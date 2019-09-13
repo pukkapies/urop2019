@@ -81,8 +81,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
         Specifies whether to enable profiling.
     '''
 
-    log_dir = os.path.join(os.path.expanduser(config.log_dir), datetime.datetime.now().strftime("%y%m%d-%H%M%S")) # to save training metrics (to access using tensorboard)
-    checkpoint_dir = os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M%S"))) # to save model checkpoints
+    log_dir = os.path.join(os.path.expanduser(config.log_dir), 'custom_' + frontend[:13] + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))
     
     with strategy.scope():
         
@@ -107,15 +106,12 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
         if resume_time is None:
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
-            if not os.path.isdir(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
-            shutil.copy(config.path, checkpoint_dir) # copy config file in the same folder where the models will be saved
+            shutil.copy(config.path, log_dir) # copy config file in the same folder where the models will be saved
         else:
-            log_dir = os.path.join(os.path.expanduser(config.log_dir), resume_time) # keep saving logs in the 'old' folder
-            checkpoint_dir = os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + resume_time) # keep saving checkpoints in the 'old' folder
+            log_dir = os.path.join(os.path.expanduser(config.log_dir), 'custom_' + frontend[:13] + '_' + resume_time) # keep saving logs and checkpoints in the 'old' folder
             
             # try to load checkpoint
-            chkp = tf.train.latest_checkpoint(checkpoint_dir)
+            chkp = tf.train.latest_checkpoint(log_dir)
             if chkp:
                 tf.print("Checkpoint file {} found. Restoring...".format(chkp))
                 checkpoint.restore(chkp)
@@ -254,17 +250,17 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
                     if not config.early_stop_patience:
                         config.early_stop_patience = 1
                     
-                    if os.path.isfile(os.path.join(checkpoint_dir, 'early_stopping.npy')):
-                        cumerror = int(np.load(os.path.join(checkpoint_dir, 'early_stopping.npy')))
+                    if os.path.isfile(os.path.join(log_dir, 'early_stopping.npy')):
+                        cumerror = int(np.load(os.path.join(log_dir, 'early_stopping.npy')))
                     
                     if val_metrics_2.result() > (max_metric + config.early_stop_min_delta):
                         max_metric = val_metrics_2.result()
                         cumerror = 0
-                        np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
+                        np.save(os.path.join(log_dir, 'early_stopping.npy'), cumerror)
                     else:
                         cumerror += 1
                         tf.print('Epoch {}/{}: no significant improvements ({}/{})'.format(epoch, epochs-1, cumerror, config.early_stop_patience))
-                        np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
+                        np.save(os.path.join(log_dir, 'early_stopping.npy'), cumerror)
                         if cumerror == config.early_stop_patience:
                             tf.print('Epoch {}: stopping')
                             break
@@ -277,7 +273,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
             elif (config.early_stop_min_delta) or (config.early_stop_patience):
                 raise RuntimeError('EarlyStopping requires a validation dataset')
 
-            checkpoint_path = os.path.join(checkpoint_dir, 'epoch'+str(epoch.numpy()))
+            checkpoint_path = os.path.join(log_dir, 'epoch'+str(epoch.numpy()))
             saved_path = checkpoint.save(checkpoint_path)
             tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
 
