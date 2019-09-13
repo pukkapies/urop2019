@@ -101,8 +101,8 @@ def create_config_json(config_path, **kwargs):
     # specify how to train the model
     model_training = {
         "optimizer": {
-            "name": "SGD",      # name of the optimizer, as appears in tf.keras.optimizers
-            "learning_rate": 0  # initial learning rate
+            "name": "Adam",      # name of the optimizer, as appears in tf.keras.optimizers
+            "learning_rate": 0.  # initial learning rate
         },
         "batch_size": 0,                # global batch size
         "interleave_cycle_length": 0,   # number of input elements that are processed concurrently (when using tf.data.Dataset.interleave)
