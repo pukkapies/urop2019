@@ -6,7 +6,7 @@ Notes
 This file can be run as a script, for more information on possible arguments type 
 audio_processing -h in the terminal.
 
-The script can output .tfrecord files in two different ways, depending on arguments:
+The script can output .tfrecord files in two different ways, depfilename_suffix on arguments:
 if --split TRAIN/VAL/TEST is set then 3 .tfrecord files will be created. A train, validation and test file.
 TRAIN, VAL, TEST can be either integer or floats and they dictate what proportion of entries will be saved in each file.
 Example: python audio_processing --split 0.9/0.05/0.05 will save 90% of entries to the train file and 5% each 
@@ -60,11 +60,13 @@ import tensorflow as tf
 from lastfm import LastFm
 from lastfm import LastFm2Pandas
 
-def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
+from utils import MyProgbar
+
+def process_array(array, audio_format, sr_in, sr_out = 16000, num_mels = 96):
     ''' Processesing array and applying desired audio format 
     
     The array is processed by the following steps:
-    1. Convert to mono (if not already);
+    1. Convert to mono (if not mono already);
     2. Resample to desired sample rate;
     3. Convert audio array to desired audio format.
 
@@ -82,7 +84,7 @@ def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
     sr_out: int
         The sample rate of the output processed audio.
 
-    n_mels: int
+    num_mels: int
         The number of mels in the mel-spectrogram.
 
     Returns
@@ -99,19 +101,20 @@ def process_array(array, audio_format, sr_in, sr_out = 16000, n_mels = 96):
     array = librosa.resample(array, sr_in, sr_out)
     
     if audio_format == "log-mel-spectrogram":
-        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, sr_out, n_mels=n_mels))
+        array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, sr_out, n_mels=num_mels))
     
     return array
 
-def get_encoded_tags(tid, fm, n_tags):
+def get_encoded_tags(fm, tid, n_tags):
     ''' Given a tid gets the tags and encodes them with a one-hot encoding 
     
     Parameters
     ----------
-    tid: str
-
     fm: LastFm, LastFm2Pandas
         Any instance of the tags database.
+
+    tid: str
+        The track tid.
 
     n_tags: int
         The number of tag entries in the database.
@@ -136,32 +139,34 @@ def get_encoded_tags(tid, fm, n_tags):
     return encoded_tags
 
 def _bytes_feature(value):
-    ''' Creates a BytesList Feature '''
+    ''' Creates a BytesList Feature. '''
 
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 def _float_feature(value):
-    ''' Creates a FloatList Feature '''
+    ''' Creates a FloatList Feature. '''
 
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
 def _int64_feature(value):
-    ''' Creases a IntList Feature '''
+    ''' Creases a Int64List Feature. '''
 
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
 def get_example(array, tid, encoded_tags):
-    ''' Gets a tf.train.Example object
+    ''' Gets a tf.train.Example object.
     
     Parameters
     ----------
     array: ndarray
-        The ndarray containing audio data.
+        A ndarray containing audio data.
 
     tid: str
+        The track tid.
 
     encoded_tags: ndarray
-        The ndarray containing the encoded tags as a one-hot vector.
+        A ndarray containing the encoded tags as a one-hot vector (might be a two-dimensional array, if multiple tags 
+        databases are being processed at the same time).
     
     Returns
     -------
@@ -169,17 +174,17 @@ def get_example(array, tid, encoded_tags):
         Contains array, tid and encoded_tags as features.
     '''
 
-    example = tf.train.Example(
-            features=tf.train.Features(
-                feature={
-                    'audio': _float_feature(array.flatten()),
-                    'tid': _bytes_feature(bytes(tid, 'utf8')),
-                    'tags': _int64_feature(encoded_tags)
-            }))
+    feature_dict = {'audio': _float_feature(array.flatten()), 'tid': _bytes_feature(bytes(tid, 'utf8'))} 
 
-    return example
+    if len(encoded_tags.shape) == 1:
+        feature_dict['tags'] = _int64_feature(encoded_tags)
+    else:
+        for i, encoded_tags in enumerate(encoded_tags):
+            feature_dict['tags_' + str(i)] = _int64_feature(encoded_tags)
 
-def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, n_mels=96, verbose=True):
+    return tf.train.Example(features=tf.train.Features(feature=feature_dict))
+
+def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, num_mels=96, multitag=False, verbose=False):
     ''' Creates and saves a TFRecord file.
 
     Parameters
@@ -203,36 +208,46 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
     sample_rate: int
         The sample rate to use when serializing the audio.
 
-    n_mels: int
+    num_mels: int
         The number of mels in the mel-spectrogram.
+    
+    multitag: list
+        If True, encode multiple tags at the same time (provide as list of filenames; feature names will be 'tags-0', 'tags-1' etc.)
 
     verbose: bool
         If True, print progress.
     '''
 
     with tf.io.TFRecordWriter(output_path) as writer:
-        start = time.time()
-        start_loop = time.time()
-
-        # tags encoded outside the loop for efficiency
-        fm = LastFm(tag_path)
-        n_tags = len(fm.get_tag_nums())
+        if not multitag:
+            fm = LastFm(tag_path)
+            n_tags = len(fm.get_tag_nums())
+        else:
+            fm = [LastFm(os.path.join(tag_path, path)) for path in multitag]
+            n_tags = [len(fm.get_tag_nums()) for fm in fm]
+            assert all(x == n_tags[0] for x in n_tags), 'all databases need to have the same number of tags'
+            n_tags = n_tags[0] # cast back to int
 
         # initialize
         exceptions = []
 
         df.reset_index(drop=True, inplace=True)
 
+        if verbose:
+            progbar = MyProgbar(len(df)) # create an instance of the progress bar
+
         for i, cols in df.iterrows():
-            if verbose and i % 10 == 9:
-                print("{:3d} tracks saved. Last 10 tracks took {:6.4f} s".format(i+1, time.time()-start_loop))
-                start_loop = time.time()
+            if verbose:
+                progbar.add(1) # update progress bar
 
             # unpack cols
             tid, path = cols
 
             # encode tags
-            encoded_tags = get_encoded_tags(tid, fm, n_tags)
+            if not multitag:
+                encoded_tags = get_encoded_tags(fm, tid, n_tags)
+            else:
+                encoded_tags = np.array([get_encoded_tags(fm, tid, n_tags) for fm in fm]) # convert to ndarray to ensure consistency with one-dimensional case
             
             # skip tracks which dont have any "clean" tags    
             if encoded_tags.size == 0:
@@ -255,44 +270,32 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
                 unsampled_audio = {'array': array, 'sr': sr}
 
             # resample audio array into 'sample_rate' and convert into 'audio_format'
-            processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, n_mels=n_mels)
+            processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, num_mels=num_mels)
             
-            # create and save a tf.Example
+            # load the tf.Example
             example = get_example(processed_array, tid, encoded_tags)
+            
+            # save the tf.Example into a .tfrecord file
             writer.write(example.SerializeToString())
     
-        print("{} tracks saved in {:10.4f} s".format(i, time.time()-start))
-
-        # try to re-handle exceptions (sometimes it works!!); otherwise, skip
+        # print exceptions
         if set(df.columns) == {'track_id', 'npz_path'}:
             return
         else:
-            for exception in exceptions:
-                print("Handling exception {}...".format(exception['path']), end=" ", flush=True)
-                try:
-                    array, sr = librosa.core.load(exception['path'], sr=None)
-                except:
-                    print("FAIL. Skipping...")
-                    continue
-                print("SUCCESS!")
-                unsampled_audio = {'array': array, 'sr': sr}
-
-                # resample audio array into 'sample_rate' and convert into 'audio_format'
-                processed_array = process_array(unsampled_audio['array'], audio_format, sr_in=unsampled_audio['sr'], sr_out=sample_rate, n_mels=n_mels)
-                
-                # create and save a tf.Example
-                example = get_example(processed_array, exception['tid'], exception['encoded_tags'])
-                writer.write(example.SerializeToString())
+            print('Could not process the following tracks:')
+            for i, exception in enumerate(exceptions):
+                print(" {:3d}. {} {}".format(i, exception["tid"] + exception["path"]))
             return
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("format", choices=["waveform", "log-mel-spectrogram"], help="output format of audio")
-    parser.add_argument("output", help="directory to save .tfrecords files in")
-    parser.add_argument("--root-dir", help="set path to directory containing the .npz files, defaults to path on Boden", default='/srv/data/msd/7digital/')
-    parser.add_argument("--tag-path", help="set path to 'clean' tags database, defaults to path on Boden", default='/srv/data/urop/clean_lastfm.db')
-    parser.add_argument("--csv-path", help="set path to .csv file, defaults to path on Boden", default='/srv/data/urop/ultimate.csv')
-    parser.add_argument("--mels", help="set num of mels to use to encode audio as log-mel-spec, defaults to 96", type=int, default=96)
+    parser.add_argument("output", help="directory to save .tfrecord files in")
+    parser.add_argument("--root-dir", help="set path to directory containing the .npz or .mp3 files (defaults to path on Boden)", default='/srv/data/msd/7digital/')
+    parser.add_argument("--csv-path", help="set path to .csv file (defaults to path on Boden)", default='/srv/data/urop/ultimate.csv')
+    parser.add_argument("--tag-path", help="set path to 'clean' tags database (defaults to path on Boden)", default='/srv/data/urop/clean_lastfm.db')
+    parser.add_argument("--tag-path-multi", help="set path to multiple 'clean' tags databases", nargs='+')
+    parser.add_argument("--mels", help="set num of mels to use to encode audio as log-mel-spectrogram, defaults to 128", type=int, default=128)
     parser.add_argument("--sr", help="set sample rate to use to encode audio, defaults to 16kHz", type=int, default=16000)
     parser.add_argument("-n", "--num-files", help="number of files to split the data into, defaults to 100", type=int, default=100)
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -302,8 +305,14 @@ if __name__ == '__main__':
     mode.add_argument("-i", "--start-stop", help="specify which interval of files to process (inclusive, starts from 1), use in combination with --n-tfrecords, supply as START STOP", type=int, nargs=2)
 
     args = parser.parse_args()
+
+    # sanity check
+    if args.tag_path_multi:
+        args.tag_path_multi = [os.path.expanduser(path) for path in args.tag_path_multi]
+        args.tag_path = os.path.commonpath(args.tag_path_multi) # tag_paths is interpreted as a root directory when multiple databases are specified
+        args.tag_path_multi = [os.path.relpath(path, start=args.tag_path) for path in args.tag_path_multi]
     
-    # set seed in case interval is specified in order to enable parallel execution
+    # set seed in order to enable parallel execution
     if args.start_stop:
         np.random.seed(1)
 
@@ -317,29 +326,29 @@ if __name__ == '__main__':
     if not os.path.isdir(args.output):
         os.makedirs(args.output)
 
-    # create base name variable, for naming the .tfrecord files
-    if args.format == "log-mel-spectrogram":
-        base_name = os.path.join(args.output, args.format + "_")
-    else:
-        base_name = os.path.join(args.output, "waveform_")
+    base_name = os.path.join(args.output, args.format + "_") # to name the output .tfrecord files
     
-    # if split is specified, save to three files (for training, testing and validating)
+    # if split is specified, save to three files (for training, validating and testing)
     if args.split: 
         # scaling up split
         tot = len(df)
         split = np.cumsum(args.split) * tot // np.sum(args.split)
 
-
-        # split the DataFrame according to train/val/test split
+        # split the dataframe according to train/val/test split
         df1 = df[:split[0]]
         df2 = df[split[0]:split[1]]
         df3 = df[split[1]:]
 
-        # create + save the three .tfrecord files
-        ending = str(args.split[0]) + '-'+str(args.split[1]) + '-'+str(args.split[2]) + ".tfrecord" 
-        save_example_to_tfrecord(df1, base_name + "train_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
-        save_example_to_tfrecord(df2, base_name + "validation_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
-        save_example_to_tfrecord(df3, base_name + "test_" + ending, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+        # create and save the three .tfrecord files
+        filename = ('train_', 'validation_', 'test+')
+        filename_suffix = str(args.split[0]) + '-' + str(args.split[1]) + '-' + str(args.split[2]) + ".tfrecord" 
+
+        for i, df in enumerate((df1, df2, df3)):
+            save_example_to_tfrecord(df, base_name + filename[i] + filename_suffix, audio_format=args.format, 
+                                     root_dir=args.root_dir, tag_path=args.tag_path, 
+                                     multitag=args.tag_path_multi,
+                                     sample_rate=args.sr, num_mels=args.mels,
+                                     verbose=args.verbose)
 
     # otherwise, save to args.num_files equal-sized files
     else:
@@ -347,37 +356,53 @@ if __name__ == '__main__':
         if args.start_stop:
             start, stop = args.start_stop
             for num_file in range(start-1, stop):
-                name = base_name + str(num_file+1) + ".tfrecord"
-                print("Now writing to: " + name)
+                filename = base_name + str(num_file+1) + ".tfrecord"
+                print("Writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                        root_dir=args.root_dir, tag_path=args.tag_path, 
+                                        multitag=args.tag_path_multi,
+                                        sample_rate=args.sr, num_mels=args.mels,
+                                        verbose=args.verbose)
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             if stop >= args.num_files:
                 stop = args.num_files-1
-                name = base_name + str(args.num_files) + ".tfrecord"
-                print("Now writing to: " + name)
+                filename = base_name + str(args.num_files) + ".tfrecord"
+                print("Writing to: " + filename)
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
-
+                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                        root_dir=args.root_dir, tag_path=args.tag_path, 
+                                        multitag=args.tag_path_multi,
+                                        sample_rate=args.sr, num_mels=args.mels,
+                                        verbose=args.verbose)
+        
         # otherwise, create all files at once
         else:
             for num_file in range(args.num_files - 1):
-                name = base_name + str(num_file+1) + ".tfrecord"
-                print("Now writing to: " + name)
+                filename = base_name + str(num_file+1) + ".tfrecord"
+                print("Writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
-            
+                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                        root_dir=args.root_dir, tag_path=args.tag_path, 
+                                        multitag=args.tag_path_multi,
+                                        sample_rate=args.sr, num_mels=args.mels,
+                                        verbose=args.verbose)
+
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
-            name = base_name + str(args.num_files) + ".tfrecord"
-            print("Now writing to: " + name)
+            filename = base_name + str(args.num_files) + ".tfrecord"
+            print("Writing to: " + filename)
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             # create and save to the .tfrecord file
-            save_example_to_tfrecord(df_slice, name, audio_format=args.format, root_dir=args.root_dir, tag_path=args.tag_path, sample_rate=args.sr, n_mels=args.mels, verbose=args.verbose)
+            save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                        root_dir=args.root_dir, tag_path=args.tag_path, 
+                                        multitag=args.tag_path_multi,
+                                        sample_rate=args.sr, num_mels=args.mels,
+                                        verbose=args.verbose)
