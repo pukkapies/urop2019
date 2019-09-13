@@ -72,7 +72,7 @@ import tensorflow as tf
 from utils import MyEncoder, NoIndent
         
 def create_config_json(config_path, **kwargs):
-    ''' Creates configuration file with training specs.
+    ''' Creates an "empty" configuration file for training specs.
 
     Parameters
     -----------
@@ -92,60 +92,65 @@ def create_config_json(config_path, **kwargs):
     >>> create_config_json(config_path, learning_rate=0.00001, n_filters=64)
     '''
 
+    # specify how to build the model
     model = {
-        'n_dense_units': 500,    # number of neurons in the dense hidden layer in the backend, see https://github.com/jordipons/music-audio-tagging-at-scale-models
-        'n_filters': 16,    # number of filters in the first Conv layers of the log mel-spectrogram frontend
+        "n_dense_units": 0, # number of neurons in the dense hidden layer of the backend
+        "n_filters": 0,     # number of filters in the first convolution layer of the log mel-spectrogram frontend (see https://github.com/jordipons/music-audio-tagging-at-scale-models)
     }
 
-    optimizer = {
-        'name': 'Adam',    # name of optimiser to use
-        'learning_rate': 0.001,    # initial learning rate
+    # specify how to train the model
+    model_training = {
+        "optimizer": {
+            "name": "SGD",      # name of the optimizer, as appears in tf.keras.optimizers
+            "learning_rate": 0  # initial learning rate
+        },
+        "batch_size": 0,                # global batch size
+        "interleave_cycle_length": 0,   # number of input elements that are processed concurrently (when using tf.data.Dataset.interleave)
+        "interleave_block_length": 0,   # number of consecutive input elements that are consumed at each cycle (when using tf.data.Dataset.interleave) (see https://www.tensorflow.org/api_docs/python/tf/data/Dataset#interleave)
+        "reduceLRoP_factor": 0.,        # the factor the learning rate is deacreased by, when using ReduceLROnPlateau callback
+        "early_stop_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment' (please put None if EarlyStopping is not used)
+        "reduceLRoP_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment' (please put None if ReduceLROnPlateau is not used)
+        "early_stop_patience": 0,       # the number epochs with 'no improvement' to wait before triggering EarlyStopping (please put None if EarlyStopping is not used)
+        "reduceLRoP_patience": 0,       # the number epochs with 'no improvement' to wait before triggering ReduceLROnPlateau and reduce lr by a 'reduceLRoP_factor' (please put None if ReduceLROnPlateau is not used)
+        "log_dir": "~/",                # directory where tensorboard logs and checkpoints will be stored
+        "shuffle": True,                # if True, shuffle the dataset
+        "shuffle_buffer_size": 0,       # buffer size to use to shuffle the dataset (only applies if shuffle is True)
+        "split": NoIndent([0, 0]),      # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
+        "window_length": 0,             # length (in seconds) of the audio 'window' to input into the model
+        "window_random": True,          # if True, the window is picked randomly along the track length; if False, the window is always picked from the middle
     }
 
+    # specify which tags to use
     tags = {
-        'top': 50,    # e.g. the first 50 tags to use from the tag database. If None, all tags go into training.
-        'with': NoIndent(None),    # additional tags that go into training with 'top'
-        'without': NoIndent(None),    # tags to exclude from above'
-        'merge': NoIndent(None),    # tags to merge, e.g. to merge 1 and 2, 3 and 4, you should use 'merge': [[1,2], [3,4]]
+        "top": 0,                   # e.g. use only the most popular 50 tags from the tags database will go into training (if None, all tags go into training)
+        "with": NoIndent([]),       # tags that will be added to the list above        
+        "without": NoIndent([]),    # tags that will be excluded from the list above
+        "merge": None,              # tags to merge together (e.g. use 'merge': [[1,2], [3,4]] to merge tags 1 and 2, 3 and 4)
     }
 
+    # specify how the data has been encoded in the .tfrecord files
     tfrecords = {
-        'n_mels': 128,    # number of mel-bands
-        'n_tags': 155,    # number of tags in the clean tag database that will be used in training
-        'sample_rate': 16000,    # sample rate of log mel-spectrogram when tfrecords were created
-    }
-
-    config = {
-        'batch_size': 32,    # global batch size for training
-        'cycle_length': 2,    # the number of input elements that are processed concurrently when parsing tfrecords
-        'early_stop_min_delta': 0.2,    # the minimum increase in PR-AUC between two consecutive epochs to be considered as an 'improvment'. If early stopping is not used, please put None
-        'early_stop_patience': 5,    # the number of 'no-improvement' to trigger early stopping. If early stopping is not used, please put None
-        'log_dir': '/srv/data/urop/log/',    # the directory where the TensorBoard logs are stored
-        'checkpoint_dir': '/srv/data/urop/model/',    # the directory where the Checkpoints are stored
-        'shuffle': True,    # if True, the entries from tfrecords are shuffle based on the buffer size below
-        'shuffle_buffer_size': 10000,    # the buffer size of shuffling when tfrecords are parsed
-        'split': NoIndent((80, 10, 10)),    # the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
-        'reduce_lr_plateau_min_delta': 0.1,    # threshold for measuring the new optimum, to only focus on significant changes. If reduce_lr_plateau is not used, please put None
-        'reduce_lr_plateau_patience': 2,    # number of epochs with no improvement after which learning rate will be reduced by a factor of 0.5. If reduce_lr.plateau is not used, please put None
-        'window_length': 15,    # the length of tracks that will be input to the training algorithm
-        'window_extract_randomly': True,    # if True, a random section of a track is input to the algorithm for every epoch
+        "n_mels": 0,        # number of mels in the log-mel-spectrogram audio files
+        "n_tags": 0,        # *total* number of tags in the database (*not* the number of tags that you will eventually be using for training)
+        "sample_rate": 0,   # sample rate of the audio files
     }
 
     def substitute_into_dict(key, value):
-        for dict in (model, tags, tfrecords, config):
+        for dict in (model, model_training, tags, tfrecords):
             if key in dict:
                 dict[key] = value
                 return
         raise KeyError(key)
-
+    
+    # substitute kwargs into output dictionary (passing kwargs is basically equivalent to editing the .json file manually)
     for key, value in kwargs.items():
         substitute_into_dict(key, value)
     
-    if not os.path.splitext(config_path)[1] == '.json':
-        config_path = os.path.join(config_path, 'config.json')
+    if os.path.isdir(config_path):
+        config_path = os.path.join(os.path.abspath(config_path), 'config.json')
     
     with open(config_path, 'w') as f:
-        d = {'model': model, 'optimizer': optimizer, 'tags': tags, 'tfrecords': tfrecords, 'config': config}
+        d = {'model': model, 'model-training': model_training, 'tags': tags, 'tfrecords': tfrecords}
         s = json.dumps(d, cls=MyEncoder, indent=2)
         f.write(s)
     
