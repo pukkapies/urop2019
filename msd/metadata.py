@@ -108,7 +108,7 @@ def get_attribute(attr: str, ids: list):
     
     Parameters
     ----------
-    attr : str
+    attr: str
         The column of the track_metadata.db database to be queried. 
         Possible values are 'title', 'release', 'duration', 'artist_id', 'artist_mbid', 
         'artist_name', 'artist_familiarity', 'artist_hotttnesss', 'year'.

@@ -69,7 +69,7 @@ import os
 
 import tensorflow as tf
 
-from utils import MyEncoder, NoIndent
+from utils import MyEncoder, WithoutIndent
         
 def create_config_json(config_path, **kwargs):
     ''' Creates configuration file with training specs.
@@ -104,9 +104,9 @@ def create_config_json(config_path, **kwargs):
 
     tags = {
         'top': 50,    # e.g. the first 50 tags to use from the tag database. If None, all tags go into training.
-        'with': NoIndent(None),    # additional tags that go into training with 'top'
-        'without': NoIndent(None),    # tags to exclude from above'
-        'merge': NoIndent(None),    # tags to merge, e.g. to merge 1 and 2, 3 and 4, you should use 'merge': [[1,2], [3,4]]
+        'with': WithoutIndent(None),    # additional tags that go into training with 'top'
+        'without': WithoutIndent(None),    # tags to exclude from above'
+        'merge': WithoutIndent(None),    # tags to merge, e.g. to merge 1 and 2, 3 and 4, you should use 'merge': [[1,2], [3,4]]
     }
 
     tfrecords = {
@@ -124,7 +124,7 @@ def create_config_json(config_path, **kwargs):
         'checkpoint_dir': '/srv/data/urop/model/',    # the directory where the Checkpoints are stored
         'shuffle': True,    # if True, the entries from tfrecords are shuffle based on the buffer size below
         'shuffle_buffer_size': 10000,    # the buffer size of shuffling when tfrecords are parsed
-        'split': NoIndent((80, 10, 10)),    # the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
+        'split': WithoutIndent((80, 10, 10)),    # the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
         'reduce_lr_plateau_min_delta': 0.1,    # threshold for measuring the new optimum, to only focus on significant changes. If reduce_lr_plateau is not used, please put None
         'reduce_lr_plateau_patience': 2,    # number of epochs with no improvement after which learning rate will be reduced by a factor of 0.5. If reduce_lr.plateau is not used, please put None
         'window_length': 15,    # the length of tracks that will be input to the training algorithm
