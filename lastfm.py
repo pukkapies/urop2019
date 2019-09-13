@@ -195,21 +195,6 @@ class LastFm():
         else:
             return self.tag_to_tag_num_vec(tag)
 
-    def sql_tid_to_tid_num(self, tid):
-        ''' Returns tid_num, given tid. '''
-
-        q = "SELECT rowid FROM tids WHERE tid = ?"
-        self._query(q, tid)
-        return self.c.fetchone()[0]
-    
-    def tid_to_tid_num(self, tid):
-        ''' Returns tid_num, given tid. '''
-
-        if isinstance(tid, str):
-            return self.sql_tid_to_tid_num(tid)
-        else:
-            return self.tid_num_to_tid_vec(tid)
-
     def sql_tid_num_to_tid(self, tid_num):
         ''' Returns tid, given tid_num. '''
 
@@ -224,6 +209,21 @@ class LastFm():
             return self.sql_tid_num_to_tid(str(tid_num))
         else:
             return self.tid_num_to_tid_vec([str(i) for i in tid_num])
+
+    def sql_tid_to_tid_num(self, tid):
+        ''' Returns tid_num, given tid. '''
+
+        q = "SELECT rowid FROM tids WHERE tid = ?"
+        self._query(q, tid)
+        return self.c.fetchone()[0]
+    
+    def tid_to_tid_num(self, tid):
+        ''' Returns tid_num, given tid. '''
+
+        if isinstance(tid, str):
+            return self.sql_tid_to_tid_num(tid)
+        else:
+            return self.tid_num_to_tid_vec(tid)
 
     def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
