@@ -52,12 +52,12 @@ def find_tracks(abs_path = False):
     
     Parameters
     ----------
-    abs_path : bool
+    abs_path: bool
         If true, use absolute paths.
 
     Returns
     -------
-    paths : list
+    paths: list
         Contains paths (str) to all .mp3 files in mp3_root_dir.
     
     '''
@@ -77,12 +77,12 @@ def find_tracks_with_7dids(abs_path = False):
     
     Parameters
     ----------
-    abs_path : bool
+    abs_path: bool
         If true, use absolute paths.
 
     Returns
     -------
-    df : DataFrame
+    df: pd.DataFrame
         Contains 1 column for the paths and 1 for the corresponding 7digitalids.
     '''
 
