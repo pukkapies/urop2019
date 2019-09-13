@@ -7,6 +7,7 @@ take a music audio file and predict a list of tags that are relevant to that aud
 
 ## Table of Contents
 
+
 * [Introduction](https://github.com/pukkapies/urop2019#introduction)
 * [Prerequisites](https://github.com/pukkapies/urop2019#prerequisites)
 * [Data Cleaning](https://github.com/pukkapies/urop2019#data-cleaning)
@@ -23,6 +24,7 @@ take a music audio file and predict a list of tags that are relevant to that aud
 * [Results](https://github.com/pukkapies/urop2019#results)
 * [Reference](https://github.com/pukkapies/urop2019#reference)
 * [Contact / Getting Help](https://github.com/pukkapies/urop2019#contact--getting-help)
+
 
 ## Introduction
 
@@ -64,6 +66,7 @@ If you are interested to see our experiment result, click here (hyperlink to res
     * Other common libraries 
 
 ## Data Cleaning
+
 ### Audio
 Firstly, by `fetcher.py`, the directory which contains all the tracks is thoroughly 
 scanned. The info: file path, duration,  number of channels, file size are captured and 
@@ -121,7 +124,9 @@ removing unnecessary columns to produce the 'ultimate' dataframe.
 This dataframe acts as a clean dataset containing all the essential information 
 about the tracks and will be used throughout the project.
 
+
 For more information about how these functions are used, see [here](https://github.com/pukkapies/urop2019/blob/master/msd/README.md)
+
 
 
 **Example**
@@ -476,7 +481,6 @@ The parameters we have used can be found [here](https://github.com/pukkapies/uro
 ![alt text](https://github.com/pukkapies/urop2019/blob/master/results/waveform_1.png)
 
 
-
 Log mel-spectrogram:
 
 Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout',
@@ -484,6 +488,7 @@ Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic'
  'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 'rock n roll', 'country',
  'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop',
  'trance', 'trip-hop']
+
 
 The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/results/logmelspectrogram_config_1.json)
 
