@@ -73,7 +73,7 @@ def check_silence(df, verbose=True):
 
     Returns
     -------
-    df : pd.DataFrame
+    df: pd.DataFrame
         DataFrame given as parameter with the following extra columns:
 
         'effective_clip_length': float
