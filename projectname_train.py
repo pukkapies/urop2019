@@ -1,3 +1,21 @@
+''' Contains tools to parse the config.jon file and train our model with the training functions defined in training.py or training_custom.py.
+
+
+Notes
+-----
+This module can be run as a script. To do so, just type 'python orpheus_train.py' in the terminal. The help 
+page should contain all the options you might possibly need.
+
+This module relies on the training functions defined in training.py and training_custom.py. Please read
+either of the two modules for full specificatons on how our training process is set up.
+
+
+Functions
+---------
+- parse_config
+    Parse the config.json and sets all the training parameters. 
+'''
+
 import argparse
 import importlib
 import json
