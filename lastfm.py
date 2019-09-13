@@ -70,18 +70,18 @@ class LastFm():
     
     - tag_to_tag_num
         Get tag_num given tag (vectorized version).
-    
-    - sql_tid_to_tid_num
-        Get tid_num given tid.
-    
-    - tid_to_tid_num
-        Get tid_num given tid (vectorized version).
 
     - sql_tid_num_to_tid
         Get tid given tid_num.
 
     - tid_num_to_tid
         Get tid given tid_num (vectorized version).
+
+    - sql_tid_to_tid_num
+        Get tid_num given tid.
+    
+    - tid_to_tid_num
+        Get tid_num given tid (vectorized version).
 
     - tid_num_to_tag_nums
         Get tag_num given tid_num.
