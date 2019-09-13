@@ -176,9 +176,9 @@ class LastFm():
         ''' Returns tag given tag_num. '''
 
         if isinstance(tag_num, int):
-            return self.sql_tag_num_to_tag(tag_num)
+            return self.sql_tag_num_to_tag(str(tag_num))
         else:
-            return self.tag_num_to_tag_vec(tag_num)
+            return self.tag_num_to_tag_vec([str(i) for i in tag_num])
 
     def sql_tag_to_tag_num(self, tag):
         ''' Returns tag_num given tag. '''
@@ -221,9 +221,9 @@ class LastFm():
         ''' Returns tid, given tid_num. '''
 
         if isinstance(tid_num, int):
-            return self.sql_tid_num_to_tid(tid_num)
+            return self.sql_tid_num_to_tid(str(tid_num))
         else:
-            return self.tid_num_to_tid_vec(tid_num)
+            return self.tid_num_to_tid_vec([str(i) for i in tid_num])
 
     def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
