@@ -131,11 +131,16 @@ class LastFm():
         self.c = self.conn.cursor()
         self.path = path
 
+        self.tag_num_to_tag = np.vectorize(self.tag_num_to_tag_no_vec)
+        self.tag_to_tag_num = np.vectorize(self.tag_to_tag_num_no_vec)
+        self.tid_num_to_tid = np.vectorize(self.tid_num_to_tid_no_vec)
+        self.tid_to_tid_num = np.vectorize(self.tid_to_tid_num_no_vec)
+
     def __del__(self): # close the connection gracefully when the object goes out of scope
         self.conn.close()
 
     def _query(self, q, *params):
-        return self.c.execute(q, params)
+        self.c.execute(q, params)
     
     def to_csv(self, output_dir=None):
         ''' Converts the tags database into three different .csv files. 
@@ -160,53 +165,40 @@ class LastFm():
             df.to_csv(path, index_label=False)
         return
 
-    def tid_to_tid_num(self, tid):
+    def tid_to_tid_num_no_vec(self, tid):
         ''' Returns tid_num, given tid. '''
 
         q = "SELECT rowid FROM tids WHERE tid = ?"
-        
-        if not isinstance(tid, list):
-            return self._query(q, tid).fetchone()[0]
-        else:
-            return [self._query(q, i).fetchone()[0] for i in tid]
+        self._query(q, tid)
+        return self.c.fetchone()[0]
 
-
-    def tid_num_to_tid(self, tid_num):
+    def tid_num_to_tid_no_vec(self, tid_num):
         ''' Returns tid, given tid_num. '''
 
         q = "SELECT tid FROM tids WHERE rowid = ?"
-        
-        if not isinstance(tid_num, list):
-            return self._query(q, str(tid_num)).fetchone()[0]
-        else:
-            return [self._query(q, str(i)).fetchone()[0] for i in tid_num]
-
+        self._query(q, tid_num)
+        return self.c.fetchone()[0]
 
     def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
-        
+
         q = "SELECT tag FROM tid_tag WHERE tid = ?"
         self._query(q, tid_num)
         return [i[0] for i in self.c.fetchall()]
         
-    def tag_num_to_tag(self, tag_num):
+    def tag_num_to_tag_no_vec(self, tag_num):
         ''' Returns tag given tag_num. '''
-        
-        q = "SELECT tag FROM tags WHERE rowid = ?"
-        if not isinstance(tag_num, list):
-            return self._query(q, str(tag_num)).fetchone()[0]
-        else:
-            return [self._query(q, str(i)).fetchone()[0] for i in tag_num]
 
-    def tag_to_tag_num(self, tag):
+        q = "SELECT tag FROM tags WHERE rowid = ?"
+        self._query(q, tag_num)
+        return self.c.fetchone()[0]
+
+    def tag_to_tag_num_no_vec(self, tag):
         ''' Returns tag_num given tag. '''
 
         q = "SELECT rowid FROM tags WHERE tag = ?"
-        if not isinstance(tag, list):
-            
-            return self._query(q, tag).fetchone()[0]
-        else:
-            return [self._query(q, i).fetchone()[0] for i in tag]
+        self._query(q, tag)
+        return self.c.fetchone()[0]
 
     def get_tags(self):
         ''' Returns a list of all the tags. '''
