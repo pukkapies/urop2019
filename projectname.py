@@ -69,7 +69,7 @@ import os
 
 import tensorflow as tf
 
-from utils import MyEncoder, NoIndent
+from utils import MyJSONEncoder, NoIndent
         
 def create_config_json(config_path, **kwargs):
     ''' Creates an "empty" configuration file for training specs.
@@ -151,7 +151,7 @@ def create_config_json(config_path, **kwargs):
     
     with open(config_path, 'w') as f:
         d = {'model': model, 'model-training': model_training, 'tags': tags, 'tfrecords': tfrecords}
-        s = json.dumps(d, cls=MyEncoder, indent=2)
+        s = json.dumps(d, cls=MyJSONEncoder, indent=2)
         f.write(s)
     
 def wave_frontend(input):
