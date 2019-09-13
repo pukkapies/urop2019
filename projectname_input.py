@@ -394,7 +394,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     tfrecords = np.array(tfrecords, dtype=np.unicode) # allow for single str as input
     tfrecords = np.vectorize(lambda x: os.path.abspath(os.path.expanduser(x)))(tfrecords) # fix issues with relative paths in input list
 
-    if split is not None:
+    if split:
         if np.sum(split) == 100:
             split = np.cumsum(split) * len(tfrecords) // 100
         else:
