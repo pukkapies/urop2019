@@ -172,30 +172,31 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument("config-path", help="Path to config JSON file")
-    parser.add_argument("checkpoint", help="Path to a checkpoint or directory of checkpoints")
-    parser.add_argument("audio-format", help="Model audio format")
+    parser.add_argument("format", help="Model audio format")
     parser.add_argument("mode", choices=["predict", "test"], help="Choose functionality of script, testing or predict")
+    parser.add_argument("config", help="Path to config JSON file")
+    parser.add_argument("--checkpoint", help="Path to a checkpoints, will default to directory in config.")
     parser.add_argument("--lastfm-path", help="Path to lastfm database", default="/home/calle/clean_lastfm.db")
     parser.add_argument("--tfrecords-dir", help="Path to tfrecords directory, specify if test mode has been selected")
     parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
-    parser.add_argument("--cutoff", help="Lower bound for what prediction values to print")
+    parser.add_argument("--cutoff", type=int, help="Lower bound for what prediction values to print", default=0.1)
 
     args = parser.parse_args()
+    print(args)
 
-    config = parse_config(args.config_path, args.lastfm_path)[0]
-    model = load_from_checkpoint(args.audio_format, config, checkpoint_path=args.checkpoint) 
+    config = parse_config(args.config, args.lastfm_path)[0]
+    model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
 
     if args.mode == "test":
-        test(model, args.tfrecords_dir, args.audio_format, config.split, batch_size=config.batch_size, with_tags=config.tags)
+        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, with_tags=config.tags)
     else:
         if not args.mp3_path:
             raise ValueError("If predicting, must specify mp3 file(s) to predict")
         elif os.path.isfile(args.mp3_path):
-            audio = get_audio(args.mp3_path, args.audio_format, args.config)
-            print("prediction: ", predict(model, audio, args.audio_format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+            audio = get_audio(args.mp3_path, args.format, args.config)
+            print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
         else:
             for path in os.listdir(args.mp3_path): 
-                audio = get_audio(path, args.audio_format, config)
+                audio = get_audio(os.path.join(args.mp3_path, path), args.format, config)
                 print("file: ", path)
-                print(̈́"prediction: ", predict(model, audio, args.audio_format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+                print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
