@@ -46,7 +46,7 @@ import tensorflow as tf
 
 import projectname
 
-def get_compiled_model(frontend, strategy, config, timestamp_resume=None):
+def get_compiled_model(frontend, strategy, config, timestamp_to_resume=None):
     ''' Creates a compiled instance of the training model. 
     
     Parameters
@@ -60,7 +60,7 @@ def get_compiled_model(frontend, strategy, config, timestamp_resume=None):
     config: argparse.Namespace
         Instance of the config namespace. It is generated when parsing the config.json file.
     
-    timestamp_resume: str
+    timestamp_to_resume: str
         Specifies the timestamp of the checkpoint to restore. Should be a timestamp in the 'YYMMDD-hhmm' format.
     '''
 
@@ -72,13 +72,13 @@ def get_compiled_model(frontend, strategy, config, timestamp_resume=None):
         model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM), metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
         
-        # restore timestamp_resume (if provided)
-        if timestamp_resume:
-            model.load_weights(os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + timestamp_resume)))
+        # restore timestamp_to_resume (if provided)
+        if timestamp_to_resume:
+            model.load_weights(os.path.join(os.path.join(os.path.expanduser(config.checkpoint_dir), frontend + '_' + timestamp_to_resume)))
 
     return model
 
-def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, steps_per_epoch=None, timestamp_resume=None, update_freq=1, profile_batch=0):
+def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, steps_per_epoch=None, timestamp_to_resume=None, update_freq=1, profile_batch=0):
     ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
 
     Parameters
@@ -104,7 +104,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
     steps_per_epoch: int
         Specifies the number of steps to perform for each epoch. If None, the whole dataset will be used.
     
-    timestamp_resume: str
+    timestamp_to_resume: str
         Specifies the timestamp of the checkpoint to restore. Should be a timestamp in the 'YYMMDD-hhmm' format.
 
     update_freq: int
@@ -117,16 +117,16 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
     timestamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
 
     # load model
-    model = get_compiled_model(frontend, strategy, config, timestamp_resume)
+    model = get_compiled_model(frontend, strategy, config, timestamp_to_resume)
 
     # set up logs and checkpoints directories
-        if timestamp_resume is None:
+        if timestamp_to_resume is None:
             log_dir = os.path.join(os.path.expanduser(config.log_dir), frontend[:13] + '_' + timestamp)
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
             shutil.copy(config.path, log_dir) # copy config file in the same folder where the models will be saved
         else:
-            log_dir = os.path.join(os.path.expanduser(config.log_dir), frontend[:13] + '_' + timestamp_resume) # keep saving logs and checkpoints in the 'old' folder
+            log_dir = os.path.join(os.path.expanduser(config.log_dir), frontend[:13] + '_' + timestamp_to_resume) # keep saving logs and checkpoints in the 'old' folder
     
     # set up callbacks
     callbacks = [

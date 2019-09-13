@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', help='specify the number of epochs to train on', type=int, required=True)
     parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)', type=int)
     parser.add_argument('--no-shuffle', action='store_true', help='force no shuffle, override config setting')
-    parser.add_argument('--resume-time', help='load a previously saved model')
+    parser.add_argument('--resume', help='load a previously saved model')
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
     parser.add_argument('--cuda', help='set cuda visible devices', type=int, nargs='+')
     parser.add_argument('--custom', action='store_true', help='train using custom training loop')
@@ -119,4 +119,4 @@ if __name__ == '__main__':
     train(train_dataset, valid_dataset, frontend=args.frontend,
           strategy=strategy, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, 
           config=config,
-          update_freq=args.update_freq, resume_time=args.resume_time)
+          update_freq=args.update_freq, timestamp_to_resume=args.resume)

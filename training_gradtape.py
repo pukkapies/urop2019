@@ -18,7 +18,7 @@ be fully specified in the config.json file.
 The logs are saved automatically subdirectories named after the timestamp and can be accessed
 using TensorBoard. The checkpoints are saved automatically in subdirectories named after
 the frontend being adopted and timestamp. The config.json file is copied automatically
-in the latter directory for future reference. By recovering a checkpoint using resume_time, 
+in the latter directory for future reference. By recovering a checkpoint using timestamp_to_resume, 
 training will resume from the latest completed epoch. 
 
 If early stopping is enabled, a .npy file will be generated to
@@ -48,7 +48,7 @@ import tensorflow as tf
 
 import projectname
             
-def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, steps_per_epoch=None, resume_time=None, update_freq=1, analyse_trace=False):
+def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, steps_per_epoch=None, timestamp_to_resume=None, update_freq=1, analyse_trace=False):
     ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
 
     Parameters
@@ -71,7 +71,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
     epochs: int
         Specifies the number of epochs to train for.
     
-    resume_time: str
+    timestamp_to_resume: str
         Specifies the timestamp of the checkpoint to restore. Should be a timestamp in the 'YYMMDD-hhmm' format.
 
     update_freq: int
@@ -81,7 +81,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
         Specifies whether to enable profiling.
     '''
 
-    log_dir = os.path.join(os.path.expanduser(config.log_dir), 'custom_' + frontend[:13] + '_' + datetime.datetime.now().strftime("%y%m%d-%H%M"))
+    timestamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
     
     with strategy.scope():
         
@@ -98,17 +98,18 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
         train_metrics_1 = tf.keras.metrics.AUC(curve='ROC', name='train_AUC-ROC', dtype=tf.float32)
         train_metrics_2 = tf.keras.metrics.AUC(curve='PR', name='train_AUC-PR', dtype=tf.float32)
 
-        # setting up checkpoint
+        # set up checkpoint
         checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
         prev_epoch = -1
         
-        # resume
-        if resume_time is None:
+       # set up logs and checkpoints directories
+        if timestamp_to_resume is None:
+            log_dir = os.path.join(os.path.expanduser(config.log_dir), 'custom_' + frontend[:13] + '_' + timestamp)
             if not os.path.isdir(log_dir):
                 os.makedirs(log_dir)
             shutil.copy(config.path, log_dir) # copy config file in the same folder where the models will be saved
         else:
-            log_dir = os.path.join(os.path.expanduser(config.log_dir), 'custom_' + frontend[:13] + '_' + resume_time) # keep saving logs and checkpoints in the 'old' folder
+            log_dir = os.path.join(os.path.expanduser(config.log_dir), 'custom_' + frontend[:13] + '_' + timestamp_to_resume) # keep saving logs and checkpoints in the 'old' folder
             
             # try to load checkpoint
             chkp = tf.train.latest_checkpoint(log_dir)
