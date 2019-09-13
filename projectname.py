@@ -17,7 +17,7 @@ This module can be divded into four parts:
 Functions
 ---------
 - create_config_json
-    Create a json file storing the parameters.
+    Create a json file storing the parameters. See inline documentation for more details.
 
 - wave_frontend
     Model frontend for waveform input.
@@ -49,7 +49,7 @@ conditions and the following disclaimer in the documentation and/or other materi
 promote products derived from this software without specific prior written permission.
 
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR 
 IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
 AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
 CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
@@ -69,7 +69,7 @@ import os
 
 import tensorflow as tf
 
-from pretty_print import MyEncoder, NoIndent
+from utils import MyEncoder, NoIndent
         
 def create_config_json(config_path, **kwargs):
     ''' Creates configuration file with training specs.
@@ -89,40 +89,50 @@ def create_config_json(config_path, **kwargs):
 
     Examples
     --------
-    >>> create_config_json(config_path, lr=0.00001, n_filters=64)
+    >>> create_config_json(config_path, learning_rate=0.00001, n_filters=64)
     '''
 
-    dataset_specs = {
-        'n_tags': 155, 
-        'n_mels': 96,
-        'sample_rate': 16000,
+    model = {
+        'n_dense_units': 500,    # number of neurons in the dense hidden layer in the backend, see https://github.com/jordipons/music-audio-tagging-at-scale-models
+        'n_filters': 16,    # number of filters in the first Conv layers of the log mel-spectrogram frontend
     }
 
-    train_options = {
-        'lr': 0.001,
-        'n_dense_units': 500,
-        'n_filters': 16,
+    optimizer = {
+        'name': 'Adam',    # name of optimiser to use
+        'learning_rate': 0.001,    # initial learning rate
     }
 
-    train_options_dataset = {
-        'presets': [
-            {
-                'tags': NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal']),
-                'merge_tags': None,
-            },
-            {
-                'tags': NoIndent(['rock', 'pop', 'electronic', 'dance', 'hip-hop', 'jazz', 'metal', 'instrumental', 'male', 'female']),
-                'merge_tags': None,
-            },
-        ],
-        'window_length': 15,
-        'window_extract_randomly': False,
-        'shuffle': True,
-        'shuffle_buffer_size': 10000,
+    tags = {
+        'top': 50,    # e.g. the first 50 tags to use from the tag database. If None, all tags go into training.
+        'with': NoIndent(None),    # additional tags that go into training with 'top'
+        'without': NoIndent(None),    # tags to exclude from above'
+        'merge': NoIndent(None),    # tags to merge, e.g. to merge 1 and 2, 3 and 4, you should use 'merge': [[1,2], [3,4]]
+    }
+
+    tfrecords = {
+        'n_mels': 128,    # number of mel-bands
+        'n_tags': 155,    # number of tags in the clean tag database that will be used in training
+        'sample_rate': 16000,    # sample rate of log mel-spectrogram when tfrecords were created
+    }
+
+    config = {
+        'batch_size': 32,    # global batch size for training
+        'cycle_length': 2,    # the number of input elements that are processed concurrently when parsing tfrecords
+        'early_stop_min_delta': 0.2,    # the minimum increase in PR-AUC between two consecutive epochs to be considered as an 'improvment'. If early stopping is not used, please put None
+        'early_stop_patience': 5,    # the number of 'no-improvement' to trigger early stopping. If early stopping is not used, please put None
+        'log_dir': '/srv/data/urop/log/',    # the directory where the TensorBoard logs are stored
+        'checkpoint_dir': '/srv/data/urop/model/',    # the directory where the Checkpoints are stored
+        'shuffle': True,    # if True, the entries from tfrecords are shuffle based on the buffer size below
+        'shuffle_buffer_size': 10000,    # the buffer size of shuffling when tfrecords are parsed
+        'split': NoIndent((80, 10, 10)),    # the number of train/validation/test files to use when reading the .tfrecord files (can be a tuple of any length, as long as enough files are provided in the 'tfrecords' list).
+        'reduce_lr_plateau_min_delta': 0.1,    # threshold for measuring the new optimum, to only focus on significant changes. If reduce_lr_plateau is not used, please put None
+        'reduce_lr_plateau_patience': 2,    # number of epochs with no improvement after which learning rate will be reduced by a factor of 0.5. If reduce_lr.plateau is not used, please put None
+        'window_length': 15,    # the length of tracks that will be input to the training algorithm
+        'window_extract_randomly': True,    # if True, a random section of a track is input to the algorithm for every epoch
     }
 
     def substitute_into_dict(key, value):
-        for dict in (dataset_specs, train_options, train_options_dataset):
+        for dict in (model, tags, tfrecords, config):
             if key in dict:
                 dict[key] = value
                 return
@@ -131,11 +141,11 @@ def create_config_json(config_path, **kwargs):
     for key, value in kwargs.items():
         substitute_into_dict(key, value)
     
-    if not os.path.isfile(config_path):
-        config_path = os.path.join(os.path.abspath(config_path),'config.json')
+    if not os.path.splitext(config_path)[1] == '.json':
+        config_path = os.path.join(config_path, 'config.json')
     
     with open(config_path, 'w') as f:
-        d = {'dataset_specs': dataset_specs, 'training_options': train_options, 'training_options_dataset': train_options_dataset}
+        d = {'model': model, 'optimizer': optimizer, 'tags': tags, 'tfrecords': tfrecords, 'config': config}
         s = json.dumps(d, cls=MyEncoder, indent=2)
         f.write(s)
     
