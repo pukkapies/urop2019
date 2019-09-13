@@ -36,10 +36,13 @@ Functions
     Change the shape of tag hot-encoded vector to suit the output of _tag_filter.
 
 - _window_1
-    Extract a sample of n seconds from each audio tensor within a batch (use with waveform).
+    Extract a sample of n seconds from each audio tensor within a batch.
 
 - _window_2
-    Extract a sample of n seconds from each audio tensor within a batch (use with log_mel_spectrogram).
+    Extract a sample of n seconds from each audio tensor within a batch.
+
+- _window
+    Return either _window_1 if audio-format is waveform, or _window_2 if audio-format is log-mel-spectrogram.
 
 - _spect_normalization
     Ensure zero mean and unit variance within a batch of log-mel-spectrograms.
@@ -270,6 +273,11 @@ def _window_2(features_dict, sample_rate, window_length=15, window_random=False)
     features_dict['audio'] = tf.cond(random, lambda: fn2a(features_dict['audio']), lambda: fn2b(features_dict['audio']))
     return features_dict
 
+def _window(audio_format):
+    ''' Returns the right window function, depending to the specified audio-format. '''
+
+    return {'waveform': _window_1, 'log-mel-spectrogram': _window_2}[audio_format]
+
 def _spect_normalization(features_dict):
     ''' Normalizes the log-mel-spectrograms within a batch. '''
 
@@ -432,11 +440,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
             dataset = dataset.filter(lambda x: _tid_filter(x, tids=with_tids))
         
         # slice into audio windows
-        if audio_format == 'waveform':
-            dataset = dataset.map(lambda x : _window_1(x, sample_rate, window_length, window_random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        
-        elif audio_format == 'log-mel-spectrogram':
-            dataset = dataset.map(lambda x : _window_2(x, sample_rate, window_length, window_random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(lambda x: _window(audio_format)(x, sample_rate, window_length, window_random), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         
         # batch
         dataset = dataset.batch(batch_size, drop_remainder=True)
