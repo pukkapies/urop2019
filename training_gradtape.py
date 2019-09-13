@@ -37,10 +37,8 @@ Functions
     Creates a compiled instance of the training model and trains it. 
 '''
 
-import argparse
 import datetime
 import gc
-import json
 import os
 import time
 import shutil
@@ -49,77 +47,8 @@ import numpy as np
 import tensorflow as tf
 
 import projectname
-import projectname_input
-
-from lastfm import LastFm
-
-def parse_config(config_path, lastfm_path):
-
-    # load tags database
-    lastfm = LastFm(os.path.expanduser(lastfm_path))
-
-    if not os.path.isfile(os.path.expanduser(config_path)):
-        path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
-    else:
-        path = os.path.expanduser(config_path)
-
-    # load json
-    with open(path, 'r') as f:
-        config_d = json.loads(f.read())
-
-    
-    n_tags = config_d['tfrecords']['n_tags']
-    # read top tags from popularity dataframe
-    top = config_d['tags']['top']
-    if (top is not None) and (top !=n_tags):
-        top_tags = lastfm.popularity()['tag'][:top].tolist()
-        tags = set(top_tags)
-    else:
-        tags=None
-
-    # find tags to use
-    if tags is not None:
-        if config_d['tags']['with']:
-            tags.union(config_d['tags']['with'])
-        
-        if config_d['tags']['without']:
-            tags.discard(config_d['tags']['without'])
-    else:
-        raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
-
-    # create config namespace (to be accessed more easily than a dictionary)
-    config = argparse.Namespace()
-    config.batch = config_d['config']['batch_size']
-    config.cycle_len = config_d['config']['cycle_length']
-    config.early_stop_min_d = config_d['config']['early_stop_min_delta']
-    config.early_stop_patience = config_d['config']['early_stop_patience']
-    config.n_dense_units = config_d['model']['n_dense_units']
-    config.n_filters = config_d['model']['n_filters']
-    config.n_mels = config_d['tfrecords']['n_mels']
-    config.n_output_neurons = len(tags) if tags is not None else n_tags
-    config.path = config_path
-    config.plateau_min_d = config_d['config']['reduce_lr_plateau_min_delta']
-    config.plateau_patience = config_d['config']['reduce_lr_plateau_patience']
-    config.shuffle = config_d['config']['shuffle']
-    config.shuffle_buffer = config_d['config']['shuffle_buffer_size']
-    config.split = config_d['config']['split']
-    config.sr = config_d['tfrecords']['sample_rate']
-    config.tags = lastfm.tag_to_tag_num(list(tags)) if tags is not None else None
-    config.tags_to_merge = lastfm.tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
-    config.tot_tags = config_d['tfrecords']['n_tags']
-    config.window_len = config_d['config']['window_length']
-    config.window_random = config_d['config']['window_extract_randomly']
-    config.log_dir = config_d['config']['log_dir']
-    config.checkpoint_dir = config_d['config']['checkpoint_dir']
-
-    # create config namespace for the optimizer (will be used by get_optimizer() in order to allow max flexibility)
-    config_optim = argparse.Namespace()
-    config_optim.class_name = config_d['optimizer'].pop('name')
-    config_optim.config = config_d['optimizer']
-    
-    return config, config_optim
             
-def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, resume_time=None, update_freq=1, analyse_trace=False):
+def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, steps_per_epoch=None, resume_time=None, update_freq=1, analyse_trace=False):
     ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
 
     Parameters
@@ -138,9 +67,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
 
     config: argparse.Namespace
         Instance of the config namespace. It is generated when parsing the config.json file.
-    
-    config_optim: argparse.Namespace
-        Instance of the config_optim namespace. The optimizer will be fully specified by this parameter. It is generated when parsing the config.json file.
         
     epochs: int
         Specifies the number of epochs to train for.
@@ -167,7 +93,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
         
         # initialise loss, optimizer and metrics
-        optimizer = tf.keras.optimizers.get({"class_name": config_optim.class_name, "config": config_optim.config})
+        optimizer = tf.keras.optimizers.get({"class_name": config.optimizer_name, "config": config.optimizer})
         train_loss = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
         train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
         train_metrics_1 = tf.keras.metrics.AUC(curve='ROC', name='train_AUC-ROC', dtype=tf.float32)
@@ -221,10 +147,10 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         # rescale loss
         def compute_loss(labels, predictions):
             per_example_loss = train_loss(labels, predictions)
-            return per_example_loss/config.batch
+            return per_example_loss/config.batch_size
         
-        def train_step(entry):
-            audio_batch, label_batch = entry['audio'], entry['tags']
+        def train_step(batch):
+            audio_batch, label_batch = batch
             with tf.GradientTape() as tape:
                 logits = model(audio_batch)
                 loss = compute_loss(label_batch, logits)
@@ -237,8 +163,8 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             train_mean_loss.update_state(loss)
             return loss
 
-        def valid_step(entry):
-            audio_batch, label_batch = entry['audio'], entry['tags']
+        def valid_step(batch):
+            audio_batch, label_batch = batch
             logits = model(audio_batch, training=False)
             loss = compute_loss(label_batch, logits)
 
@@ -248,10 +174,10 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             return loss
             
         @tf.function 
-        def distributed_train_body(entry, epoch, num_replica):
+        def distributed_train_body(batch, epoch, num_replica):
             num_batches = 0 
-            for entry in train_dataset:
-                strategy.experimental_run_v2(train_step, args=(entry, ))
+            for batch in train_dataset:
+                strategy.experimental_run_v2(train_step, args=(batch, ))
                 num_batches += 1
                 # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):
@@ -265,9 +191,9 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 gc.collect()
 
         @tf.function
-        def distributed_val_body(entry):
-            for entry in valid_dataset:
-                strategy.experimental_run_v2(valid_step, args=(entry, ))
+        def distributed_val_body(batch):
+            for batch in valid_dataset:
+                strategy.experimental_run_v2(valid_step, args=(batch, ))
                 gc.collect()
 
         max_metric = -200 # for early stopping
@@ -320,9 +246,9 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 tf.print('Val- Epoch', epoch, ': loss', tf.multiply(val_loss.result(), num_replica), ';ROC_AUC', val_metrics_1.result(), '; PR_AUC', val_metrics_2.result())
                 
                 # early stopping
-                if (config.early_stop_min_d) or (config.early_stop_patience):
+                if (config.early_stop_min_delta) or (config.early_stop_patience):
                     
-                    if not config.early_stop_min_d:
+                    if not config.early_stop_min_delta:
                         config.early_stop_min_d = 0.
                    
                     if not config.early_stop_patience:
@@ -331,7 +257,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                     if os.path.isfile(os.path.join(checkpoint_dir, 'early_stopping.npy')):
                         cumerror = int(np.load(os.path.join(checkpoint_dir, 'early_stopping.npy')))
                     
-                    if val_metrics_2.result() > (max_metric + config.early_stop_min_d):
+                    if val_metrics_2.result() > (max_metric + config.early_stop_min_delta):
                         max_metric = val_metrics_2.result()
                         cumerror = 0
                         np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
@@ -348,7 +274,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 val_metrics_2.reset_states()
                 val_loss.reset_states()
                     
-            elif (config.early_stop_min_d) or (config.early_stop_patience):
+            elif (config.early_stop_min_delta) or (config.early_stop_patience):
                 raise RuntimeError('EarlyStopping requires a validation dataset')
 
             checkpoint_path = os.path.join(checkpoint_dir, 'epoch'+str(epoch.numpy()))
@@ -361,71 +287,3 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             
             tf.keras.backend.clear_session()
             gc.collect()
-
-if __name__ == '__main__':
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument("frontend", choices=["waveform", "log-mel-spectrogram"])
-    parser.add_argument("--root-dir", dest="tfrecords_dir", help="directory to read .tfrecord files from (default to path on Boden)")
-    parser.add_argument("--config-path", help="path to config.json (default to path on Boden)", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
-    parser.add_argument("--lastfm-path", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
-    parser.add_argument("--epochs", help="specify the number of epochs to train on", type=int, required=True)
-    parser.add_argument("--steps-per-epoch", help="specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)", type=int)
-    parser.add_argument("--no-shuffle", action="store_true", help="override shuffle setting")
-    parser.add_argument("--resume-time", help="load a previously saved model")
-    parser.add_argument("--update-freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
-    parser.add_argument("--cuda", help="set cuda visible devices", type=int, nargs="+")
-    parser.add_argument("-v", "--verbose", choices=['0', '1', '2', '3'], help="verbose mode", default='0')
-
-    args = parser.parse_args()
-
-    # specify number of visible gpu's
-    if args.cuda:
-        os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID" # see issue #152
-        os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(i) for i in args.cuda])
-
-    # specify verbose mode
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = args.verbose
-
-    # parse json
-    config, config_optim = parse_config(args.config_path, args.lastfm_path)
-
-    # if root_dir is not specified, use default path on our server
-    if not args.tfrecords_dir:
-        if config.sr != 16000:
-            s = '-' + str(config.sr // 1000) + 'kHz'
-        else:
-            s = ''
-        args.tfrecords_dir = os.path.normpath("/srv/data/urop/tfrecords-" + args.frontend + s)
-
-    # override shuffle setting
-    if args.no_shuffle:
-        config.shuffle = False
-
-    # create training and validation dataset
-    assert config.split
-    assert len(config.split) >= 2
-    assert len(config.split) <= 3
-    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
-                                                                                sample_rate=config.sr, batch_size=config.batch, 
-                                                                                cycle_length=config.cycle_len, 
-                                                                                shuffle=config.shuffle, shuffle_buffer_size=config.shuffle_buffer, 
-                                                                                num_tags=config.tot_tags, window_length=config.window_len, window_random=config.window_random, 
-                                                                                with_tags=config.tags, merge_tags=config.tags_to_merge,
-										                                        as_tuple=False)
-    
-    if args.steps_per_epoch:
-        train_dataset = train_dataset.take(args.steps_per_epoch)
-        valid_dataset = valid_dataset.take(args.steps_per_epoch)
-
-    # set up training strategy
-    strategy = tf.distribute.MirroredStrategy()
-    train_dataset = strategy.experimental_distribute_dataset(train_dataset)
-    valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
-
-    # train
-    train(train_dataset, valid_dataset, frontend=args.frontend, strategy=strategy,
-          config=config, config_optim=config_optim,
-          epochs=args.epochs, resume_time=args.resume_time, 
-          update_freq=args.update_freq)
-
