@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import json
 import os
 
@@ -69,11 +70,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # import the right training function (either custom loop, or built-in)
+    # import right training module (either custom loop, or built-in)
+    training_module = 'training'
     if args.custom:
-        from training_gradtape import train
-    else:
-        from training import train
+        training_module += '_custom' 
+    training = importlib.import_module(training_module)
 
     # specify number of visible gpu's
     if args.cuda:
@@ -116,7 +117,7 @@ if __name__ == '__main__':
             valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
 
     # train
-    train(train_dataset, valid_dataset, frontend=args.frontend,
-          strategy=strategy, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, 
-          config=config,
-          update_freq=args.update_freq, timestamp_to_resume=args.resume)
+    training.train(train_dataset, valid_dataset, frontend=args.frontend,
+                   strategy=strategy, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, 
+                   config=config,
+                   update_freq=args.update_freq, timestamp_to_resume=args.resume)
