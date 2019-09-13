@@ -81,7 +81,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
         Specifies whether to enable profiling.
     '''
 
-    timestamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+    timestamp = datetime.datetime.now().strftime("%d%m%y-%H%M")
     
     with strategy.scope():
         

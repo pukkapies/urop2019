@@ -44,8 +44,8 @@ def parse_config(config_path, lastfm_path):
     tags = list(tags)
 
     config.n_output_neurons = len(tags)
-    config.tags = lastfm.vec_tag_to_tag_num(tags)
-    config.tags_to_merge = lastfm.vec_tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
+    config.tags = lastfm.tag_to_tag_num(tags)
+    config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
     
     return config
 

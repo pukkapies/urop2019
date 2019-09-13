@@ -109,25 +109,25 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
 
     update_freq: int
         Specifies the number of batches to wait before writing to logs. Note that writing too frequently can slow down training.
-    
+
     profile_batch: int
         Specifies the batch to profile. Set to 0 to disable, or if errors occur.
     '''
 
-    timestamp = datetime.datetime.now().strftime("%y%m%d-%H%M")
+    timestamp = datetime.datetime.now().strftime("%d%m%y-%H%M")
 
     # load model
     model = get_compiled_model(frontend, strategy, config, timestamp_to_resume)
 
     # set up logs and checkpoints directories
-        if timestamp_to_resume is None:
-            log_dir = os.path.join(os.path.expanduser(config.log_dir), frontend[:13] + '_' + timestamp)
-            if not os.path.isdir(log_dir):
-                os.makedirs(log_dir)
-            shutil.copy(config.path, log_dir) # copy config file in the same folder where the models will be saved
-        else:
-            log_dir = os.path.join(os.path.expanduser(config.log_dir), frontend[:13] + '_' + timestamp_to_resume) # keep saving logs and checkpoints in the 'old' folder
-    
+    if timestamp_to_resume is None:
+        log_dir = os.path.join(os.path.expanduser(config.log_dir), frontend[:13] + '_' + timestamp)
+        if not os.path.isdir(log_dir):
+            os.makedirs(log_dir)
+        shutil.copy(config.path, log_dir) # copy config file in the same folder where the models will be saved
+    else:
+        log_dir = os.path.join(os.path.expanduser(config.log_dir), frontend[:13] + '_' + timestamp_to_resume) # keep saving logs and checkpoints in the 'old' folder
+
     # set up callbacks
     callbacks = [
         tf.keras.callbacks.ModelCheckpoint(
