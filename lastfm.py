@@ -223,7 +223,7 @@ class LastFm():
         if isinstance(tid, str):
             return self.sql_tid_to_tid_num(tid)
         else:
-            return self.tid_num_to_tid_vec(tid)
+            return self.tid_to_tid_num_vec(tid)
 
     def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
