@@ -224,7 +224,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
             train_metrics_2.reset_states()
             train_mean_loss.reset_states()
 
-            # export profiling and write validation metrics on tensorboard
+            # write training profile
             if analyse_trace:
                 with prof_summary_writer.as_default():   
                     tf.summary.trace_export(name="trace", 
@@ -232,8 +232,11 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
                                             profiler_outdir=os.path.normpath(prof_log_dir)) 
 
             if valid_dataset:
+
                 distributed_val_body(valid_dataset)
                 gc.collect()
+
+                # write metris on tensorboard after each epoch
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC_epoch', val_metrics_1.result(), step=epoch)
                     tf.summary.scalar('PR_AUC_epoch', val_metrics_2.result(), step=epoch)

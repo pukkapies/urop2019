@@ -102,6 +102,9 @@ if __name__ == '__main__':
     # specify verbose mode
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = args.verbose
 
+    # in order correctly see training profile on tensorboard
+    os.environ['LD_LIBRARY_PATH'] = '/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda-10.0/lib64:/usr/local/cuda-10.0/extras/CUPTI/lib64'
+
     # parse config
     config = parse_config(args.config_path, args.lastfm_path)
 
