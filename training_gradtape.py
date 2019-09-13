@@ -410,7 +410,7 @@ if __name__ == '__main__':
                                                                                 sample_rate=config.sr, batch_size=config.batch, 
                                                                                 cycle_length=config.cycle_len, 
                                                                                 shuffle=config.shuffle, shuffle_buffer_size=config.shuffle_buffer, 
-                                                                                num_tags=config.tot_tags, window_size=config.window_len, window_random=config.window_random, 
+                                                                                num_tags=config.tot_tags, window_length=config.window_len, window_random=config.window_random, 
                                                                                 with_tags=config.tags, merge_tags=config.tags_to_merge,
 										                                        as_tuple=False)
     

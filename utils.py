@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 
-class WithoutIndent(object): # value wrapper
+class NoIndent(object): # value wrapper
     def __init__(self, value):
         self.value = value
 
