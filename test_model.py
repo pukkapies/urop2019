@@ -147,7 +147,7 @@ def get_audio(mp3_path, audio_format, config):
         array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, config.sr, n_mels=config.n_mels))
         # normalization
         mean, variance = tf.nn.moments(tf.constant(array), axes=[0,1], keepdims=True)
-        array = (array - mean) / np.sqrt(variance+0.000001)
+        array = tf.nn.batch_normalization(array, mean, variance, offset = 0, scale = 1, variance_epsilon = .000001).numpy()
 
     return array
 
@@ -195,7 +195,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
 
         audio_batch, label_batch = entry[0], entry[1]
 
-        logits = tf.multiply(model(audio_batch), tf.constant(0.001, dtype=tf.float32))
+        logits = tf.multiply(model(audio_batch, training=False), tf.constant(0.001, dtype=tf.float32))
 
         ROC_AUC.update_state(label_batch, logits)
         PR_AUC.update_state(label_batch, logits)
