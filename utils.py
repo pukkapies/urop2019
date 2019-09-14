@@ -6,11 +6,11 @@ import time
 
 import numpy as np
 
-class WithoutIndent(object): # value wrapper
+class NoIndent(object): # value wrapper
     def __init__(self, value):
         self.value = value
 
-class MyEncoder(json.JSONEncoder): # see https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
+class MyJSONEncoder(json.JSONEncoder): # see https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
     FORMAT_SPEC = '@@{}@@'
     regex = re.compile(FORMAT_SPEC.format(r'(\d+)'))
 

@@ -3,34 +3,35 @@
     "n_dense_units": 500,
     "n_filters": 16
   },
-  "optimizer": {
-    "name": "Adam",
-    "learning_rate": 0.001
-  },
-  "tags": {
-    "top": 50,
-    "with": null,
-    "without": null,
-    "merge": null
-  },
-  "tfrecords": {
-    "n_mels": 128,
-    "n_tags": 155,
-    "sample_rate": 16000
-  },
-  "config": {
+  "model-training": {
+    "optimizer": {
+      "name": "Adam",
+      "learning_rate": 0.001
+    },
     "batch_size": 64,
-    "cycle_length": 2,
+    "interleave_cycle_length": 2,
+    "interleave_block_length": 1,
+    "reduceLRoP_factor": null,
     "early_stop_min_delta": null,
+    "reduceLRoP_min_delta": null,
     "early_stop_patience": null,
-    "log_dir": "/srv/data/urop/log/",
-    "checkpoint_dir": "/srv/data/urop/model/",
+    "reduceLRoP_patience": null,
+    "log_dir": "/srv/data/urop/logs",
     "shuffle": false,
     "shuffle_buffer_size": null,
     "split": [80, 10, 10],
-    "reduce_lr_plateau_min_delta": null,
-    "reduce_lr_plateau_patience": null,
     "window_length": 15,
-    "window_extract_randomly": true
+    "window_random": true
+  },
+  "tags": {
+    "top": 50,
+    "with": [],
+    "without": [],
+    "merge": null
+  },
+  "tfrecords": {
+    "n_mels": null,
+    "n_tags": 155,
+    "sample_rate": 16000
   }
 }

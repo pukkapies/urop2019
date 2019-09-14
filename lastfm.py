@@ -70,18 +70,18 @@ class LastFm():
     
     - tag_to_tag_num
         Get tag_num given tag (vectorized version).
-    
-    - sql_tid_to_tid_num
-        Get tid_num given tid.
-    
-    - tid_to_tid_num
-        Get tid_num given tid (vectorized version).
 
     - sql_tid_num_to_tid
         Get tid given tid_num.
 
     - tid_num_to_tid
         Get tid given tid_num (vectorized version).
+
+    - sql_tid_to_tid_num
+        Get tid_num given tid.
+    
+    - tid_to_tid_num
+        Get tid_num given tid (vectorized version).
 
     - tid_num_to_tag_nums
         Get tag_num given tid_num.
@@ -195,21 +195,6 @@ class LastFm():
         else:
             return self.tag_to_tag_num_vec(tag)
 
-    def sql_tid_to_tid_num(self, tid):
-        ''' Returns tid_num, given tid. '''
-
-        q = "SELECT rowid FROM tids WHERE tid = ?"
-        self._query(q, tid)
-        return self.c.fetchone()[0]
-    
-    def tid_to_tid_num(self, tid):
-        ''' Returns tid_num, given tid. '''
-
-        if isinstance(tid, str):
-            return self.sql_tid_to_tid_num(tid)
-        else:
-            return self.tid_num_to_tid_vec(tid)
-
     def sql_tid_num_to_tid(self, tid_num):
         ''' Returns tid, given tid_num. '''
 
@@ -224,6 +209,21 @@ class LastFm():
             return self.sql_tid_num_to_tid(str(tid_num))
         else:
             return self.tid_num_to_tid_vec([str(i) for i in tid_num])
+
+    def sql_tid_to_tid_num(self, tid):
+        ''' Returns tid_num, given tid. '''
+
+        q = "SELECT rowid FROM tids WHERE tid = ?"
+        self._query(q, tid)
+        return self.c.fetchone()[0]
+    
+    def tid_to_tid_num(self, tid):
+        ''' Returns tid_num, given tid. '''
+
+        if isinstance(tid, str):
+            return self.sql_tid_to_tid_num(tid)
+        else:
+            return self.tid_to_tid_num_vec(tid)
 
     def tid_num_to_tag_nums(self, tid_num):
         ''' Returns list of the associated tag_nums to the given tid_num. '''
@@ -278,8 +278,8 @@ class LastFm():
         ''' Gets tags for a given tid. '''
         
         tags = []
-        for tag_num in self.tid_num_to_tag_nums(self.tid_to_tid_num_no_vec(tid)):
-            tags.append(self.tag_num_to_tag_no_vec(tag_num))
+        for tag_num in self.tid_num_to_tag_nums(self.tid_to_tid_num(tid)):
+            tags.append(self.tag_num_to_tag(tag_num))
         return tags
 
     def query_tags_dict(self, tids): # pandas series would perform a bit faster here...
@@ -342,9 +342,9 @@ class LastFm():
         ''' Return all tids with a given tag. '''
         
         q = "SELECT tid FROM tid_tag WHERE tag = ?"
-        tag_num = self.tag_to_tag_num_no_vec(tag)
+        tag_num = self.tag_to_tag_num(tag)
         self._query(q, tag_num)
-        return [self.tid_num_to_tid_no_vec(i[0]) for i in self.c.fetchall()]
+        return [self.tid_num_to_tid(i[0]) for i in self.c.fetchall()]
         
     def popularity(self):
         ''' Produces a dataframe with the following columns: 'tag', 'tag_num', 'count'. '''
@@ -355,7 +355,7 @@ class LastFm():
         
         # add tag to list of tuples
         for i, entry in enumerate(l):
-            l[i] = (self.tag_num_to_tag_no_vec(entry[0]), ) + entry
+            l[i] = (self.tag_num_to_tag(entry[0]), ) + entry
         
         # create df
         pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
