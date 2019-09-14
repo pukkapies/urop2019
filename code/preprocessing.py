@@ -57,10 +57,10 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+from tensorflow.keras.utils import Progbar
+
 from lastfm import LastFm
 from lastfm import LastFm2Pandas
-
-from utils import MyProgbar
 
 def process_array(array, audio_format, sr_in, sr_out = 16000, num_mels = 96):
     ''' Processesing array and applying desired audio format 
@@ -234,7 +234,7 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
         df.reset_index(drop=True, inplace=True)
 
         if verbose:
-            progbar = MyProgbar(len(df)) # create an instance of the progress bar
+            progbar = Progbar(len(df)) # create an instance of the progress bar
 
         for i, cols in df.iterrows():
             if verbose:
