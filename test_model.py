@@ -1,6 +1,7 @@
 import os
 import json
 import argparse
+import time
 
 import tensorflow as tf
 import numpy as np
@@ -299,6 +300,8 @@ if __name__ == '__main__':
     parser.add_argument("--lastfm-path", help="Path to lastfm database", default="/home/calle/clean_lastfm.db")
     parser.add_argument("--tfrecords-dir", help="Path to tfrecords directory, specify if test mode has been selected")
     parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
+    parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_false")
+    parser.add_argument("-s", "--recording-second", help="Number of seconds to record. Minimum length is 15 seconds", type=int, default='15')
     parser.add_argument("--cutoff", type=int, help="Lower bound for what prediction values to print", default=0.1)
 
     args = parser.parse_args()
@@ -311,13 +314,47 @@ if __name__ == '__main__':
     if args.mode == "test":
         test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, with_tags=config.tags)
     else:
-        if not args.mp3_path:
-            raise ValueError("If predicting, must specify mp3 file(s) to predict")
-        elif os.path.isfile(args.mp3_path):
-            audio = get_audio(args.mp3_path, args.format, args.config)
-            print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
-        else:
-            for path in os.listdir(args.mp3_path): 
-                audio = get_audio(os.path.join(args.mp3_path, path), args.format, config)
-                print("file: ", path)
+        
+        if not (args.mp3_path or args.from_recording):
+            raise ValueError("If predicting, must either specify mp3 file(s) to predict, or set --from-recording as True")
+        elif (args.mp3_path and args.from_recording):
+            raise ValueError("If predicting, must either specify mp3 file(s) to predict, or set --from-recording as True")
+        elif args.mp3_path:
+            if os.path.isfile(args.mp3_path):
+                audio = get_audio(args.mp3_path, args.format, args.config)
                 print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+            else:
+                for path in os.listdir(args.mp3_path): 
+                    audio = get_audio(os.path.join(args.mp3_path, path), args.format, config)
+                    print("file: ", path)
+                    print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+        else:
+            assert args.recording_second >=15
+            
+            # In case this is not installed automatically
+            import sounddevice as sd
+            sr = config.sr  # Sample rate
+            seconds = int(args.second)  # Duration of recording
+
+            while True:
+                val = input('Press Enter to begin')
+                if val is not None:
+                    break
+
+            print('record starts in')
+            print('3')
+            time.sleep(1)
+            print('2')
+            time.sleep(1)
+            print('1')
+            time.sleep(1)
+            print('0')
+            print('Recording')
+
+            audio = sd.rec(int(seconds * sr), samplerate=sr, channels=2)
+            sd.wait()  # Wait until recording is finished
+            print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+            
+            
+            
+            
