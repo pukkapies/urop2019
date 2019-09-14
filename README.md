@@ -470,11 +470,11 @@ Below are our results trained from waveform and log mel-spectrogram respectively
 
 Waveform:
 
-Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout',
- 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 'folk', 'chill',
- 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 'rock n roll', 'country',
- 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop',
- 'trance', 'trip-hop']
+Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 
+'chillout', 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 
+'folk', 'chill', 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 
+'rock n roll', 'country', 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 
+'psychedelic', 'synthpop', 'trance', 'trip-hop'
 
 The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/results/waveform_config_1.json)
 
@@ -483,11 +483,11 @@ The parameters we have used can be found [here](https://github.com/pukkapies/uro
 
 Log mel-spectrogram:
 
-Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout',
- 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 'folk', 'chill',
- 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 'rock n roll', 'country',
- 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop',
- 'trance', 'trip-hop']
+Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 
+'chillout', 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 
+'folk', 'chill', 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 
+'rock n roll', 'country', 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 
+'psychedelic', 'synthpop', 'trance', 'trip-hop']
 
 
 The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/results/logmelspectrogram_config_1.json)
