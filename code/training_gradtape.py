@@ -115,6 +115,8 @@ def parse_config(config_path, lastfm_path):
     # create config namespace for the optimizer (will be used by get_optimizer() in order to allow max flexibility)
     config_optim = argparse.Namespace()
     config_optim.class_name = config_d['optimizer'].pop('name')
+    config_optim.max_learning_rate = config_d['optimizer'].pop('max_learning_rate')
+    config_optim.cycle_stepsize = config_d['optimizer'].pop('cycle_stepsize')
     config_optim.config = config_d['optimizer']
     
     return config, config_optim
@@ -167,10 +169,19 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
         
         # initialise loss, optimizer and metrics
-        # CHANGE ASAP -- TESTING PURPOSE
-        max_lr = tf.constant(0.002, dtype=tf.float32)
-        learning_rate = tf.Variable(max_lr/4)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+
+        def get_learning_rate(step, cycle_stepsize, max_lr):
+            # it is recommended that min_lr is 1/3 or 1/4th of the maximum lr. see:  
+            min_lr = max_lr/4
+            current_cycle = tf.floor(step/(2*cycle_stepsize))
+            ratio = step/cycle_stepsize-current_cycle*2
+            lr = min_lr + (max_lr - min_lr)*tf.cast(tf.abs(tf.abs(ratio-1)-1), dtype=tf.float32)
+            return lr
+
+        if config_optim.max_learning_rate and config_optim.cycle_stepsize:
+            config_optim.config['learning_rate'] = tf.Variable(get_learning_rate(0, config_optim.cycle_stepsize, config_optim.max_learning_rate))
+
+        optimizer = tf.keras.optimizers.get({"class_name": config_optim.class_name, "config": config_optim.config})
         train_loss = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
         train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
         train_metrics_1 = tf.keras.metrics.AUC(curve='ROC', name='train_AUC-ROC', dtype=tf.float32)
@@ -221,13 +232,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             prof_log_dir = os.path.join(log_dir, 'profile/')
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
 
-        def get_learning_rate(step, lr_step_size, max_lr):
-            # it is recommended that min_lr is 1/3 or 1/4th of the maximum lr. see:  
-            min_lr = max_lr/4
-            current_cycle = tf.floor(step/(2*lr_step_size))
-            ratio = step/lr_step_size-current_cycle*2
-            lr = min_lr + (max_lr - min_lr)*tf.cast(tf.abs(tf.abs(ratio-1)-1), dtype=tf.float32)
-            return lr
         
         # rescale loss
         def compute_loss(labels, predictions):
@@ -262,9 +266,9 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         def distributed_train_body(entry, epoch, num_replica):
             num_batches = 0 
             for entry in train_dataset:
-                tf.print('Learning rate ', learning_rate)
+                tf.print('Learning rate ', optimizer.learning_rate)
                 strategy.experimental_run_v2(train_step, args=(entry, ))
-                learning_rate.assign(get_learning_rate(optimizer.iterations, 7164, max_lr))
+                optimizer.learning_rate.assign(get_learning_rate(optimizer.iterations, config_optim.cycle_stepsize, config_optim.max_learning_rate))
                 num_batches += 1
                 # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):

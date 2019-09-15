@@ -101,8 +101,10 @@ def create_config_json(config_path, **kwargs):
     # specify how to train the model
     model_training = {
         "optimizer": {
-            "name": "Adam",      # name of the optimizer, as appears in tf.keras.optimizers
-            "learning_rate": 0.  # initial learning rate
+            "name": "Adam",             # name of the optimizer, as appears in tf.keras.optimizers
+            "learning_rate": 0.,        # initial learning rate
+            "max_learning_reate": 0.,   # maximal learning rate in a cycle
+            "cycle_stepsize": 0,        # specify when using cyclical learning rate. Stepsize is a half cycle, recommended is 2 times the iterations in an epoch
         },
         "batch_size": 0,                # global batch size
         "interleave_cycle_length": 0,   # number of input elements that are processed concurrently (when using tf.data.Dataset.interleave)
