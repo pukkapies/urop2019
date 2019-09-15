@@ -13,15 +13,15 @@ class MyJSONEncoder(json.JSONEncoder): # see https://stackoverflow.com/questions
     def __init__(self, **kwargs):
         # save copy of any keyword argument values needed for use here
         self.__sort_keys = kwargs.get('sort_keys', None)
-        super(MyEncoder, self).__init__(**kwargs)
+        super(MyJSONEncoder, self).__init__(**kwargs)
 
     def default(self, obj):
         return (self.FORMAT_SPEC.format(id(obj)) if isinstance(obj, NoIndent)
-                else super(MyEncoder, self).default(obj))
+                else super(MyJSONEncoder, self).default(obj))
 
     def encode(self, obj):
         format_spec = self.FORMAT_SPEC
-        json_repr = super(MyEncoder, self).encode(obj) # default JSON repr
+        json_repr = super(MyJSONEncoder, self).encode(obj) # default JSON repr
 
         # replace any marked-up object ids in the JSON repr with the value returned from the json.dumps() of the corresponding wrapped object
         for match in self.regex.finditer(json_repr):
