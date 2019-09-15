@@ -167,6 +167,8 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         model = projectname.build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
         
         # initialise loss, optimizer and metrics
+        # CHANGE ASAP -- TESTING PURPOSE
+        max_lr = tf.constant(0.002, dtype=tf.float32)
         learning_rate = tf.Variable(max_lr/4)
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         train_loss = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
@@ -219,12 +221,12 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             prof_log_dir = os.path.join(log_dir, 'profile/')
             prof_summary_writer = tf.summary.create_file_writer(prof_log_dir)
 
-        def get_lr(step, lr_step_size, max_lr):
+        def get_learning_rate(step, lr_step_size, max_lr):
             # it is recommended that min_lr is 1/3 or 1/4th of the maximum lr. see:  
             min_lr = max_lr/4
             current_cycle = tf.floor(step/(2*lr_step_size))
             ratio = step/lr_step_size-current_cycle*2
-            lr = min_lr + (max_lr - min_lr)*(tf.abs(ratio-1)+1)
+            lr = min_lr + (max_lr - min_lr)*tf.cast(tf.abs(tf.abs(ratio-1)-1), dtype=tf.float32)
             return lr
         
         # rescale loss
@@ -260,8 +262,9 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         def distributed_train_body(entry, epoch, num_replica):
             num_batches = 0 
             for entry in train_dataset:
+                tf.print('Learning rate ', learning_rate)
                 strategy.experimental_run_v2(train_step, args=(entry, ))
-                learning_rate.assign(get_learning_rate(optimizer.iterations, 7164, 0.002))
+                learning_rate.assign(get_learning_rate(optimizer.iterations, 7164, max_lr))
                 num_batches += 1
                 # print metrics after each iteration
                 if tf.equal(num_batches % update_freq, 0):
