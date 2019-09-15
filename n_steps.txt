@@ -1,0 +1,1 @@
+batch size 128 and log-mel-spectrogram on split (80, 10, 10) gives: 2026
