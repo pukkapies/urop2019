@@ -104,8 +104,8 @@ def parse_config(config_path, lastfm_path):
     config.shuffle_buffer = config_d['config']['shuffle_buffer_size']
     config.split = config_d['config']['split']
     config.sr = config_d['tfrecords']['sample_rate']
-    config.tags = lastfm.vec_tag_to_tag_num(list(tags)) if tags is not None else None
-    config.tags_to_merge = lastfm.vec_tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
+    config.tags = lastfm.tag_to_tag_num(list(tags)) if tags is not None else None
+    config.tags_to_merge = lastfm.tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
     config.tot_tags = config_d['tfrecords']['n_tags']
     config.window_len = config_d['config']['window_length']
     config.window_random = config_d['config']['window_extract_randomly']
@@ -422,8 +422,8 @@ if __name__ == '__main__':
     train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
                                                                                 sample_rate=config.sr, batch_size=config.batch, 
                                                                                 cycle_length=config.cycle_len, 
-                                                                                shuffle=config.shuffle, buffer_size=config.shuffle_buffer, 
-                                                                                num_tags=config.tot_tags, window_size=config.window_len, random=config.window_random, 
+                                                                                shuffle=config.shuffle, shuffle_buffer_size=config.shuffle_buffer, 
+                                                                                num_tags=config.tot_tags, window_length=config.window_len, window_random=config.window_random, 
                                                                                 with_tags=config.tags, merge_tags=config.tags_to_merge,
 										                                        as_tuple=False)
     

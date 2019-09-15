@@ -88,7 +88,7 @@ def mp3_path_to_npz_path(path):
     
     Parameters
     ----------
-    path : str
+    path: str
         The path of the .mp3 file.
 
     Returns

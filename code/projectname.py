@@ -17,7 +17,7 @@ This module can be divded into four parts:
 Functions
 ---------
 - create_config_json
-    Create a json file storing the parameters.
+    Create a json file storing the parameters. See inline documentation for more details.
 
 - wave_frontend
     Model frontend for waveform input.
@@ -69,10 +69,10 @@ import os
 
 import tensorflow as tf
 
-from utils import MyEncoder, NoIndent
+from utils import MyJSONEncoder, NoIndent
         
 def create_config_json(config_path, **kwargs):
-    ''' Creates configuration file with training specs.
+    ''' Creates an "empty" configuration file for training specs.
 
     Parameters
     -----------
@@ -92,61 +92,66 @@ def create_config_json(config_path, **kwargs):
     >>> create_config_json(config_path, learning_rate=0.00001, n_filters=64)
     '''
 
+    # specify how to build the model
     model = {
-        'n_dense_units': 500,
-        'n_filters': 16,
+        "n_dense_units": 0, # number of neurons in the dense hidden layer of the backend
+        "n_filters": 0,     # number of filters in the first convolution layer of the log mel-spectrogram frontend (see https://github.com/jordipons/music-audio-tagging-at-scale-models)
     }
 
-    optimizer = {
-        'name': 'SGD',
-        'learning_rate': 0.01,
+    # specify how to train the model
+    model_training = {
+        "optimizer": {
+            "name": "Adam",      # name of the optimizer, as appears in tf.keras.optimizers
+            "learning_rate": 0.  # initial learning rate
+        },
+        "batch_size": 0,                # global batch size
+        "interleave_cycle_length": 0,   # number of input elements that are processed concurrently (when using tf.data.Dataset.interleave)
+        "interleave_block_length": 0,   # number of consecutive input elements that are consumed at each cycle (when using tf.data.Dataset.interleave) (see https://www.tensorflow.org/api_docs/python/tf/data/Dataset#interleave)
+        "reduceLRoP_factor": 0.,        # the factor the learning rate is deacreased by, when using ReduceLROnPlateau callback
+        "early_stop_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment' (please put None if EarlyStopping is not used)
+        "reduceLRoP_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment' (please put None if ReduceLROnPlateau is not used)
+        "early_stop_patience": 0,       # the number epochs with 'no improvement' to wait before triggering EarlyStopping (please put None if EarlyStopping is not used)
+        "reduceLRoP_patience": 0,       # the number epochs with 'no improvement' to wait before triggering ReduceLROnPlateau and reduce lr by a 'reduceLRoP_factor' (please put None if ReduceLROnPlateau is not used)
+        "log_dir": "~/",                # directory where tensorboard logs and checkpoints will be stored
+        "shuffle": True,                # if True, shuffle the dataset
+        "shuffle_buffer_size": 0,       # buffer size to use to shuffle the dataset (only applies if shuffle is True)
+        "split": NoIndent([0, 0]),      # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
+        "window_length": 0,             # length (in seconds) of the audio 'window' to input into the model
+        "window_random": True,          # if True, the window is picked randomly along the track length; if False, the window is always picked from the middle
     }
 
+    # specify which tags to use
     tags = {
-        'top': 50,
-        'with': NoIndent(None),
-        'without': NoIndent(None),
-        'merge': NoIndent(None),
+        "top": 0,                   # e.g. use only the most popular 50 tags from the tags database will go into training (if None, all tags go into training)
+        "with": NoIndent([]),       # tags that will be added to the list above        
+        "without": NoIndent([]),    # tags that will be excluded from the list above
+        "merge": None,              # tags to merge together (e.g. use 'merge': [[1,2], [3,4]] to merge tags 1 and 2, 3 and 4)
     }
 
+    # specify how the data has been encoded in the .tfrecord files
     tfrecords = {
-        'n_mels': 128,
-        'n_tags': 155,
-        'sample_rate': 16000,
-    }
-
-    config = {
-        'batch_size': 32,
-        'cycle_length': 2,
-        'early_stop_min_delta': 0.2,
-        'early_stop_patience': 5,
-        'log_dir': '/srv/data/urop/log/',
-        'checkpoint_dir': '/srv/data/urop/model/',
-        'shuffle': True,
-        'shuffle_buffer_size': 10000,
-        'split': NoIndent((80, 10, 10)),
-        'reduce_lr_plateau_min_delta': 0.1,
-        'reduce_lr_plateau_patience': 2,
-        'window_length': 15,
-        'window_extract_randomly': True,
+        "n_mels": 0,        # number of mels in the log-mel-spectrogram audio files
+        "n_tags": 0,        # *total* number of tags in the database (*not* the number of tags that you will eventually be using for training)
+        "sample_rate": 0,   # sample rate of the audio files
     }
 
     def substitute_into_dict(key, value):
-        for dict in (model, tags, tfrecords, config):
+        for dict in (model, model_training, tags, tfrecords):
             if key in dict:
                 dict[key] = value
                 return
         raise KeyError(key)
-
+    
+    # substitute kwargs into output dictionary (passing kwargs is basically equivalent to editing the .json file manually)
     for key, value in kwargs.items():
         substitute_into_dict(key, value)
     
-    if not os.path.isfile(config_path):
-        config_path = os.path.join(os.path.abspath(config_path),'config.json')
+    if os.path.isdir(config_path):
+        config_path = os.path.join(os.path.abspath(config_path), 'config.json')
     
     with open(config_path, 'w') as f:
-        d = {'model': model, 'optimizer': optimizer, 'tags': tags, 'tfrecords': tfrecords, 'config': config}
-        s = json.dumps(d, cls=MyEncoder, indent=2)
+        d = {'model': model, 'model-training': model_training, 'tags': tags, 'tfrecords': tfrecords}
+        s = json.dumps(d, cls=MyJSONEncoder, indent=2)
         f.write(s)
     
 def wave_frontend(input):
