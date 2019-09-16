@@ -51,19 +51,26 @@ def parse_config(config_path, lastfm_path):
 
     # read tags from popularity dataframe
     top = config_dict['tags']['top']
-    if top is None:
-        top = config.n_tags
-    tags = set(lastfm.popularity()['tag'][:top].tolist())
+    if (top is not None) and (top !=config.n_tags):
+        top_tags = lastfm.popularity()['tag'][:top].tolist()
+        tags = set(top_tags)
+    else:
+        tags=None
 
-    # read tags to add or discard, and update the tags set
-    if config_dict['tags']['with']:
-        tags.update(config_dict['tags']['with'])
-    if config_dict['tags']['without']:
-        tags.difference_update(config_dict['tags']['without'])
-    tags = list(tags)
-
-    config.n_output_neurons = len(tags)
-    config.tags = lastfm.tag_to_tag_num(tags)
+    # find tags to use
+    if tags is not None:
+        if config['tags']['with']:
+            tags.update(config['tags']['with'])
+        
+        if config['tags']['without']:
+            tags.difference_update(config['tags']['without'])
+        tags = list(tags)
+    else:
+        raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
+    
+    
+    config.n_output_neurons = len(tags) if tags is not None else config.n_tags
+    config.tags = lastfm.tag_to_tag_num(tags) if tags is not None else None
     config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
     
     return config
