@@ -282,9 +282,10 @@ def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, 
         if set(df.columns) == {'track_id', 'npz_path'}:
             return
         else:
-            print('Could not process the following tracks:')
-            for i, exception in enumerate(exceptions):
-                print(" {:3d}. {} {}".format(i, exception["tid"] + exception["path"]))
+            if exceptions:
+                print('Could not process the following tracks:')
+                for i, exception in enumerate(exceptions):
+                    print(" {:3d}. {} {}".format(i, exception["tid"] + exception["path"]))
             return
 
 if __name__ == '__main__':
@@ -357,6 +358,7 @@ if __name__ == '__main__':
             start, stop = args.start_stop
             for num_file in range(start-1, stop):
                 filename = base_name + str(num_file+1) + ".tfrecord"
+                print()
                 print("Writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
@@ -371,6 +373,7 @@ if __name__ == '__main__':
             if stop >= args.num_files:
                 stop = args.num_files-1
                 filename = base_name + str(args.num_files) + ".tfrecord"
+                print()
                 print("Writing to: " + filename)
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
@@ -385,6 +388,7 @@ if __name__ == '__main__':
         else:
             for num_file in range(args.num_files - 1):
                 filename = base_name + str(num_file+1) + ".tfrecord"
+                print()
                 print("Writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
@@ -397,6 +401,7 @@ if __name__ == '__main__':
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             filename = base_name + str(args.num_files) + ".tfrecord"
+            print()
             print("Writing to: " + filename)
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
