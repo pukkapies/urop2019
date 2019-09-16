@@ -1,37 +1,31 @@
-# urop2019 -- Projectname
+# UROP 2019 -- Deep Learning for Music Tagging (aka 'Orpheus)
 
-Summer UROP 2019 project repository.
-
-This project aims to develop a neural network music audio autotagger, i.e. this network will 
-take a music audio file and predict a list of tags that are relevant to that audio.
+In this project, we aim to develop an end-to-end music audio auto-tagger competitive with the state-of-the-art. In this project, we will use deep learning to train a CNN to take a music audio file and predict the list of tags that are more relevant to it.
 
 ## Table of Contents
 
-
-* [Introduction](https://github.com/pukkapies/urop2019#introduction)
-* [Prerequisites](https://github.com/pukkapies/urop2019#prerequisites)
-* [Data Cleaning](https://github.com/pukkapies/urop2019#data-cleaning)
-    * [Audio](https://github.com/pukkapies/urop2019#audio)
-    * [Database](https://github.com/pukkapies/urop2019#database)
-    * [Tags](https://github.com/pukkapies/urop2019#tags)
-* [Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline)
-    * [TFRecords](https://github.com/pukkapies/urop2019#tfrecords)
-    * [Dataset Preparation](https://github.com/pukkapies/urop2019#dataset-preparation)
-* [Training](https://github.com/pukkapies/urop2019#training)
-    * [Model and Configuration](https://github.com/pukkapies/urop2019#model-and-configuration)
-    * [Training loops](https://github.com/pukkapies/urop2019#training-loops)
-* [Evaluation tools](https://github.com/pukkapies/urop2019#evaluation-tools)
+* [Outline of the Project](https://github.com/pukkapies/urop2019#outline-of-the-project)
+* [Requirements](https://github.com/pukkapies/urop2019#requirements)
+* [Getting Started](https://github.com/pukkapies/urop2019#getting-started)
+	* [Data Cleaning](https://github.com/pukkapies/urop2019#data-cleaning)
+	    * [Audio](https://github.com/pukkapies/urop2019#audio)
+	    * [Database](https://github.com/pukkapies/urop2019#database)
+	    * [Tags](https://github.com/pukkapies/urop2019#tags)
+	* [Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline)
+	    * [TFRecords](https://github.com/pukkapies/urop2019#tfrecords)
+	    * [Dataset Preparation](https://github.com/pukkapies/urop2019#dataset-preparation)
+	* [Training](https://github.com/pukkapies/urop2019#training)
+	    * [Model and Configuration](https://github.com/pukkapies/urop2019#model-and-configuration)
+	    * [Training Loops](https://github.com/pukkapies/urop2019#training-loops)
+	* [Evaluating and Predicting](https://github.com/pukkapies/urop2019#evaluation-tools)
 * [Results](https://github.com/pukkapies/urop2019#results)
-* [Reference](https://github.com/pukkapies/urop2019#reference)
-* [Contact / Getting Help](https://github.com/pukkapies/urop2019#contact--getting-help)
+* [References](https://github.com/pukkapies/urop2019#references)
+* [Contacts / Getting Help](https://github.com/pukkapies/urop2019#contacts--getting-help)
 
 
-## Introduction
+## Outline of the Project
 
-This project makes use of the freely-available [Million Song Dataset]( http://millionsongdataset.com), 
-and the [Last.fm](http://millionsongdataset.com/lastfm/) dataset. The former provides a link between 
-all the useful information of the related to the tracks and the actual track files, whereas the 
-latter contains all the tags information of the audio files.
+This project makes use of the freely-available [Million Song Dataset]( http://millionsongdataset.com), and the [Last.fm](http://millionsongdataset.com/lastfm/) dataset. The former provides a link between all the useful information of the related to the tracks and the actual track files, whereas the latter contains all the tags information of the audio files.
 
 Outline of the project:
 
@@ -54,16 +48,20 @@ audio, or even how to make use of our codes to carry out your experiment very ea
 If you are interested to see our experiment result, click here (hyperlink to results)
 
 
-## Prerequisites
+## Requirements
 
 * Python 3.6
 * One or more CUDA-enabled GPUs
 * Mac or Linux environment
-* Libraries Required:
-    * [TensorFlow](https://www.tensorflow.org/beta) 2.0.0-rc0 GPU version or above
-    * [Librosa](https://github.com/librosa/librosa) 0.7.0 + ffmpeg
-    * [Mutagen](https://mutagen.readthedocs.io/en/latest/) 1.42.0
-    * Other common libraries 
+* [TensorFlow](https://www.tensorflow.org/beta) 2.0.0-rc0 or above (GPU version) 
+* [H5Py](https://www.h5py.org/) 2.3.1 -- to read the HDF5 dataset summary 
+* [Librosa](https://github.com/librosa/librosa) 0.7.0 + [FFmpeg](https://www.ffmpeg.org/) -- to read, load and analyse audio files
+* [Mutagen](https://mutagen.readthedocs.io/en/latest/) 1.42.0 -- to read audio files
+* [Sparse](https://sparse.pydata.org/en/latest/) 0.8.9 -- to perform advanced operations on the tags database and save data as a n-dimensional sparse matrix
+* Other common Python libraries such as [Pandas](https://pandas.pydata.org/) or [NumPy](https://numpy.org/)
+
+## Getting Started
+Lorem ipsum
 
 ## Data Cleaning
 
@@ -528,11 +526,3 @@ calle.sonne18@imperial.ac.uk
 chon.ho17@imperial.ac.uk
 
 davide.gallo18@imperial.ac.uk
-
-
-
-
-
-
-
-
