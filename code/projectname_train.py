@@ -59,11 +59,11 @@ def parse_config(config_path, lastfm_path):
 
     # find tags to use
     if tags is not None:
-        if config['tags']['with']:
-            tags.update(config['tags']['with'])
+        if config_dict['tags']['with']:
+            tags.update(config_dict['tags']['with'])
         
-        if config['tags']['without']:
-            tags.difference_update(config['tags']['without'])
+        if config_dict['tags']['without']:
+            tags.difference_update(config_dict['tags']['without'])
         tags = list(tags)
     else:
         raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
