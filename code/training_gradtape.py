@@ -107,6 +107,7 @@ def parse_config(config_path, lastfm_path):
     config.tags = lastfm.tag_to_tag_num(list(tags)) if tags is not None else None
     config.tags_to_merge = lastfm.tag_to_tag_num(config_d['tags']['merge']) if config_d['tags']['merge'] is not None else None
     config.tot_tags = config_d['tfrecords']['n_tags']
+    config.iterations = config_d['tfrecords']['iterations']
     config.window_len = config_d['config']['window_length']
     config.window_random = config_d['config']['window_extract_randomly']
     config.log_dir = config_d['config']['log_dir']
@@ -116,12 +117,11 @@ def parse_config(config_path, lastfm_path):
     config_optim = argparse.Namespace()
     config_optim.class_name = config_d['optimizer'].pop('name')
     config_optim.max_learning_rate = config_d['optimizer'].pop('max_learning_rate')
-    config_optim.cycle_stepsize = config_d['optimizer'].pop('cycle_stepsize')
     config_optim.config = config_d['optimizer']
     
     return config, config_optim
             
-def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, resume_time=None, update_freq=1, analyse_trace=False):
+def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim, epochs, resume_time=None, update_freq=1, lr_range=None, analyse_trace=False):
     ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
 
     Parameters
@@ -170,16 +170,25 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
         
         # initialise loss, optimizer and metrics
 
-        def get_learning_rate(step, cycle_stepsize, max_lr):
+        def get_cyclic_learning_rate(step, iterations, max_lr):
             # it is recommended that min_lr is 1/3 or 1/4th of the maximum lr. see:  
             min_lr = max_lr/4
+            # cycle stepsize twice the iterations in an epoch is recommended
+            cycle_stepsize = iterations*2
+
             current_cycle = tf.floor(step/(2*cycle_stepsize))
             ratio = step/cycle_stepsize-current_cycle*2
             lr = min_lr + (max_lr - min_lr)*tf.cast(tf.abs(tf.abs(ratio-1)-1), dtype=tf.float32)
             return lr
 
-        if config_optim.max_learning_rate and config_optim.cycle_stepsize:
-            config_optim.config['learning_rate'] = tf.Variable(get_learning_rate(0, config_optim.cycle_stepsize, config_optim.max_learning_rate))
+        def get_range_test_learning_rate(step, lr_range, iterations):
+            lr = lr_range[0]*tf.cast((lr_range[1]/lr_range[0])**(step/iterations), dtype=tf.float32)
+            return lr
+
+        if lr_range:
+            config_optim.config['learning_rate'] = tf.Variable(get_range_test_learning_rate(0, lr_range, config.iterations))
+        elif config_optim.max_learning_rate:
+            config_optim.config['learning_rate'] = tf.Variable(get_cyclic_learning_rate(0, config.iterations, config_optim.max_learning_rate))
 
         optimizer = tf.keras.optimizers.get({"class_name": config_optim.class_name, "config": config_optim.config})
         train_loss = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
@@ -264,20 +273,25 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             
         @tf.function 
         def distributed_train_body(entry, epoch, num_replica):
-            num_batches = 0 
             for entry in train_dataset:
-                tf.print('Learning rate ', optimizer.learning_rate)
-                strategy.experimental_run_v2(train_step, args=(entry, ))
-                optimizer.learning_rate.assign(get_learning_rate(optimizer.iterations, config_optim.cycle_stepsize, config_optim.max_learning_rate))
-                num_batches += 1
+                per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry, ))
+
+                if lr_range:
+                    optimizer.learning_rate.assign(get_range_test_learning_rate(optimizer.iterations, lr_range, config.iterations))
+                elif config_optim.max_learning_rate:
+                    optimizer.learning_rate.assign(get_cyclic_learning_rate(optimizer.iterations, config.iterations, config_optim.max_learning_rate))
+
                 # print metrics after each iteration
-                if tf.equal(num_batches % update_freq, 0):
-                    tf.print('Epoch',  epoch,'; Step', num_batches, '; loss', tf.multiply(train_mean_loss.result(), num_replica), '; ROC_AUC', train_metrics_1.result(), ';PR_AUC', train_metrics_2.result())
+                if tf.equal(optimizer.iterations % update_freq, 0):
+                    tf.print('Epoch',  epoch,'; Step', optimizer.iterations, '; loss', tf.multiply(train_mean_loss.result(), num_replica), 
+                             '; ROC_AUC', train_metrics_1.result(), ';PR_AUC', train_metrics_2.result(), '; learning rate', optimizer.learning_rate)
 
                     with train_summary_writer.as_default():
                         tf.summary.scalar('ROC_AUC_itr', train_metrics_1.result(), step=optimizer.iterations)
                         tf.summary.scalar('PR_AUC_itr', train_metrics_2.result(), step=optimizer.iterations)
-                        tf.summary.scalar('Loss_itr', tf.multiply(train_mean_loss.result(), num_replica), step=optimizer.iterations)
+                        tf.summary.scalar('Loss_itr', strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None), step=optimizer.iterations)
+                        if lr_range:
+                            tf.summary.scalar('Learning rate', optimizer.learning_rate, step=optimizer.iterations)
                         train_summary_writer.flush()
                 gc.collect()
 
@@ -393,7 +407,8 @@ if __name__ == '__main__':
     parser.add_argument("--update-freq", help="specify the frequency (in steps) to record metrics and losses", type=int, default=10)
     parser.add_argument("--cuda", help="set cuda visible devices", type=int, nargs="+")
     parser.add_argument("-v", "--verbose", choices=['0', '1', '2', '3'], help="verbose mode", default='0')
-
+    parser.add_argument("--lr-range", help="MIN/MAX. range for learning rate range test")
+    
     args = parser.parse_args()
 
     # specify number of visible gpu's
@@ -419,17 +434,23 @@ if __name__ == '__main__':
     if args.no_shuffle:
         config.shuffle = False
 
+    if args.lr_range:
+        args.lr_range = [float(val) for val in args.lr_range.split("/")]
+        args.epochs = 1
+
     # create training and validation dataset
     assert config.split
     assert len(config.split) >= 2
     assert len(config.split) <= 3
-    train_dataset, valid_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split=config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
-                                                                                sample_rate=config.sr, batch_size=config.batch, 
-                                                                                cycle_length=config.cycle_len, 
-                                                                                shuffle=config.shuffle, shuffle_buffer_size=config.shuffle_buffer, 
-                                                                                num_tags=config.tot_tags, window_length=config.window_len, window_random=config.window_random, 
-                                                                                with_tags=config.tags, merge_tags=config.tags_to_merge,
-										                                        as_tuple=False)
+    train_dataset, valid_dataset = \
+            projectname_input.generate_datasets_from_dir(args.tfrecords_dir, 
+                    args.frontend, split=config.split, sample_rate=config.sr, 
+                    which_split=(True, True, ) + (False, ) * (len(config.split)-2),
+                    batch_size=config.batch, cycle_length=config.cycle_len, 
+                    shuffle=config.shuffle, shuffle_buffer_size=config.shuffle_buffer, 
+                    num_tags=config.tot_tags, window_length=config.window_len, 
+                    window_random=config.window_random, with_tags=config.tags,
+                    merge_tags=config.tags_to_merge, as_tuple=False)
     
     if args.steps_per_epoch:
         train_dataset = train_dataset.take(args.steps_per_epoch)
@@ -441,8 +462,7 @@ if __name__ == '__main__':
     valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
 
     # train
-    train(train_dataset, valid_dataset, frontend=args.frontend, strategy=strategy,
-          config=config, config_optim=config_optim,
+    train(train_dataset, valid_dataset, frontend=args.frontend, 
+          strategy=strategy, config=config, config_optim=config_optim,
           epochs=args.epochs, resume_time=args.resume_time, 
-          update_freq=args.update_freq)
-
+          update_freq=args.update_freq, lr_range=args.lr_range)
