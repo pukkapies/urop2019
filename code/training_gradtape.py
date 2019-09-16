@@ -39,7 +39,6 @@ Functions
 
 import argparse
 import datetime
-import gc
 import json
 import os
 import time
@@ -293,13 +292,11 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                         if lr_range:
                             tf.summary.scalar('Learning rate', optimizer.learning_rate, step=optimizer.iterations)
                         train_summary_writer.flush()
-                gc.collect()
 
         @tf.function
         def distributed_val_body(entry):
             for entry in valid_dataset:
                 strategy.experimental_run_v2(valid_step, args=(entry, ))
-                gc.collect()
 
         max_metric = -200 # for early stopping
 
@@ -316,7 +313,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 tf.summary.trace_on(graph=False, profiler=True)
             
             distributed_train_body(train_dataset, epoch, num_replica)
-            gc.collect()
             
             # write metrics on tensorboard after each epoch
             with train_summary_writer.as_default():
@@ -341,7 +337,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
 
             if valid_dataset:
                 distributed_val_body(valid_dataset)
-                gc.collect()
                 with val_summary_writer.as_default():
                     tf.summary.scalar('ROC_AUC_epoch', val_metrics_1.result(), step=epoch)
                     tf.summary.scalar('PR_AUC_epoch', val_metrics_2.result(), step=epoch)
@@ -391,7 +386,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             tf.print('Epoch {}: {} s'.format(epoch, time_taken))
             
             tf.keras.backend.clear_session()
-            gc.collect()
 
 if __name__ == '__main__':
     
