@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', help='specify the number of epochs to train on', type=int, required=True)
     parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)', type=int)
     parser.add_argument('--no-shuffle', action='store_true', help='force no shuffle, override config setting')
-    parser.add_argument('--resume', help='load a previously saved model')
+    parser.add_argument('--resume', help='load a previously saved model with the time in the format ddmmyy-hhmm, e.g. if the folder which the model is saved is custom_log-mel-spect_160919-0539, resume should take the argument 160919-0539')
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
     parser.add_argument('--cuda', help='set cuda visible devices', type=int, nargs='+')
     parser.add_argument('--custom', action='store_true', help='train using custom training loop')
