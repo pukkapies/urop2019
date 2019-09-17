@@ -1,9 +1,9 @@
-''' Contains tools to generate a new lastfm_tags.db file containing only the "clean" merged tags.
+''' Contains tools to generate a new lastfm_tags.db file containing only the 'clean' merged tags.
 
 
 Notes
 -----
-This file can be run as a script. To do so, just type 'python clean_lastfm.py' in the terminal. The help 
+This file can be run as a script. To do so, just type 'python lastfm_cleaning.py' in the terminal. The help 
 page should contain all the options you might possibly need. 
 
 The script relies on the query_lastfm module to perform queries on the original database, and on the
@@ -22,10 +22,10 @@ Functions
     Take the tag dataframe and flatten, then replace tag with tag nums from the original database, then add one row of 0's at the top of the output dataframe.
 
 - create_tag_tag_table
-    Create a dataframe linking the tag num's in the original lastfm database to the tag num's in the new "clean" database.
+    Create a dataframe linking the tag num's in the original lastfm database to the tag num's in the new 'clean' database.
 
 - create_tid_tag_table
-    Create a dataframe containing all the "clean" tags for each tid.
+    Create a dataframe containing all the 'clean' tags for each tid.
 '''
 
 import argparse
@@ -39,6 +39,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath
 
 from lastfm import LastFm
 from lastfm import LastFm2Pandas
+from lastfm import Matrix
 
 def flatten(df: pd.DataFrame):
     ''' Produce a dataframe with the following columns: 'tag', 'new_tag_num'.
@@ -56,7 +57,7 @@ def flatten(df: pd.DataFrame):
     ---------------------------------------------
     1   |    rock        |  ['ROCK']
     2   |    pop         |  []
-    3   |    hip hip     |  ['hiphop', 'hip-hop']
+    3   |    hip-hop     |  ['hiphop', 'hip hop']
 
                                 ...then flatten(df) returns:
 
@@ -164,12 +165,12 @@ def create_tid_tag_table(lf: LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: i
     tid_tag = tid_tag[tid_tag['tag'] != 0]
     return tid_tag
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
-    import lastfm_tool as lf_tool
+    import lastfm_cleaning_utils as lastfm_utils
 
-    description = "Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track."
-    epilog = "Example: python clean_lastfm.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db"
+    description = 'Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track.'
+    epilog = 'Example: python lastfm_cleaning.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db'
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("input", help="input db filename or path, or .csv folder path")
     parser.add_argument("output", help="output db filename or path")
@@ -177,25 +178,24 @@ if __name__ == "__main__":
     parser.add_argument('--supp-txt-path', help="set supplementary txt folder path")
     
     args = parser.parse_args()
-    
+
+    # check if output filename ends with .db extension
+    if args.output[-3:] != '.db':
+        args.output += '.db'
+
+    # check if output file already exists
+    if os.path.isfile(args.output):
+       raise OSError("file " + args.output + " already exists!")
+
+    # check if different txt path has been provided
+    if args.supp_txt_path:
+        lastfm_utils.set_txt_path(args.supp_txt_path)
+
     # if user provided a .csv folder, load .csv into LastFm2Pandas; otherwise, load db into LastFm
     if os.path.isdir(args.input):
         lastfm = LastFm2Pandas.from_csv(args.input)
     else:
         lastfm = LastFm(args.input)
-
-    # check if output ends with db extension
-    if args.output[-3:] != '.db':
-        args.output += '.db'
-
-    # check if output already exists
-    if os.path.isfile(args.output):
-       print("WARNING file " + args.output + " already exists!")
-       sys.exit(0)
-    
-    # check if different txt path has been provided
-    if args.supp_txt_path:
-        lf_tool.set_txt_path(args.supp_txt_path)
     
     df = lf_tool.generate_final_df(lastfm)
     df.reset_index(drop=True, inplace=True) # shouldn't be needed to reset_index... this only adds extra safety
