@@ -359,6 +359,7 @@ class LastFm():
         
         # create df
         pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
+        pop.sort_values('count', ascending=False, inplace=True)
         pop.index += 1
         return pop
 
@@ -681,6 +682,7 @@ class LastFm2Pandas():
         self.pop.reset_index(inplace=True)
         self.pop.rename(columns={'index':'tag_num'}, inplace=True)
         self.pop = pd.concat([self.pop['tag'], self.pop['tag_num'], self.pop['count']], axis=1)
+        self.pop.sort_values('count', ascending=False, inplace=True)
         self.pop.index += 1
         return self.pop
 
