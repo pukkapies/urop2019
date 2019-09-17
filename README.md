@@ -43,7 +43,7 @@ genre predictions to input audio.
 
 In the following sections, we will present to you in more details on what we have done, 
 and a brief tutorial of how you may utilize this repository to make genre predictions to your own 
-audio, or even how carry out your experiments based on this repository very easily.
+audio, or even how to easily carry out experiments based on this repository.
 
 If you are interested to see our experiment result, click [here](https://github.com/pukkapies/urop2019#results)
 
