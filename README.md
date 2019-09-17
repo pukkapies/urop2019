@@ -114,21 +114,16 @@ extracted and merged. According to the MSD website, there are mismatches between
 these datasets. For more details, see [here](http://millionsongdataset.com/blog/12-2-12-fixing-matching-errors/). 
 To deal with this issue, `wrangler.py` takes a '.txt' file with a list 
 of tids which could not be trusted, and remove the corresponding rows 
-of data based on the list. Furthermore, MSD also provides `.txt` file 
+in the dataframe. Furthermore, MSD also provides a `.txt` file 
 with a list of tracks that have duplicates. `wrangler.py` by default 
-keeps one version of the duplicate tracks of each song according to the list 
-and remove the rest. 
+keeps one version of the duplicate tracks of each song and removes the rest.
 
-The dataframe from above is merged with the dataframe 
-produced by the audio section above followed by 
-removing unnecessary columns to produce the 'ultimate' dataframe. 
+The dataframe from the above paragraph is merged with the dataframe produced by the above 
+audio section followed by removing unnecessary columns to produce the 'ultimate' dataframe. 
 This dataframe acts as a clean dataset containing all the essential information 
 about the tracks and will be used throughout the project.
 
-
 For more information about how these functions are used, see [here](https://github.com/pukkapies/urop2019/blob/master/msd/README.md)
-
-
 
 **Example**
 
