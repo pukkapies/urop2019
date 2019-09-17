@@ -66,21 +66,25 @@ Lorem ipsum
 ## Data Cleaning
 
 ### Audio
-Firstly, by `fetcher.py`, the directory which contains all the tracks is thoroughly 
-scanned. The info: file path, duration,  number of channels, file size are captured and 
+Firstly, using `fetcher.py`, the directory which contains all the tracks is thoroughly 
+scanned. The info: file path, duration,  number of channels, file size are all captured and 
 stored in a Pandas dataframe. The audio files that cannot be opened correctly are removed 
-from the dataframe.  
+from this dataframe.  
 
 After that, `mp3_to_numpy.py` uses the librosa library to convert every audio file that can 
 be opened into numpy arrays (based on the number of channels). The numpy arrays of each track 
-are then analysed to extract the location of any silent sections respectively (see the 
-documentation in the script for more details). The silent information, the arrays, and the 
-sampling rate of each track are optionally stored as an npz file in the given directory. 
+are then analysed to extract the location of any silent sections (see the documentation in 
+the script for more details). The silent information, the arrays, and the 
+sampling rate of each track are optionally stored as an npz file in the given directory.
+During the project npz files were created as we didnt have the whole audio cleaning path
+outlined yet and needed to easily access the data for experimenting. However for readers we
+would recommend against creating these files as they require large amounts of storage and
+saving and opening these files will make the audio cleaning process slower.
 
 The silent information is processed and interpreted by `wrangler_silence.py`, 
 and the results, e.g. effective_clip_length, max_silence_length are appended to 
-the dataframe. `wrangler_silence` provides functions that can filter out tracks 
-based on their silent information. In our experient, tracks with ??????????????????? 
+the dataframe. The script will also filter the database and remove tracks that do not
+satisfy certain user-set criterions related to the above results.
 
 
 **Example**:
