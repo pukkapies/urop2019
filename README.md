@@ -257,17 +257,6 @@ from lastfm_cleaning_utils.py. The database has the same structure as the
 python lastfm_cleaning.py /srv/data/msd/lastfm/SQLITE/lastfm_tags.db /srv/data/urop/clean_lastfm.db --val ?? 
 ```
 
-To summeraise, `metadata.py` was used to convert between TID and 7digitalid as the `.mp3` 
-files were named by 7digitalid whilst tag information was linked to the TID. 
-THIS SCRIPT WAS NEVER USED??
-
-`lastfm.py` was used throughout the project whenever tag information is needed to be fetched. 
-In our experiment, `lastfm_cleaning` and `lastfm_cleaning_utils` were used once together 
-in order to generate the `clean_lastfm.db` containing 155 clean tags. We stored 
-more tags than we would probably need, but this was better than potentially 
-having to regenerate the TFRecord files.
-
-
 ## Data Input Pipeline
 ### Tfrecords
 To store the necessary information we need in training, we used the `.tfrecord` 
