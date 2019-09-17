@@ -76,7 +76,7 @@ be opened into numpy arrays (based on the number of channels). The numpy arrays 
 are then analysed to extract the location of any silent sections (see the documentation in 
 the script for more details). The silent information, the arrays, and the 
 sampling rate of each track are optionally stored as an npz file in the given directory.
-During the project npz files were created as we didnt have the whole audio cleaning path
+During the project npz files were created as we did not have the whole audio cleaning path
 outlined yet and needed to easily access the data for experimenting. However for readers we
 would recommend against creating these files as they require large amounts of storage and
 saving and opening these files will make the audio cleaning process slower.
@@ -85,7 +85,6 @@ The silent information is processed and interpreted by `wrangler_silence.py`,
 and the results, e.g. effective_clip_length, max_silence_length are appended to 
 the dataframe. The script will also filter the database and remove tracks that do not
 satisfy certain user-set criterions related to the above results.
-
 
 **Example**:
 
