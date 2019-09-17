@@ -42,10 +42,10 @@ customised experiments.
 genre predictions to input audio.
 
 In the following sections, we will present to you in more details on what we have done, 
-and a brief tutorial of how you may our codes to make genre predictions to your piece of 
-audio, or even how to make use of our codes to carry out your experiment very easily.
+and a brief tutorial of how you may utilize this repository to make genre predictions to your own 
+audio, or even how carry out your experiments based on this repository very easily.
 
-If you are interested to see our experiment result, click here (hyperlink to results)
+If you are interested to see our experiment result, click [here](https://github.com/pukkapies/urop2019#results)
 
 
 ## Requirements
