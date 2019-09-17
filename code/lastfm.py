@@ -414,37 +414,61 @@ class LastFm2Pandas():
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, path, no_tags=False, no_tids=False, no_tid_tag=False):
+    def __init__(self, path, tags=None, no_tags=False, tids=None, no_tids=False, tid_tag=None, no_tid_tag=False):
         '''
         Parameters
         ----------
         path: str
             Path to tags database. Defaults to path on Boden.
 
+        tags: pd.DataFrame
+            If path is None, you can directly provide a tags dataframe.
+
         no_tags: bool
             If True, do not store tags table.
 
+        tids: pd.DataFrame
+            If path is None, you can directly provide a tids dataframe.
+
         no_tids: bool
             If True, do not store tids table.
+        
+        tid_tag: pd.DataFrame
+            If path is None, you can directly provide a tids dataframe.
 
         no_tid_tag: bool
             If True, do not store tid_tag table.
         '''
 
-        if not os.path.isfile(path):
-            raise OSError("file " + path + " does not exist!")
+        if path is not None:
+            if not os.path.isfile(path):
+                raise OSError("file " + path + " does not exist!")
 
-        conn = sqlite3.connect(path)
-        if not no_tags:
-            self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
-            self.tags.index += 1
-        if not no_tids:
-            self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
-            self.tids.index += 1
-        if not no_tid_tag:
-            self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
-            self.tid_tag.index += 1
-        conn.close()
+            conn = sqlite3.connect(path)
+            if not no_tags:
+                self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
+                self.tags.index += 1
+            else:
+                self.tags = None
+            if not no_tids:
+                self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
+                self.tids.index += 1
+            else:
+                self.tids = None
+            if not no_tid_tag:
+                self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
+                self.tid_tag.index += 1
+            else:
+                self.tid_tag = None
+            conn.close()
+        else:
+            self.tags = tags
+            self.tids = tids
+            self.tid_tag = tid_tag
+
+    @classmethod
+    def load_from(cls, tags=None, tids=None, tid_tag=None): # skip the queue, and load straight from the dataframes
+        return cls(path=None, tags=tags, tids=tids, tid_tag=tid_tag)
 
     def tid_to_tid_num(self, tid, order=False):
         ''' Returns tid_num(s) given tid(s).
