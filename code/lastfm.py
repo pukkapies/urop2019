@@ -688,7 +688,7 @@ class LastFm2Pandas():
         return self.tid_tag[['tid', 'tag']][self.tid_tag['val'] > threshold]
 
     def with_tag(self, tag):
-        ''' Return all tids with a given tag. '''
+        ''' Returns all tids with a given tag. '''
         
         tag_idx = self.tag_to_tag_num(tag)
         tids = self.tid_tag['tid'][self.tid_tag['tag'] == tag_idx]
@@ -782,7 +782,7 @@ class Matrix():
         return cls(None, None, load_from=path)
 
     def matrix(self, lastfm, tags=None, dim=3, save_to=None):
-        ''' Compute a n-dimensional matrix where the (i_1, ... ,i_n)-th entry contains the number of tracks having all the i_1-th, ..., i_n-th tags (where the i's are the indexes in self.m_tags).
+        ''' Computes a n-dimensional matrix where the (i_1, ... ,i_n)-th entry contains the number of tracks having all the i_1-th, ..., i_n-th tags (where the i's are the indexes in self.m_tags).
 
         Notes
         -----
@@ -864,7 +864,7 @@ class Matrix():
         return matrix, tags
 
     def matrix_load(self, path):
-        ''' Load a previously saved matrix from a .npz file (containing the matrix) and a .nfo file (containing the matrix tags). '''
+        ''' Loads a previously saved matrix from a .npz file (containing the matrix) and a .nfo file (containing the matrix tags). '''
 
         # load matrix
         matrix = sparse.load_npz(os.path.splitext(path)[0] + '.npz')
@@ -1056,7 +1056,7 @@ class Matrix():
         return matrix
 
     def correlation_plot(self, correlation_matrix, tags=None, title=None, save_to=None):
-        ''' Plot a 2-dimensional correlation matrix graphically. 
+        ''' Plots a 2-dimensional correlation matrix graphically. 
         
         Parameters
         ----------

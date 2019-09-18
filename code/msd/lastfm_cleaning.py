@@ -99,8 +99,7 @@ def flatten_to_tag_num(fm, df):
     return output
 
 def create_tag_tag_table(fm, df):
-    '''
-    Produce a series having the old 'tag_num' as index, as the 'new_tag_num' as values. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
+    ''' Produce a series having the old 'tag_num' as index, as the 'new_tag_num' as values. This will contain all the tags from the original tags database, and 0 as a new tag if the old tag has been discarded.
     
     Parameters
     ----------
@@ -132,8 +131,7 @@ def create_tag_tag_table(fm, df):
     return tag_tag
 
 def create_tid_tag_table(fm, tag_tag, tid_tag_threshold = None):
-    '''
-    Produce a dataframe with the following columns: 'tid', 'tag'. 
+    ''' Produce a dataframe with the following columns: 'tid', 'tag'. 
 
     Parameters
     ----------
@@ -164,9 +162,8 @@ def create_tid_tag_table(fm, tag_tag, tid_tag_threshold = None):
     return tid_tag
 
 def experimental_clean_add(tid_tag, matrix):
-    '''
-    If the correlation between tag-A and tag-B is higher than a certain threshold (which will determine
-    how 'matrix' is generated), add tag-B to all the tracks which have tag-A but not tag-B.
+    ''' If the correlation between tag-A and tag-B is higher than a certain threshold (which will determine
+    how 'matrix' is generated), adds tag-B to all the tracks which have tag-A but not tag-B.
 
     Parameters
     ----------
@@ -194,9 +191,8 @@ def experimental_clean_add(tid_tag, matrix):
     return tid_tag
 
 def experimental_clean_remove1(tid_tag, matrix):
-    '''
-    If the correlation between tag-A and tag-B is higher than a certain threshold (which will determine
-    how 'matrix' is generated), remove tag-B from the tracks which have both tag-A and tag-B.
+    ''' If the correlation between tag-A and tag-B is higher than a certain threshold (which will determine
+    how 'matrix' is generated), removes tag-B from the tracks which have both tag-A and tag-B.
 
     Parameters
     ----------
@@ -220,9 +216,8 @@ def experimental_clean_remove1(tid_tag, matrix):
         tid_tag.drop(to_drop.index_y, inplace=True)
 
 def experimental_clean_remove2(tid_tag, matrix):
-    '''
-    If the correlation between tag-A and tag-B is higher than a certain threshold (which will determine
-    how 'matrix' is generated), remove tag-A from the tracks which have both tag-A and tag-B.
+    ''' If the correlation between tag-A and tag-B is higher than a certain threshold (which will determine
+    how 'matrix' is generated), removes tag-A from the tracks which have both tag-A and tag-B.
 
     Parameters
     ----------
