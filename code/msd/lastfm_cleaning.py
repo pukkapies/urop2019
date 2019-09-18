@@ -42,6 +42,7 @@ import os
 import sqlite3
 import sys
 
+import numpy as np
 import pandas as pd
 
 import lastfm_cleaning_utils as lastfm_utils
@@ -249,16 +250,16 @@ if __name__ == '__main__':
     description = 'Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track.'
     epilog = 'Example: python lastfm_cleaning.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db'
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
-    parser.add_argument("input", help="input .db filename or path, or .csv folder path")
-    parser.add_argument("output", help="output .db filename or path")
+    parser.add_argument("input", help=".db filename or path, or .csv folder path")
+    parser.add_argument("output", help=".db filename or path")
+    parser.add_argument('--supp-txt-path', help="set supplementary .txt folder path")
     parser.add_argument('--val', type=float, help="discard tags with val less than or equal to specified threshold")
-    parser.add_argument('--supp-txt-path', help="set supplementary txt folder path")
     parser.add_argument('--is-clean', action='store_true', help='skip preliminary tag cleaning (that is, if the input database is already clean)')
-    parser.add_argument('--matrix', help='if using --experimental, set the path to the saved matrix')
+    parser.add_argument('--matrix', help='if using --experimental, specify the path to the saved matrix (either the .npz path or the .nfo path will do, assuming the two files are in the same folder)')
     parser.add_argument('--exp-threshold', type=float, default=0.8, help='if using --experimental, set the correlation threshold to trigger the specified experimental function')
     parser.add_argument('--exp', type=int, choices={1, 2, 3}, help='perform advanced operations on the database, using one of the following functions: \
-                                                                             1. if correlation between tag-A and tag-B is higher than a threshold, add tag-B to \
-                                                                             all the tracks which have tag-A but not tag-B; \
+                                                                             1. if correlation between tag-A and tag-B is higher than a threshold, add tag-B \
+                                                                             to all tracks that have tag-A but not tag-B; \
                                                                              2. if correlation between tag-A and tag-B is higher than a threshold, remove tag-A \
                                                                              from tracks which have both tag-A and tag-B; \
                                                                              3. if correlation between tag-A and tag-B is higher than a threshold, remove tag-B \
@@ -266,14 +267,14 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    assert os.path.splitext(args.output[-3:])[1] == '.db', 'output filename must have .db extension'
+    assert os.path.splitext(args.output)[1] == '.db', 'output filename must have .db extension'
 
     # check if output file already exists
     if os.path.isfile(args.output):
        raise FileNotFoundError("file " + args.output + " already exists!")
 
     def clean_database():
-        # check if different txt path has been provided
+        # check if different .txt path has been provided
         if args.supp_txt_path:
             lastfm_utils.set_txt_path(args.supp_txt_path)
 
@@ -345,8 +346,8 @@ if __name__ == '__main__':
     # save into a new .db file
     print('Saving new tables as a .db file...', end=' ', flush=True)
     conn = sqlite3.connect(args.output)
-    fm.tags.to_sql('tags', conn, index=False)
-    fm.tids.to_sql('tids', conn, index=False)
-    fm.tid_tag.to_sql('tid_tag', conn, index=False)
+    clean_fm.tags.to_sql('tags', conn, index=False)
+    clean_fm.tids.to_sql('tids', conn, index=False)
+    clean_fm.tid_tag.to_sql('tid_tag', conn, index=False)
     print('done')
     conn.close()
