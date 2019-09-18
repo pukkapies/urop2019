@@ -314,9 +314,9 @@ if __name__ == '__main__':
     parser.add_argument("--lastfm-path", help="Path to lastfm database", default="/home/calle/clean_lastfm.db")
     parser.add_argument("--tfrecords-dir", help="Path to tfrecords directory, specify if test mode has been selected")
     parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
-    parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_false")
+    parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_true")
     parser.add_argument("-s", "--recording-second", help="Number of seconds to record. Minimum length is 15 seconds", type=int, default='15')
-    parser.add_argument("--cutoff", type=int, help="Lower bound for what prediction values to print", default=0.1)
+    parser.add_argument("--cutoff", type=float, help="Lower bound for what prediction values to print", default=0.1)
 
     args = parser.parse_args()
     print(args)
