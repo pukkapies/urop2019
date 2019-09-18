@@ -6,6 +6,7 @@ import time
 import tensorflow as tf
 import numpy as np
 import librosa
+import audioread
 
 import modules.query_lastfm as q_fm
 import projectname_input
@@ -299,6 +300,8 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     for idx, val in enumerate(logits):
         if val >= cutoff:
             tags.append([float(val.numpy()), fm.tag_num_to_tag(int(with_tags[idx]))])
+            
+    tags = sorted(tags, key=lambda x:x[0], reverse=True)
     return tags
 
 if __name__ == '__main__':
@@ -332,13 +335,24 @@ if __name__ == '__main__':
             raise ValueError("If predicting, must either specify mp3 file(s) to predict, or set --from-recording as True")
         elif args.mp3_path:
             if os.path.isfile(args.mp3_path):
-                audio = get_audio(args.mp3_path, args.format, args.config)
-                print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+                try:
+                    audio = get_audio(config=config, mp3_path=args.mp3_path)
+                    print("prediction: ", predict(model, config, audio, cutoff=args.cutoff))
+                except audioread.NoBackendError:
+                    print('skipping {} due to NoBackendError.'.format(args.mp3_path))
+                
             else:
                 for path in os.listdir(args.mp3_path): 
-                    audio = get_audio(os.path.join(args.mp3_path, path), args.format, config)
+                    try:
+                        audio = get_audio(config=config, mp3_path=os.path.join(args.mp3_path, path))
+                    except audioread.NoBackendError:
+                        print('skipping {} due to NoBackendError.'.format(path))
+                        continue
+                
                     print("file: ", path)
-                    print("prediction: ", predict(model, audio, args.format, config.tags, config.sr, cutoff=args.cutoff, db_path=args.lastfm_path))
+                    print("prediction: ", predict(model, config, audio, cutoff=args.cutoff))
+                    print()
+                
         else:
             assert args.recording_second >=15
             
