@@ -310,7 +310,7 @@ def _tuplify(features_dict, which_tags=None):
         assert isinstance(which_tags, int), 'which_tags must be an integer'
         return (features_dict['audio'], features_dict['tags_' + str(which_tags)])
 
-def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, repeat=None, as_tuple=True):
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, default_tags_db_valid=None, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -363,6 +363,9 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     
     default_tags_db: int
         Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
+
+    default_tags_db_valid: int
+        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided, when producing test/validation dataset).
 
     with_tids: list
         If not None, contains the tids to be trained on.
@@ -454,9 +457,12 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
             dataset = dataset.map(lambda x: _tuplify(x, which_tags=default_tags_db), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         dataset = dataset.repeat(repeat)
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
+        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
         datasets.append(dataset)
+
+        # after having produced train dataset, check if different dataset is needed for test/validation (if multiple databases are provided)
+        default_tags_db = default_tags_db_valid if default_tags_db is not None and default_tags_db_valid is not None else default_tags_db
 
     if split:
         datasets = np.where(np.array(split) != 0, datasets, None) # useful when split contains zeros
@@ -473,7 +479,7 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, repeat=1, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, default_tags_db_valid=None, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -524,6 +530,9 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
     default_tags_db: int
         Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
 
+    default_tags_db_valid: int
+        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided, when producing test/validation dataset).
+
     with_tids: list
         If not None, contains the tids to be trained on.
 
@@ -550,5 +559,5 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
                              sample_rate = sample_rate, batch_size = batch_size, 
                              block_length = block_length, cycle_length = cycle_length, shuffle = shuffle, shuffle_buffer_size = shuffle_buffer_size, 
                              window_length = window_length, window_random = window_random, 
-                             num_mels = num_mels, num_tags = num_tags, with_tids = with_tids, with_tags = with_tags, merge_tags = merge_tags, num_tags_db = num_tags_db, default_tags_db = default_tags_db,
+                             num_mels = num_mels, num_tags = num_tags, with_tids = with_tids, with_tags = with_tags, merge_tags = merge_tags, num_tags_db = num_tags_db, default_tags_db = default_tags_db, default_tags_db_valid=default_tags_db_valid,
                              repeat = repeat, as_tuple = as_tuple)
