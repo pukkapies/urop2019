@@ -316,7 +316,7 @@ def predict(model, config, audio, cutoff=0.5, window_size=15):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument("--checkpoint", help="Path to a checkpoints", default='predict_checkpoint/epoch-18.index')
+    parser.add_argument("--checkpoint", help="Path to a checkpoints", default='epoch-18')
     parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
     parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_true")
     parser.add_argument("-s", "--recording-second", help="Number of seconds to record. Minimum length is 15 seconds", type=int, default='15')
