@@ -94,11 +94,10 @@ def _merge(features_dict, tags):
 
     tags_databases = len(features_dict) - 2 # check if multiple databases have been provided
     num_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
-
     
     tags = tf.dtypes.cast(tags, tf.int64)
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    vals = tf.constant(1, dtype=tf.int64, shape=tags.get_shape())
     tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=num_tags)
     tags = tf.sparse.to_dense(tags)
     tags = tf.dtypes.cast(tags, tf.bool)
@@ -143,7 +142,7 @@ def _tag_filter(features_dict, tags, which_tags=None):
     num_tags = tf.cast(tf.shape(features_dict[dict_key]), tf.int64)
     feature_tags = tf.math.equal(tf.unstack(features_dict[dict_key]), tf.constant(1, dtype=tf.int64)) # bool tensor where True/False correspond to has/doesn't have tag
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    vals = tf.constant(1, dtype=tf.int64, shape=tags.get_shape())
     tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=num_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
@@ -387,13 +386,11 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
 
     # check if multiple databases have been provided
     if num_tags_db == 1:
-        
         # add feature 'tags'
         AUDIO_FEATURES_DESCRIPTION['tags'] = tf.io.FixedLenFeature((num_tags, ), tf.int64)
     
     else:
         default_tags_db = default_tags_db or 0
-        
         # add feature 'tags_i' for each i-th tags database provided
         for i in range(num_tags_db):
             AUDIO_FEATURES_DESCRIPTION['tags_' + str(i)] = tf.io.FixedLenFeature((num_tags, ), tf.int64)
@@ -405,11 +402,11 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
 
     if split:
         if np.sum(split) == 100:
-            split = np.cumsum(split) * len(tfrecords) // 100
+            np_split = np.cumsum(split) * len(tfrecords) // 100
         else:
             assert np.sum(split) <= len(tfrecords) , 'split exceeds the number of available .tfrecord files'
-            split = np.cumsum(split)
-        tfrecords_split = np.split(tfrecords, split)
+            np_split = np.cumsum(split)
+        tfrecords_split = np.split(tfrecords, np_split)
         tfrecords_split = tfrecords_split[:-1] # discard last empty split
     else:
         tfrecords_split = [tfrecords]
@@ -460,13 +457,16 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
         dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
 
         datasets.append(dataset)
-    
+
+    if split:
+        datasets = np.where(np.array(split) != 0, datasets, None) # useful when split contains zeros
+
     if which_split is not None:
         if split is not None:
             assert len(which_split) == len(split), 'split and which_split must have the same length'
             datasets = np.array(datasets)[np.array(which_split, dtype=np.bool)].tolist()
         else:
-            datasets = datasets + [None] * (which_split.count(1) - 1) # useful when trying to unpack datasets, but split has not been provided
+            datasets = datasets + [None] * (which_split.count(1) - 1) # useful when trying to unpack datasets (if you need a fixed number of datasets), but split has not been provided
     
     if len(datasets) == 1:
         return datasets[0]
