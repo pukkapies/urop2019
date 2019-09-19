@@ -269,7 +269,7 @@ if __name__ == '__main__':
     print(type(model))
 
     if args.mode == "test":
-        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, with_tags=config.tags, merge_tags=config.tags_to_merge)
+        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, random=config.window_random, with_tags=config.tags, merge_tags=config.tags_to_merge)
     else:
         
         if not (args.mp3_path or args.from_recording):
