@@ -204,8 +204,9 @@ basic tools to query the `msd_summary_file.h5` file.
 
 In the Lastfm database, there are more than 500,000 different tags. 
 To ensure that the training algorithm can learn from more sensible tags, 
-the tags are cleaned using `lastfm_cleaning_utils.py`. The exact mechanisms 
-of how it works can be found in the documentation of the script. 
+the tags are cleaned using `lastfm_cleaning_utils.py`. 
+
+The exact mechanisms of how it works can be found in the documentation of the script. 
 In brief, the tags are divided into two categories: 
 
 1. genre tags 
@@ -220,7 +221,7 @@ In 1.
 database which have appeared for more than 2000 times. We manually filtered out 
 the tags that we considered as non-genre tags and fed the genre tags to the algorithm 
 `generate_genre_df()`. For each genre tag, the algorithm 
-searched for other similar tags from the 500,000 tags 
+searched for other similar tags (which will be explaned later) from the 500,000 tags 
 pool (tags which have occurrence ≥ 10). A new dataset was finally generated with 
 the left-column --- the manually chosen tags, the right column 
 --- similar matching tags from the pool. 
@@ -229,9 +230,25 @@ In 2.
 
 * We obtained a long list of potentially matching tags for each of the four vocal tags. 
 We then manually seperate the 'real' matching tags from the rest for each of the lists. 
-The lists were fed into `generate_vocal_df()` and a dataset with a similar structure as 
-1. was produced. In the end, the function `generate_final_df()` combined the two 
+The lists were fed into `generate_vocal_df()` and a dataset with a similar structure as 1. was 
+produced. In the end, the function `generate_final_df()` combined the two 
 datasets as a final dataset which was passed to the `lastfm_clean.py`. 
+
+To search for similar tags, we did the following:
+1. Remove all the non-alphabet and non-number characters and any single trailing 's' 
+from the raw tags with occurance ≥ 10 and the target tags (the classified genre tags 
+and vocal tags). If any transformed raw tag is identical to any target tag, 
+the raw tag is merged into target tag.
+
+2. Repeat the same merging mechanism as 1, but replace '&' with 'n', '&' with 'and', ' n '
+with 'and' instead respectively.
+
+3. Repeat the same merging mechanism as 1, but replace any 'x0s' 
+string with '19x0s', 'x0s' with '20x0' (x denodes a number character) without 
+removing the trailing 's' respectively.
+
+See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for 
+how you may tailor the merging mechanism by defining a new fitlering fucntion.
 
 The `.txt` files containing the lists of tags we used in our experiment can be found in 
 the folder `~/msd/config`. Hence, if you prefer to use our dataset, you may simply 
@@ -245,7 +262,8 @@ if you are interested to view the dataset. Otherwise, `lastfm_clean.py` will aut
 generate this dataset and transform it into a clean Lastfm database. 
 
 Note that `lastfm_cleaning_utils` allows a great deal of customisation. 
-Please see (small readme) for more details.
+Please see [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning)
+ for more details.
 
 `lastfm_cleaning.py` creates a new database file using the cleaned tags 
 from lastfm_cleaning_utils.py. The database has the same structure as the 
@@ -475,9 +493,9 @@ Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic'
 'psychedelic', 'synthpop', 'trance', 'trip-hop']
 
 
-The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/results/logmelspectrogram_config_1.json)
+The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_config_1.json)
 
-![alt text](https://github.com/pukkapies/urop2019/blob/master/results/logmelspectrogram_1.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_1.png)
 
 |                                         | AUC-ROC |  AUC-PR |
 | --------------------------------------- |:-------:|:-------:|
