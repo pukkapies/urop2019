@@ -99,7 +99,7 @@ def get_audio(mp3_path, audio_format, config, array=None, array_sr=None):
 
     return array
 
-def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=15, random=False, with_tags=None, with_tids=None):
+def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=15, merge_tags=None, random=False, with_tags=None, with_tids=None):
     ''' Tests a given model with respect to the metrics AUC_ROC and AUC_PR
     
     Parameters
@@ -113,12 +113,19 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
     audio_format : {'waveform', 'log-mel-spectrogram'}
         audio format used in model
 
-    split : 
+    split : list of three floats
+        number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3).
+        Note that in this function, only the parameter for test will depend on the size of the tfrecords that will be fed into this function,
+        while the train parameter and the validation parameter will decide the position of the test parameter.
+        E.g. split = [80,10,10] means the last 10% will be fed into the function.
 
     batch_size : int
 
     window_size : int
         size in seconds of window to be extracted from each audio array
+        
+    merge_tags : list of list of int
+        e.g. [[1,2], [2,3]] means merge 1 with 2, and 2 with 3 respectively
 
     random : bool
         Specifies if windows should be extracted from a random location, or from the center of the array
@@ -128,6 +135,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
 
     with_tids : list
         list of tids used during training
+        
     '''
 
     # loading test dataset
@@ -148,7 +156,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
         ROC_AUC.update_state(label_batch, logits)
         PR_AUC.update_state(label_batch, logits)
 
-    print('ROC_AUC: ', int(ROC_AUC.result()), '; PR_AUC: ', int(PR_AUC.result()))
+    print('ROC_AUC: ', np.round(ROC_AUC.result().numpy(), 2), '; PR_AUC: ', np.round(PR_AUC.result().numpy(), 2))
 
 def get_slices(audio, audio_format, sample_rate, window_size=15):
     ''' Extracts slice of audio along an entire audio array
@@ -261,7 +269,7 @@ if __name__ == '__main__':
     print(type(model))
 
     if args.mode == "test":
-        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, with_tags=config.tags)
+        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, with_tags=config.tags, merge_tags=config.tags_to_merge)
     else:
         
         if not (args.mp3_path or args.from_recording):
