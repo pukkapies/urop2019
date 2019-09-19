@@ -503,8 +503,8 @@ The parameters we have used can be found [here](https://github.com/pukkapies/uro
 
 |                                         | AUC-ROC |  AUC-PR |
 | --------------------------------------- |:-------:|:-------:|
-| Waveform (from us)                      |         |         |
-| Log mel-spectrogram (from us)           |         |         |
+| Waveform (from us)                      | 86.96   | 39.95   |
+| Log mel-spectrogram (from us)           | 87.33   | 40.96   |
 | Waveform (Pons, et al., 2018)           | 87.41   | 28.53   |
 | Log mel-spectrogram (Pons, et al., 2018)| 88.75   | 31.24   |
 
