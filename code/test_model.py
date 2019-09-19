@@ -2,16 +2,17 @@ import os
 import argparse
 import time
 
+
 import tensorflow as tf
 import numpy as np
 import librosa
 import audioread
 
-import code.lastfm as q_fm
+import lastfm as q_fm
 import projectname_input
 import projectname as Model
 
-from code.projectname_train import parse_config
+from projectname_train import parse_config
 
 def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     ''' Loads model from checkpoint 
