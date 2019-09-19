@@ -47,6 +47,7 @@ audio, or even how to easily carry out experiments based on this repository.
 
 If you are interested to see our experiment result, click [here](https://github.com/pukkapies/urop2019#results)
 
+If you are interested to run the lite version of our prediction tool, click [here](TODO)
 
 ## Requirements
 
@@ -61,7 +62,8 @@ If you are interested to see our experiment result, click [here](https://github.
 * [Sounddevice](https://python-sounddevice.readthedocs.io/en/0.3.12/installation.html) 0.3.12 -- to record audio from your microphone through terminal*
 * Other common Python libraries such as [Pandas](https://pandas.pydata.org/) or [NumPy](https://numpy.org/)
 
-*If you only wish to run our lite version prediction function as mentioned in [here], all you need is to download the items with a *.
+If you only wish to run our lite version prediction function as mentioned in [here](TODO) --'projectname_predict_lite.py', all you need is to download the items with a *.
+
 ## Getting Started
 Lorem ipsum
 
