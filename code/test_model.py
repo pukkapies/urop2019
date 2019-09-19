@@ -283,21 +283,21 @@ if __name__ == '__main__':
         elif args.mp3_path:
             if os.path.isfile(args.mp3_path):
                 try:
-                    audio = get_audio(config=config, mp3_path=args.mp3_path)
-                    print("prediction: ", predict(model, config, audio, cutoff=args.cutoff))
+                    audio = get_audio(audio_format=args.format, config=config, mp3_path=args.mp3_path)
+                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, cutoff=args.cutoff, window_length=config.window_length))
                 except audioread.NoBackendError:
                     print('skipping {} due to NoBackendError.'.format(args.mp3_path))
                 
             else:
                 for path in os.listdir(args.mp3_path): 
                     try:
-                        audio = get_audio(config=config, mp3_path=os.path.join(args.mp3_path, path))
+                        audio = get_audio(audio_format=args.format, config=config, mp3_path=os.path.join(args.mp3_path, path))
                     except audioread.NoBackendError:
                         print('skipping {} due to NoBackendError.'.format(path))
                         continue
                 
                     print("file: ", path)
-                    print("prediction: ", predict(model, config, audio, cutoff=args.cutoff))
+                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, cutoff=args.cutoff, window_length=config.window_length))
                     print()
                 
         else:
