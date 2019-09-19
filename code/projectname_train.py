@@ -118,7 +118,7 @@ if __name__ == '__main__':
     # if root_dir is not specified, use default path on our server
     if not args.tfrecords_dir:
         if config.sample_rate != 16000:
-            s = '-' + str(config.sr // 1000) + 'kHz'
+            s = '-' + str(config.sample_rate // 1000) + 'kHz'
         else:
             s = ''
         args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.frontend + s)
