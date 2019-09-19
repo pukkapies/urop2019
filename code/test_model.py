@@ -46,12 +46,12 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     checkpoint = tf.train.Checkpoint(model=model)
     if checkpoint_path:
         print('Loading from {}'.format(checkpoint_path))
-        checkpoint.restore(checkpoint_path)
+        checkpoint.restore(checkpoint_path).expect_partial()
     else:
         # loading latest training checkpoint 
         latest = tf.train.latest_checkpoint(config.log_dir)
         print('Loading from {}'.format(latest))
-        checkpoint.restore(latest)
+        checkpoint.restore(latest).expect_partial()
 
     return model
 
@@ -100,7 +100,7 @@ def get_audio(mp3_path, audio_format, config, array=None, array_sr=None):
 
     return array
 
-def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=15, merge_tags=None, random=False, with_tags=None, with_tids=None):
+def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length=15, merge_tags=None, window_random=False, with_tags=None, with_tids=None, num_tags=155):
     ''' Tests a given model with respect to the metrics AUC_ROC and AUC_PR
     
     Parameters
@@ -122,13 +122,13 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
 
     batch_size : int
 
-    window_size : int
+    window_length : int
         size in seconds of window to be extracted from each audio array
         
     merge_tags : list of list of int
         e.g. [[1,2], [2,3]] means merge 1 with 2, and 2 with 3 respectively
 
-    random : bool
+    window_random : bool
         Specifies if windows should be extracted from a random location, or from the center of the array
 
     with_tags : list
@@ -137,13 +137,16 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
     with_tids : list
         list of tids used during training
         
+    num_tags : int
+        number of tags in the clean lastfm database
+        
     '''
 
     # loading test dataset
     dataset = projectname_input.generate_datasets_from_dir(tfrecords_dir, audio_format, split=split, 
-                                                            batch_size=batch_size, shuffle=False, window_size=window_size,
-                                                            random=random, with_tags=with_tags, with_tids=with_tids,
-                                                            merge_tags=merge_tags, num_tags=155, num_epochs=1)[-1]
+                                                            batch_size=batch_size, shuffle=False, window_length=window_length,
+                                                            window_random=window_random, with_tags=with_tags, with_tids=with_tids,
+                                                            merge_tags=merge_tags, num_tags=num_tags)[-1]
 
     ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='ROC_AUC',  dtype=tf.float32)
     PR_AUC = tf.keras.metrics.AUC(curve='PR', name='PR_AUC', dtype=tf.float32)
@@ -157,9 +160,9 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
         ROC_AUC.update_state(label_batch, logits)
         PR_AUC.update_state(label_batch, logits)
 
-    print('ROC_AUC: ', np.round(ROC_AUC.result().numpy(), 2), '; PR_AUC: ', np.round(PR_AUC.result().numpy(), 2))
+    print('ROC_AUC: ', np.round(ROC_AUC.result().numpy()*100, 2), '; PR_AUC: ', np.round(PR_AUC.result().numpy()*100, 2))
 
-def get_slices(audio, audio_format, sample_rate, window_size=15):
+def get_slices(audio, audio_format, sample_rate, window_length=15):
     ''' Extracts slice of audio along an entire audio array
     
     Parameters
@@ -173,7 +176,7 @@ def get_slices(audio, audio_format, sample_rate, window_size=15):
     sample_rate : int
         sample rate used for the audio
 
-    window_size : int
+    window_length : int
         size of window to be extracted
 
     Returns
@@ -182,21 +185,21 @@ def get_slices(audio, audio_format, sample_rate, window_size=15):
     '''
     
     if audio_format == 'waveform':
-        slice_length = window_size*sample_rate
+        slice_length = window_length*sample_rate
         n_slices = audio.shape[0]//slice_length
         slices = [audio[i*slice_length:(i+1)*slice_length] for i in range(n_slices)] 
         slices.append(audio[-slice_length:])
         return np.array(slices)
 
     elif audio_format == 'log-mel-spectrogram':
-        slice_length = window_size*sample_rate//512
+        slice_length = window_length*sample_rate//512
         n_slices = audio.shape[1]//slice_length
 
         slices = [audio[:,i*slice_length:(i+1)*slice_length] for i in range(n_slices)]
         slices.append(audio[:,-slice_length:])
         return np.array(slices)
 
-def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, window_size=15, db_path='/srv/data/urop/clean_lastfm.db'):
+def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, window_length=15, db_path='/srv/data/urop/clean_lastfm.db'):
     ''' Predicts tags given audio for one track 
     
     Paramters:
@@ -218,7 +221,7 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     cutoff : float
         threshold for confidence value of tags to be returned
 
-    window_size : int
+    window_length : int
         size of windows to be extracted along the audio
 
     db_path : str
@@ -236,7 +239,7 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     with_tags = np.sort(with_tags)
 
     # compute average by using a moving window
-    slices = get_slices(audio, audio_format, sample_rate, window_size)
+    slices = get_slices(audio, audio_format, sample_rate, window_length)
     logits = tf.reduce_mean(model(slices, training=False), axis=[0])
     
     # get tags
@@ -265,12 +268,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    config = parse_config(args.config, args.lastfm_path)[0]
+    config = parse_config(args.config, args.lastfm_path)
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
     print(type(model))
 
     if args.mode == "test":
-        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, random=config.window_random, with_tags=config.tags, merge_tags=config.tags_to_merge)
+        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, window_random=config.window_random, with_tags=config.tags, merge_tags=config.tags_to_merge, num_tags=config.n_tags)
     else:
         
         if not (args.mp3_path or args.from_recording):
