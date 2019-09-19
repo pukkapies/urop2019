@@ -50,16 +50,18 @@ If you are interested to see our experiment result, click [here](https://github.
 
 ## Requirements
 
-* Python 3.6
+* Python 3.6*
 * One or more CUDA-enabled GPUs
 * Mac or Linux environment
-* [TensorFlow](https://www.tensorflow.org/beta) 2.0.0-rc0 or above (GPU version) 
+* [TensorFlow](https://www.tensorflow.org/beta) 2.0.0-rc0 or above (GPU version)*
 * [H5Py](https://www.h5py.org/) 2.3.1 -- to read the HDF5 dataset summary 
-* [Librosa](https://github.com/librosa/librosa) 0.7.0 + [FFmpeg](https://www.ffmpeg.org/) -- to read, load and analyse audio files
+* [Librosa](https://github.com/librosa/librosa) 0.7.0 + [FFmpeg](https://www.ffmpeg.org/) -- to read, load and analyse audio files*
 * [Mutagen](https://mutagen.readthedocs.io/en/latest/) 1.42.0 -- to read audio files
 * [Sparse](https://sparse.pydata.org/en/latest/) 0.8.9 -- to perform advanced operations on the tags database and save data as a n-dimensional sparse matrix
+* [Sounddevice](https://python-sounddevice.readthedocs.io/en/0.3.12/installation.html) 0.3.12 -- to record audio from your microphone through terminal*
 * Other common Python libraries such as [Pandas](https://pandas.pydata.org/) or [NumPy](https://numpy.org/)
 
+*If you only wish to run our lite version prediction function as mentioned in [here], all you need is to download the items with a *.
 ## Getting Started
 Lorem ipsum
 
