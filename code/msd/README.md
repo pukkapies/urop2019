@@ -48,9 +48,33 @@ where sub_threshold=10 indicates that the algorithm will only run a search on ta
 Step 5: Take a look at the generated datasets from step 4 and decide what further tags you may want to add, merge, or remove from the datasets. After that, run the function generate_final_df() with your chosen parameters. For example,
 
 ```python
-generate_final_df(from_csv_path=’/srv/data/urop’, threshold=2000, sub_threshold=10, combine_list=[[‘rhythm and blues’, ‘rnb’], [‘funky’, ‘funk’]], drop_list=[‘2000’, ‘00’, ‘90’, ‘80’, ‘70’, ‘60’])
+df_final = generate_final_df(from_csv_path=’/srv/data/urop’, threshold=2000, sub_threshold=10, combine_list=[[‘rhythm and blues’, ‘rnb’], [‘funky’, ‘funk’]], drop_list=[‘2000’, ‘00’, ‘90’, ‘80’, ‘70’, ‘60’])
 ```
 
 Alternatively, you may skip step 4 but directly run step 5. After taking a look at the output dataset, you may use the functions `combine_tags()`, `add_tags()`, `remove()` to customise your datasets.
+
+As mentioned in [here]((https://github.com/pukkapies/urop2019#filtering), all the searches mentioned will be run automatically on the genre tags if you 
+call 'generate_final_df()' or 'generate_genre_df()'. You may also run extra customised search functions by defining a search function 'fn', which takes any tag as input, 
+and return a transformed tag based on your function as an output. An example of such function is the `clean_1` function, which can be found in the script. After that, you may do the 
+following:
+
+```python
+# define a dataframe which acts as the tag pool, in this example, the entire popularity dataset is used
+df = popularity.copy()
+df.tag = df.tag.astype(str)
+
+# run the search with the search function fn, where tags with occurance ≥ 10 from the popularity dataset will be in the tag pool
+df_output = df_final
+df_final = search_genre(df, df_output, search_method=fn, search_tags_list=None, sub_threshold=10)
+```
+
+If the `search_tags_list` parameter is None, all the tags from `df_output` will act as target tags, and the algorithm will search for matching tags for each target tag. If 
+`search_tags_list` is a list of tags, the list will act as the target tags instead. Note that the set of target tags must be a subset of the set of tags in `df_output`.
+
+For more advanced user, you may run your customised searches by `search_genre()` and recompile your genre dataset with the vocal dataset (from `generate_vocal_df()`)
+to generate a final dataset `df_final`.
+
+
+
 
 Please refer to the documentation of lastfm_cleaning_utils.py for more details.
