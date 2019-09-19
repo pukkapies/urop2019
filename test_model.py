@@ -151,7 +151,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_size=1
 
         audio_batch, label_batch = entry[0], entry[1]
 
-        logits = tf.multiply(model(audio_batch, training=False), tf.constant(0.001, dtype=tf.float32))
+        logits = model(audio_batch, training=False)
 
         ROC_AUC.update_state(label_batch, logits)
         PR_AUC.update_state(label_batch, logits)
