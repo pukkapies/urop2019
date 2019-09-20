@@ -465,7 +465,7 @@ except replacing `training` with `training_gradtape`.
 `test_model.py` is the script containing the evaluation tools. There is a `test_model()` function which 
 simply tests the model's performance on the test dataset from a certain checkpoint. The `predict()` function 
 takes an audio array, in the waveform or the log mel-spectrogram format, and uses the model on consecutive 15s 
-windows (with backward 15s window when if the last window has length less than 15s) of the input audio to returns the 
+windows (with the last window 15s from the end of the track) of the input audio to return the 
 average prediction as tags in string form.
 
 **Example**
