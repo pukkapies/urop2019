@@ -225,14 +225,15 @@ def test(model, tfrecords_dir, audio_format, config):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument('-f', help='model audio format', required=True)
+    parser.add_argument('-f', '--format', help='model audio format', required=True)
     parser.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
     parser.add_argument('--config', help='path to config.json', required=True)
     parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
-    
-    subparsers = parser.add_subparsers(title='script functionality, testing or predicting', dest='mode')
+    subparsers = parser.add_subparsers(title='script functionality, testing or predicting', dest='mode', required=True)
+
     testing = subparsers.add_parser('test')
     testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from')
+
     predicting = subparsers.add_parser('predict')
     prediction = predicting.add_mutually_exclusive_group(required=True)
     prediction.add_argument('--mp3', help='predict tags using specified .mp3 file (or .mp3 files contained in specified directory)')
