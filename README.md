@@ -538,6 +538,9 @@ Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic'
 
 The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_config_1.json)
 
+![alt text](https://github.com/pukkapies/urop2019/blob/master/results/???.png)
+
+
 **Experiment 2:**
 Using the same tags and model as the above log-mel-spectrogram experiment above, but this time a cyclical learning rate going between 0.0014/4 and 0.0014 linearly was used and a batch size of 128 instead of ...
 
@@ -563,11 +566,7 @@ removing tags which are more subjective or have vague meaning, which was not don
 According to the results above, the AUC-PR of both waveform and log 
 mel-spectrogram has significantly improved from (Pons, et al., 2018) respectively. In the
 meantime, the AUC-ROC scores of our experiments are comparable to those produced by
-(Pons, et al., 2018). We have, therefore, proven that training
-the model on cleaner tags with both waveform and log mel-spectrogram will improve the quality
-of the models. 
-
-(any further analysis?)
+(Pons, et al., 2018).
 
 ## Reference
 Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
