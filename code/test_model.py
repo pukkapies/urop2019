@@ -86,7 +86,6 @@ def get_audio(mp3_path, audio_format, sample_rate, array=None, array_sr=None):
     if audio_format == "log-mel-spectrogram":
         array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, config.sample_rate, n_mels=config.n_mels))
         array = array.astype(np.float32)
-        # normalization
         mean, variance = tf.nn.moments(tf.constant(array), axes=[0,1], keepdims=True)
         array = tf.nn.batch_normalization(array, mean, variance, offset = 0, scale = 1, variance_epsilon = .000001).numpy()
 
@@ -183,7 +182,7 @@ def predict(model, fm, audio, config, threshold=0.5):
 
     return tags
 
-def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length=15, merge_tags=None, window_random=False, with_tags=None, with_tids=None, num_tags=155):
+def test(model, tfrecords_dir, audio_format, config):
     ''' Takes a given model and tests its performance on a test dataset using AUC_ROC and AUC_PR.
     
     Parameters
@@ -226,81 +225,80 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument("format", help="Model audio format")
-    parser.add_argument("mode", choices=["predict", "test"], help="Choose functionality of script, testing or predict")
-    parser.add_argument("config", help="Path to config JSON file")
-    parser.add_argument("--checkpoint", help="Path to a checkpoints, will default to directory in config.")
-    parser.add_argument("--lastfm-path", help="Path to lastfm database", default="/srv/data/urop/clean_lastfm.db")
-    parser.add_argument("--tfrecords-dir", help="Path to tfrecords directory, specify if test mode has been selected")
-    parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
-    parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_true")
-    parser.add_argument("-s", "--recording-second", help="Number of seconds to record. Minimum length is 15 seconds", type=int, default='15')
-    parser.add_argument("--threshold", type=float, help="Lower bound for what prediction values to print", default=0.1)
+    parser.add_argument("-f", help="model audio format", required=True)
+    parser.add_argument("--checkpoint", help="path to checkpoint to restore", required=True)
+    parser.add_argument("--config", help="path to config.json", required=True)
+    parser.add_argument("--lastfm", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
+    
+    subparsers = parser.add_subparsers(title='script functionality, testing or predicting', dest='mode')
+    testing = subparsers.add_parser('test')
+    testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from')
+    predicting = subparsers.add_parser('predict')
+    prediction = predicting.add_mutually_exclusive_group(required=True)
+    prediction.add_argument('--mp3', help='predict tags using specified .mp3 file (or .mp3 files contained in specified directory)')
+    prediction.add_argument('--record', action='store_true', help='predict tags using recorded audio from your microphone')
+    predicting.add_argument('--record-length', help='length of audio recording (minimum length 15 sec)', type=int)
+    predicting.add_argument('--window-length', help='length (in seconds) of audio window to use for predictions', type=int)
+    predicting.add_argument('--n-slices', help='number of slices to use for predictions', type=int)
+    predicting.add_argument('-t', '--threshold', help='threshold for confidence values to count as confident predictions', type=float, default=0.1)
 
     args = parser.parse_args()
-    print(args)
 
-    config = parse_config(args.config, args.lastfm_path)
+    fm = lastfm.LastFm(args.lastfm)
+
+    config = parse_config(args.config, fm)
+
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
-    print(type(model))
 
     if args.mode == "test":
-        test(model, args.tfrecords_dir, args.format, config.split, batch_size=config.batch_size, window_random=config.window_random, with_tags=config.tags, merge_tags=config.tags_to_merge, num_tags=config.n_tags)
+        test(model, args.tfrecords_dir, args.format, config)
+    
     else:
+        # if window_length is not specified, use 'window_length' from config.json
+        args.window_length = args.window_length or config.window_length
         
-        if not (args.mp3_path or args.from_recording):
-            raise ValueError("If predicting, must either specify mp3 file(s) to predict, or set --from-recording as True")
-        elif (args.mp3_path and args.from_recording):
-            raise ValueError("If predicting, must either specify mp3 file(s) to predict, or set --from-recording as True")
-        elif args.mp3_path:
+        if not args.from_recording:
             if os.path.isfile(args.mp3_path):
                 try:
-                    audio = get_audio(audio_format=args.format, sample_rate=config.sample_rate, mp3_path=args.mp3_path)
-                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, threshold=args.threshold, window_length=config.window_length))
+                    narray = get_audio(args.mp3_path, args.format, sample_rate=config.sample_rate)
+                    narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
+                    print("Predictions: ", predict(model, fm, narray, config, threshold=args.threshold))
                 except audioread.NoBackendError:
-                    print('skipping {} due to NoBackendError.'.format(args.mp3_path))
-                
+                    print("Skipping {} because of a NoBackendError occurred...".format(args.mp3_path))
             else:
-                for path in os.listdir(args.mp3_path): 
+                for mp3_path in os.listdir(args.mp3_path): 
                     try:
-                        audio = get_audio(audio_format=args.format, sample_rate=config.sample_rate, mp3_path=os.path.join(args.mp3_path, path))
+                        narray = get_audio(mp3_path, args.mp3_path, args.format, sample_rate=config.sample_rate)
+                        narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
+                        print("File: ", mp3_path)
+                        print("Predictions: ", predict(model, fm, narray, config, threshold=args.threshold))
                     except audioread.NoBackendError:
-                        print('skipping {} due to NoBackendError.'.format(path))
+                        print("Skipping {} because of a NoBackendError occurred...".format(mp3_path))
                         continue
                 
-                    print("file: ", path)
-                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, threshold=args.threshold, window_length=config.window_length))
-                    print()
-                
         else:
-            assert args.recording_second >=15
+            assert args.record_length >=15
+
+            import sounddevice as sd  # in case this is not installed automatically
             
-            # In case this is not installed automatically
-            import sounddevice as sd
-            sr_rec = 44100  # Sample rate
-            seconds = int(args.second)  # Duration of recording
+            sr_rec = 44100  # sample rate
 
             while True:
                 val = input('Press Enter to begin')
                 if val is not None:
                     break
 
-            print('record starts in')
-            print('3')
+            print('3', end='/r')
             time.sleep(1)
-            print('2')
+            print('2', end='/r')
             time.sleep(1)
-            print('1')
+            print('1', end='/r')
             time.sleep(1)
-            print('0')
-            print('Recording')
-            audio = sd.rec(int(seconds * sr_rec), samplerate=sr_rec, channels=2)
-            sd.wait()  # Wait until recording is finished
+            print('Recording...', end='/r')
 
-            audio = sd.rec(int(seconds * sr_rec), samplerate=sr_rec, channels=2)
-            sd.wait()  # Wait until recording is finished
+            audio = sd.rec(int(args.record_length * sr_rec), samplerate=sr_rec, channels=2)
+            sd.wait() # wait until recording is finished
             
             audio = audio.transpose()
-            audio = get_audio(sample_rate=config.sample_rate, array=audio, array_sr=sr_rec)
-            print("prediction: ", predict(model, audio, args.format, config.tags, sr_rec, threshold=args.threshold, db_path=args.lastfm_path))
-            print("prediction: ", predict(model, audio, args.format, config.tags, config.sample_rate, threshold=args.threshold, db_path=args.lastfm_path))
+            audio = get_audio(mp3_path = None, sample_rate=config.sample_rate, array=audio, array_sr=sr_rec)
+            print("Predictions: ", predict(model, audio, config, threshold=args.threshold))
