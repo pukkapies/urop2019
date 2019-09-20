@@ -538,12 +538,18 @@ Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic'
 
 The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_config_1.json)
 
+**Experiment 2:**
+Using the same tags and model as the above log-mel-spectrogram experiment above, but this time a cyclical learning rate going between 0.0014/4 and 0.0014 linearly was used and a batch size of 128 instead of ...
+
+The parameters used can be found [here] ()
+
 ![alt text](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_1.png)
 
 |                                         | AUC-ROC |  AUC-PR |
 | --------------------------------------- |:-------:|:-------:|
 | Waveform (from us)                      | 86.96   | 39.95   |
 | Log mel-spectrogram (from us)           | 87.33   | 40.96   |
+| Log mel-spectrogram (cyclic learning rate) | 87.68   | 42.05   |
 | Waveform (Pons, et al., 2018)           | 87.41   | 28.53   |
 | Log mel-spectrogram (Pons, et al., 2018)| 88.75   | 31.24   |
 
