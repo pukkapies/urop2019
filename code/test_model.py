@@ -137,60 +137,56 @@ def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=N
     
     return np.take(slices, np.random.choice(slices.shape[0], size=n_slices, replace=False), axis=0)
 
-def predict(model, audio, config, threshold=0.5, db_path='/srv/data/urop/clean_lastfm.db'):
-    ''' Predicts tags given audio for one track 
+def predict(model, fm, audio, config, threshold=0.5):
+    ''' Takes a trained model and uses it to predict the tags for a given (batch of) track(s).
     
     Paramters:
     ---------
-    model : tf.keras.Model object
-        model to use for prediction
+    model : tf.keras.Model
+        Instance of the model to use for predictions.
+
+    fm: LastFm, LastFm2Pandas
+        Instance of the tags database.
 
     audio :
-        The processed audio array.
+        The processed audio array (or audio 'batch').
 
     audio_format : {'waveform', 'log-mel-spectrogram'}
         The audio format.
 
-    with_tags : list
-        list of tags used during training 
-
-    sample_rate : int
-        sample rate used for the audio
+    config: argparse.Namespace
+        The namespace generated from config.json with parse_config().
 
     threshold : float
-        threshold for confidence value of tags to be returned
+        Only the tag predictions with 'confidence' higher than the threshold will be returned. 
 
-    db_path : str
-        path to lastfm database
-
-    Returns:
+    Returns
     -------
-    tags : array
-        contains pairs [tag, val] of predicted tags along with the confidence value
-    
+    tags: list
+        List of pairs (tag, val) of predicted tags along with their confidence.
     '''
 
-    fm = lastfm.LastFm(db_path)
-
-    # compute average by using a moving window
+    # compute average by different audio slices
     logits = tf.reduce_mean(model(audio, training=False), axis=[0])
     
-    # get tags
+    # compute tags
     tags = []
     for idx, val in enumerate(logits):
         if val >= threshold:
-            tags.append([float(val.numpy()), fm.tag_num_to_tag(int(with_tags[idx]))])
+            tags.append((fm.tag_num_to_tag(config.with_tags[idx]), val.numpy()))
             
-    tags = sorted(tags, key=lambda x:x[0], reverse=True)
+    # sort predictions from higher confidence to lower confidence
+    tags = sorted(tags, key=lambda x: x[1], reverse=True)
+
     return tags
 
 def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length=15, merge_tags=None, window_random=False, with_tags=None, with_tids=None, num_tags=155):
-    ''' Tests a given model with respect to the metrics AUC_ROC and AUC_PR
+    ''' Takes a given model and tests its performance on a test dataset using AUC_ROC and AUC_PR.
     
     Parameters
     ----------
     model : tf.keras.Model
-        The model to test.
+        Instance of the model to test.
 
     tfrecords_dir : str
         The directory containing the .tfrecord files.
@@ -221,7 +217,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length
         logits = model(audio_batch, training=False)
         metric_1.update_state(label_batch, logits)
         metric_2.update_state(label_batch, logits)
-        
+
     print('ROC_AUC: ', np.round(metric_1.result().numpy()*100, 2), '; PR_AUC: ', np.round(metric_2.result().numpy()*100, 2))
 
 if __name__ == '__main__':
