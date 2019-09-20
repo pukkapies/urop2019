@@ -83,7 +83,7 @@ def get_audio(mp3_path, audio_format, sample_rate, array=None, array_sr=None):
     array = librosa.core.to_mono(array)
     array = librosa.resample(array, sr_in, sample_rate)
 
-    if audio_format == "log-mel-spectrogram":
+    if audio_format == 'log-mel-spectrogram':
         array = librosa.core.power_to_db(librosa.feature.melspectrogram(array, config.sample_rate, n_mels=config.n_mels))
         array = array.astype(np.float32)
         mean, variance = tf.nn.moments(tf.constant(array), axes=[0,1], keepdims=True)
@@ -225,10 +225,10 @@ def test(model, tfrecords_dir, audio_format, config):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument("-f", help="model audio format", required=True)
-    parser.add_argument("--checkpoint", help="path to checkpoint to restore", required=True)
-    parser.add_argument("--config", help="path to config.json", required=True)
-    parser.add_argument("--lastfm", help="path to (clean) lastfm database (default to path on Boden)", default="/srv/data/urop/clean_lastfm.db")
+    parser.add_argument('-f', help='model audio format', required=True)
+    parser.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
+    parser.add_argument('--config', help='path to config.json', required=True)
+    parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     
     subparsers = parser.add_subparsers(title='script functionality, testing or predicting', dest='mode')
     testing = subparsers.add_parser('test')
@@ -250,7 +250,7 @@ if __name__ == '__main__':
 
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
 
-    if args.mode == "test":
+    if args.mode == 'test':
         test(model, args.tfrecords_dir, args.format, config)
     
     else:
@@ -262,18 +262,18 @@ if __name__ == '__main__':
                 try:
                     narray = get_audio(args.mp3_path, args.format, sample_rate=config.sample_rate)
                     narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
-                    print("Predictions: ", predict(model, fm, narray, config, threshold=args.threshold))
+                    print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                 except audioread.NoBackendError:
-                    print("Skipping {} because of a NoBackendError occurred...".format(args.mp3_path))
+                    print('Skipping {} because of a NoBackendError occurred...'.format(args.mp3_path))
             else:
                 for mp3_path in os.listdir(args.mp3_path): 
                     try:
                         narray = get_audio(mp3_path, args.mp3_path, args.format, sample_rate=config.sample_rate)
                         narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
-                        print("File: ", mp3_path)
-                        print("Predictions: ", predict(model, fm, narray, config, threshold=args.threshold))
+                        print('File: ', mp3_path)
+                        print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                     except audioread.NoBackendError:
-                        print("Skipping {} because of a NoBackendError occurred...".format(mp3_path))
+                        print('Skipping {} because of a NoBackendError occurred...'.format(mp3_path))
                         continue
                 
         else:
@@ -301,4 +301,4 @@ if __name__ == '__main__':
             
             audio = audio.transpose()
             audio = get_audio(mp3_path = None, sample_rate=config.sample_rate, array=audio, array_sr=sr_rec)
-            print("Predictions: ", predict(model, audio, config, threshold=args.threshold))
+            print('Predictions: ', predict(model, audio, config, threshold=args.threshold))
