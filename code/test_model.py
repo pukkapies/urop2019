@@ -262,10 +262,8 @@ if __name__ == '__main__':
         test(model, args.tfrecords_dir, args.format, config)
     
     else:
-        # if window_length is not specified, use 'window_length' from config.json
-        args.window_length = args.window_length or config.window_length
-        
-        if not args.from_recording:
+        args.window_length = args.window_length or config.window_length # if window_length is not specified, use 'window_length' from config.json
+        if not args.record:
             if os.path.isfile(args.mp3_path):
                 try:
                     narray = get_audio(args.mp3_path, args.format, sample_rate=config.sample_rate)
@@ -283,7 +281,6 @@ if __name__ == '__main__':
                     except audioread.NoBackendError:
                         print('Skipping {} because of a NoBackendError occurred...'.format(mp3_path))
                         continue
-                
         else:
             assert args.record_length >=15
 
