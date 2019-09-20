@@ -29,10 +29,10 @@ import projectname_input
 
 from lastfm import LastFm
 
-def parse_config(config_path, lastfm_path):
+def parse_config(config_path, lastfm):
 
-    # load tags database
-    lastfm = LastFm(os.path.expanduser(lastfm_path))
+    if not isinstance(lastfm, object):
+        lastfm = LastFm(os.path.expanduser(lastfm))
 
     # if config_path is a folder, assume the folder contains a config.json
     if os.path.isdir(os.path.expanduser(config_path)):
