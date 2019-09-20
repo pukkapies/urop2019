@@ -462,12 +462,52 @@ except replacing `training` with `training_gradtape`.
 
 
 ## Evaluation Tools
+
 `test_model.py` is the script containing the evaluation tools. There is a `test_model()` function which 
 simply tests the model's performance on the test dataset from a certain checkpoint. The `predict()` function 
 takes an audio array, in the waveform or the log mel-spectrogram format, and uses the model on consecutive 15s 
-windows of the input audio to returns the average prediction as tags in string form.
+windows (with backward 15s window when if the last window has length less than 15s) of the input audio to returns the 
+average prediction as tags in string form.
 
-(example?)
+**Example**
+
+To test the model on the last 10% of the tfrecord files on log mel-spectrogrm:
+
+```
+python log-mel-spectrogram test /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --tfrecords-dir /srv/data/urop/tfrecords-log-mel-spectrogram
+```
+
+To make prediction to an audio file and display tags with minimum score 0.1:
+
+```
+python log-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --mp3-path /srv/data/urop/song.mp3 --cutoff 0.2
+```
+
+If you have a directory which contains only audio files (one or more), you may set `--mp3-path` as the directory path.
+
+To make prediction by recording a 30s audio with your microphone in terminal:
+
+```
+python test_model.pylog-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --from-recording -s 30 --cutoff 0.2
+```
+#### Predict lite
+
+To make prediction simplier, we have produced the `projectname_predict_lite.py` script. We have also uploaded
+our checkpoint files under the 'predict' folder so that you may make prediction to your music with our script
+without needing to train your own model. The script only relies on the checkpoint and nothing more. Note that
+the checkpoint files we uploaded should be the most up-to-date model which gives the best performance. Please
+refer to [Requirements](https://github.com/pukkapies/urop2019#requirements) for more details on what you need
+to install. 
+
+
+**Example**
+
+```
+python projectname_predict_lite.py --checkpoint epoch-18 --mp3-path /srv/data/urop/song.mp3
+```
+
+Similar to `test_model.py`, you may analyse an entire directory or you may record directly from terminal by
+changing the parameters. See `python projectname_predict_lite.py -h` for more details.
 
 ## Results
 
