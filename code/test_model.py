@@ -137,68 +137,6 @@ def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=N
     
     return np.take(slices, np.random.choice(slices.shape[0], size=n_slices, replace=False), axis=0)
 
-def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length=15, merge_tags=None, window_random=False, with_tags=None, with_tids=None, num_tags=155):
-    ''' Tests a given model with respect to the metrics AUC_ROC and AUC_PR
-    
-    Parameters
-    ----------
-    model : tf.keras.Model object
-        model to test
-
-    tfrecords_dir : str
-        path to directory containing TFRecord files
-
-    audio_format : {'waveform', 'log-mel-spectrogram'}
-        audio format used in model
-
-    split : list of three floats
-        number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3).
-        Note that in this function, only the parameter for test will depend on the size of the tfrecords that will be fed into this function,
-        while the train parameter and the validation parameter will decide the position of the test parameter.
-        E.g. split = [80,10,10] means the last 10% will be fed into the function.
-
-    batch_size : int
-
-    window_length : int
-        size in seconds of window to be extracted from each audio array
-        
-    merge_tags : list of list of int
-        e.g. [[1,2], [2,3]] means merge 1 with 2, and 2 with 3 respectively
-
-    window_random : bool
-        Specifies if windows should be extracted from a random location, or from the center of the array
-
-    with_tags : list
-        list of tags used during training 
-
-    with_tids : list
-        list of tids used during training
-        
-    num_tags : int
-        number of tags in the clean lastfm database
-        
-    '''
-
-    # loading test dataset
-    dataset = projectname_input.generate_datasets_from_dir(tfrecords_dir, audio_format, split=split, 
-                                                            batch_size=batch_size, shuffle=False, window_length=window_length,
-                                                            window_random=window_random, with_tags=with_tags, with_tids=with_tids,
-                                                            merge_tags=merge_tags, num_tags=num_tags)[-1]
-
-    ROC_AUC = tf.keras.metrics.AUC(curve='ROC', name='ROC_AUC',  dtype=tf.float32)
-    PR_AUC = tf.keras.metrics.AUC(curve='PR', name='PR_AUC', dtype=tf.float32)
-
-    for entry in dataset:
-
-        audio_batch, label_batch = entry[0], entry[1]
-
-        logits = model(audio_batch, training=False)
-
-        ROC_AUC.update_state(label_batch, logits)
-        PR_AUC.update_state(label_batch, logits)
-
-    print('ROC_AUC: ', np.round(ROC_AUC.result().numpy()*100, 2), '; PR_AUC: ', np.round(PR_AUC.result().numpy()*100, 2))
-
 def predict(model, audio, config, threshold=0.5, db_path='/srv/data/urop/clean_lastfm.db'):
     ''' Predicts tags given audio for one track 
     
@@ -207,10 +145,11 @@ def predict(model, audio, config, threshold=0.5, db_path='/srv/data/urop/clean_l
     model : tf.keras.Model object
         model to use for prediction
 
-    audio : list or array-like
+    audio :
+        The processed audio array.
 
     audio_format : {'waveform', 'log-mel-spectrogram'}
-        audio format used in model
+        The audio format.
 
     with_tags : list
         list of tags used during training 
@@ -244,6 +183,46 @@ def predict(model, audio, config, threshold=0.5, db_path='/srv/data/urop/clean_l
             
     tags = sorted(tags, key=lambda x:x[0], reverse=True)
     return tags
+
+def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length=15, merge_tags=None, window_random=False, with_tags=None, with_tids=None, num_tags=155):
+    ''' Tests a given model with respect to the metrics AUC_ROC and AUC_PR
+    
+    Parameters
+    ----------
+    model : tf.keras.Model
+        The model to test.
+
+    tfrecords_dir : str
+        The directory containing the .tfrecord files.
+
+    audio_format : {'waveform', 'log-mel-spectrogram'}
+        The audio format.
+
+    config: argparse.Namespace
+        The namespace generated from config.json with parse_config().
+    '''
+    _, _, test_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split = config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
+                                                                            sample_rate = config.sample_rate, batch_size = config.batch_size, 
+                                                                            block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
+                                                                            shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
+                                                                            window_length = config.window_length, window_random = config.window_random, 
+                                                                            num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge,
+										                                    as_tuple = True)
+
+    metric_1 = tf.keras.metrics.AUC(name='ROC_AUC',
+                                        curve='ROC',
+                                        dtype=tf.float32)
+    metric_2 = tf.keras.metrics.AUC(name='PR_AUC',
+                                        curve='PR',
+                                        dtype=tf.float32)
+
+    for entry in test_dataset:
+        audio_batch, label_batch = entry[0], entry[1]
+        logits = model(audio_batch, training=False)
+        metric_1.update_state(label_batch, logits)
+        metric_2.update_state(label_batch, logits)
+        
+    print('ROC_AUC: ', np.round(metric_1.result().numpy()*100, 2), '; PR_AUC: ', np.round(metric_2.result().numpy()*100, 2))
 
 if __name__ == '__main__':
 
