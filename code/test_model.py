@@ -34,7 +34,6 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     model: tf.keras.Model
     '''
 
-    # build model
     model = projectname.build_model(audio_format, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
     
     checkpoint_path = checkpoint_path or config.log_dir # if checkpoint_path is not specified, use 'log_dir' from config.json
@@ -43,7 +42,6 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     if os.path.isdir(checkpoint_path):
         checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
     
-    # restore checkpoint
     checkpoint = tf.train.Checkpoint(model=model)
     checkpoint.restore(checkpoint_path).expect_partial()
     print('Loading from {}'.format(checkpoint_path))
@@ -178,7 +176,7 @@ def get_slices(audio, audio_format, sample_rate, window_length=15):
     -------
     np.array of slices extracted
     '''
-    
+
     if audio_format == 'waveform':
         slice_length = window_length*sample_rate
         n_slices = audio.shape[0]//slice_length
@@ -193,6 +191,27 @@ def get_slices(audio, audio_format, sample_rate, window_length=15):
         slices = [audio[:,i*slice_length:(i+1)*slice_length] for i in range(n_slices)]
         slices.append(audio[:,-slice_length:])
         return np.array(slices)
+
+def get_audio_slices(audio, audio_format, sample_rate, window_length):
+
+    assert audio_format in ('waveform', 'log-mel-spectrogram')
+    
+    slice_length = window_length * sample_rate // 512 if audio_format == 'log-mel-spectrogram' else window_length * sample_rate
+
+    # compute output shape
+    shape = audio.shape[:-1] + (audio.shape[-1] - slice_length + 1, slice_length)
+    
+    # compute output 'strides' (see http://stackoverflow.com/questions/53097952/how-to-understand-numpy-strides-for-layman)
+    strides = audio.strides + (audio.strides[-1],)
+    
+    # slice
+    slices = np.lib.stride_tricks.as_strided(audio, shape=shape, strides=strides)
+    
+    # transpose (if log-mel-spectrogram)
+    if slices.ndim == 3:
+        slices = np.transpose(slices, [1, 0, 2]) # want an array of shape (batch_size, *)
+    
+    return slices
 
 def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, window_length=15, db_path='/srv/data/urop/clean_lastfm.db'):
     ''' Predicts tags given audio for one track 
@@ -234,8 +253,7 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     with_tags = np.sort(with_tags)
 
     # compute average by using a moving window
-    slices = get_slices(audio, audio_format, sample_rate, window_length)
-    logits = tf.reduce_mean(model(slices, training=False), axis=[0])
+    logits = tf.reduce_mean(model(audio, training=False), axis=[0])
     
     # get tags
     tags = []
