@@ -97,7 +97,7 @@ def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=N
     
     Parameters
     ----------
-    audio :
+    audio: np.ndarray
         The processed audio array.
     
     audio_format: {'waveform', 'log-mel-spectrogram'}
@@ -108,6 +108,9 @@ def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=N
 
     window_length: int
         The length of the window(s) to be extracted.
+
+    n_slices: int
+        The desired number of slices. If None, compute as many slices as possible.
 
     Returns
     -------
@@ -148,7 +151,7 @@ def predict(model, fm, audio, config, threshold=0.5):
     fm: LastFm, LastFm2Pandas
         Instance of the tags database.
 
-    audio :
+    audio: np.ndarray
         The processed audio array (or audio 'batch').
 
     audio_format: {'waveform', 'log-mel-spectrogram'}
@@ -301,6 +304,3 @@ if __name__ == '__main__':
             audio = get_audio(sample_rate=config.sample_rate, array=audio, array_sr=sr_rec)
             print("prediction: ", predict(model, audio, args.format, config.tags, sr_rec, threshold=args.threshold, db_path=args.lastfm_path))
             print("prediction: ", predict(model, audio, args.format, config.tags, config.sample_rate, threshold=args.threshold, db_path=args.lastfm_path))
-            
-            
-            
