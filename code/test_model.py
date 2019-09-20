@@ -1,16 +1,15 @@
-import os
 import argparse
+import os
 import time
 
-
-import tensorflow as tf
-import numpy as np
-import librosa
 import audioread
+import librosa
+import numpy as np
+import tensorflow as tf
 
-import lastfm as q_fm
+import lastfm
 import projectname_input
-import projectname as Model
+import projectname
 
 from projectname_train import parse_config
 
@@ -38,7 +37,7 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     '''
 
     # loading model
-    model = Model.build_model(frontend_mode=audio_format, 
+    model = projectname.build_model(frontend_mode=audio_format, 
                                 num_output_neurons=config.n_output_neurons, y_input=config.n_mels,
                                 num_units=config.n_dense_units, num_filts=config.n_filters)
     
@@ -234,7 +233,7 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     
     '''
 
-    fm = q_fm.LastFm(db_path)
+    fm = lastfm.LastFm(db_path)
     # make sure tags are sorted
     with_tags = np.sort(with_tags)
 
