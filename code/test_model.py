@@ -93,6 +93,50 @@ def get_audio(mp3_path, audio_format, config, array=None, array_sr=None):
 
     return array
 
+def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=None):
+    ''' Extracts slice of audio along an entire audio array
+    
+    Parameters
+    ----------
+
+    audio : list or array-like
+    
+    audio_format : {'waveform', 'log-mel-spectrogram'}
+        audio format used in model
+
+    sample_rate : int
+        sample rate used for the audio
+
+    window_length : int
+        size of window to be extracted
+
+    Returns
+    -------
+    np.array of slices extracted
+    '''
+
+    assert audio_format in ('waveform', 'log-mel-spectrogram')
+    
+    slice_length = window_length * sample_rate // 512 if audio_format == 'log-mel-spectrogram' else window_length * sample_rate
+
+    # compute output shape
+    shape = audio.shape[:-1] + (audio.shape[-1] - slice_length + 1, slice_length)
+    
+    # compute output 'strides' (see https://stackoverflow.com/a/53099870)
+    strides = audio.strides + (audio.strides[-1],)
+    
+    # slice (see https://stackoverflow.com/a/6811241)
+    slices = np.lib.stride_tricks.as_strided(audio, shape=shape, strides=strides)
+    
+    # transpose (if log-mel-spectrogram)
+    if slices.ndim == 3:
+        slices = np.transpose(slices, [1, 0, 2]) # want an array of shape (batch_size, *)
+    
+    # pick 'n_slices' slices from array; or pick them all, if 'n_slices' is None
+    n_slices = n_slices or slices.shape[0]
+    
+    return np.take(slices, np.random.choice(slices.shape[0], size=n_slices, replace=False), axis=0)
+
 def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length=15, merge_tags=None, window_random=False, with_tags=None, with_tids=None, num_tags=155):
     ''' Tests a given model with respect to the metrics AUC_ROC and AUC_PR
     
@@ -154,50 +198,6 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length
         PR_AUC.update_state(label_batch, logits)
 
     print('ROC_AUC: ', np.round(ROC_AUC.result().numpy()*100, 2), '; PR_AUC: ', np.round(PR_AUC.result().numpy()*100, 2))
-
-def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=None):
-    ''' Extracts slice of audio along an entire audio array
-    
-    Parameters
-    ----------
-
-    audio : list or array-like
-    
-    audio_format : {'waveform', 'log-mel-spectrogram'}
-        audio format used in model
-
-    sample_rate : int
-        sample rate used for the audio
-
-    window_length : int
-        size of window to be extracted
-
-    Returns
-    -------
-    np.array of slices extracted
-    '''
-
-    assert audio_format in ('waveform', 'log-mel-spectrogram')
-    
-    slice_length = window_length * sample_rate // 512 if audio_format == 'log-mel-spectrogram' else window_length * sample_rate
-
-    # compute output shape
-    shape = audio.shape[:-1] + (audio.shape[-1] - slice_length + 1, slice_length)
-    
-    # compute output 'strides' (see https://stackoverflow.com/a/53099870)
-    strides = audio.strides + (audio.strides[-1],)
-    
-    # slice (see https://stackoverflow.com/a/6811241)
-    slices = np.lib.stride_tricks.as_strided(audio, shape=shape, strides=strides)
-    
-    # transpose (if log-mel-spectrogram)
-    if slices.ndim == 3:
-        slices = np.transpose(slices, [1, 0, 2]) # want an array of shape (batch_size, *)
-    
-    # pick 'n_slices' slices from array; or pick them all, if 'n_slices' is None
-    n_slices = n_slices or slices.shape[0]
-    
-    return np.take(slices, np.random.choice(slices.shape[0], size=n_slices, replace=False), axis=0)
 
 def predict(model, audio, config, threshold=0.5, db_path='/srv/data/urop/clean_lastfm.db'):
     ''' Predicts tags given audio for one track 
