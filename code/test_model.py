@@ -225,20 +225,26 @@ def test(model, tfrecords_dir, audio_format, config):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument('-f', '--format', help='model audio format', required=True)
-    parser.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
-    parser.add_argument('--config', help='path to config.json', required=True)
-    parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     subparsers = parser.add_subparsers(title='commands', dest='mode')
     subparsers.required=True
 
     testing = subparsers.add_parser('test', help='take a trained model and evaluate its performance on a test dataset')
+    testing.add_argument('format', help='model audio format')
+    testing.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
+    testing.add_argument('--config', help='path to config.json', required=True)
+    testing.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from')
 
     predicting = subparsers.add_parser('predict', help='take a trained model and use it to make tag previctions on .mp3 audio tracks or an audio recording')
+    predicting.add_argument('format', help='model audio format')
+    predicting.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
+    predicting.add_argument('--config', help='path to config.json', required=True)
+    predicting.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
+
     prediction = predicting.add_mutually_exclusive_group(required=True)
     prediction.add_argument('--mp3', help='predict tags using specified .mp3 file (or .mp3 files contained in specified directory)')
     prediction.add_argument('--record', action='store_true', help='predict tags using recorded audio from your microphone')
+    
     predicting.add_argument('--record-length', help='length of audio recording (minimum length 15 sec)', type=int)
     predicting.add_argument('--window-length', help='length (in seconds) of audio window to use for predictions', type=int)
     predicting.add_argument('--n-slices', help='number of slices to use for predictions', type=int)
