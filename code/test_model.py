@@ -18,10 +18,10 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     
     Parameters
     ----------
-    audio_format : {'waveform', 'log-mel-spectrogram'}
+    audio_format: {'waveform', 'log-mel-spectrogram'}
         The audio format.
 
-    config : argparse.Namespace()
+    config: argparse.Namespace()
         The config namespace generated with parse_config().
 
     checkpoint_path: str or None
@@ -53,13 +53,13 @@ def get_audio(mp3_path, audio_format, sample_rate, array=None, array_sr=None):
     
     Paramters
     ---------
-    mp3_path : str
+    mp3_path: str
         The path to the .mp3 file to load.
 
-    audio_format : {'waveform', 'log-mel-spectrogram'}
+    audio_format: {'waveform', 'log-mel-spectrogram'}
         The audio format.
 
-    sample_rate : int
+    sample_rate: int
         The audio (output) sample rate.
         
     array: numpy.ndarray
@@ -100,13 +100,13 @@ def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=N
     audio :
         The processed audio array.
     
-    audio_format : {'waveform', 'log-mel-spectrogram'}
+    audio_format: {'waveform', 'log-mel-spectrogram'}
         The audio format.
 
-    sample_rate : int
+    sample_rate: int
         The audio sample rate.
 
-    window_length : int
+    window_length: int
         The length of the window(s) to be extracted.
 
     Returns
@@ -142,7 +142,7 @@ def predict(model, fm, audio, config, threshold=0.5):
     
     Paramters:
     ---------
-    model : tf.keras.Model
+    model: tf.keras.Model
         Instance of the model to use for predictions.
 
     fm: LastFm, LastFm2Pandas
@@ -151,13 +151,13 @@ def predict(model, fm, audio, config, threshold=0.5):
     audio :
         The processed audio array (or audio 'batch').
 
-    audio_format : {'waveform', 'log-mel-spectrogram'}
+    audio_format: {'waveform', 'log-mel-spectrogram'}
         The audio format.
 
     config: argparse.Namespace
         The namespace generated from config.json with parse_config().
 
-    threshold : float
+    threshold: float
         Only the tag predictions with 'confidence' higher than the threshold will be returned. 
 
     Returns
@@ -185,13 +185,13 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length
     
     Parameters
     ----------
-    model : tf.keras.Model
+    model: tf.keras.Model
         Instance of the model to test.
 
-    tfrecords_dir : str
+    tfrecords_dir: str
         The directory containing the .tfrecord files.
 
-    audio_format : {'waveform', 'log-mel-spectrogram'}
+    audio_format: {'waveform', 'log-mel-spectrogram'}
         The audio format.
 
     config: argparse.Namespace
