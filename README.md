@@ -283,16 +283,15 @@ python lastfm_cleaning.py /srv/data/msd/lastfm/SQLITE/lastfm_tags.db /srv/data/u
 ### Tfrecords
 To store the necessary information we need in training, we used the `.tfrecord` 
 file format. The `preprocessing.py` script does exactly this. In each entry of 
-the `.tfrecord` file, it stores the audio as an array in the formats of either 
-waveform or log mel-spectrogram. It will also store the TID to identify each 
+the `.tfrecord` file, it stores the audio as an array in either 
+waveform or log mel-spectrogram format. It will also store the TID to identify each 
 track as well as the tags from the `clean_lastfm.db` database in a one-hot vector format.
 
 `preprocessing.py` leaves quite a lot of room for user customisation. It will 
 accept audio as `.mp3` files, or as `.npz` files where each entry contains the 
 audio as an array and the sample rate. The user can choose the sample rate to 
 store the data in as well as the number of mel bins when storing the audios in 
-the log mel-spectrogram form. It is also possible to specify the number of  
-`.tfrecord` files to split the data between.
+the log mel-spectrogram form. It is also possible to specify the number of  `.tfrecord` files to split the data between.
 
 In our case, we used 96 mel bins, a sample rate of 16kHz and split the data 
 into 100 .`tfrecord` files. We also had the data stored as `.npz` files, since 
@@ -466,7 +465,7 @@ except replacing `training` with `training_gradtape`.
 `test_model.py` is the script containing the evaluation tools. There is a `test_model()` function which 
 simply tests the model's performance on the test dataset from a certain checkpoint. The `predict()` function 
 takes an audio array, in the waveform or the log mel-spectrogram format, and uses the model on consecutive 15s 
-windows (with backward 15s window when if the last window has length less than 15s) of the input audio to returns the 
+windows (with the last window 15s from the end of the track) of the input audio to return the 
 average prediction as tags in string form.
 
 **Example**
