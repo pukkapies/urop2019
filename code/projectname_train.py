@@ -119,7 +119,7 @@ if __name__ == '__main__':
     # parse config
     config = parse_config(args.config_path, args.lastfm_path)
 
-    # if root_dir is not specified, use default path on our server
+    # if --tfrecords-dir is not specified, use default path on our server
     if not args.tfrecords_dir:
         if config.sample_rate != 16000:
             s = '-' + str(config.sample_rate // 1000) + 'kHz'

@@ -7,6 +7,8 @@ import librosa
 import numpy as np
 import tensorflow as tf
 
+from tqdm.auto import tqdm
+
 import lastfm
 import projectname_input
 import projectname
@@ -44,7 +46,8 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     
     checkpoint = tf.train.Checkpoint(model=model)
     checkpoint.restore(checkpoint_path).expect_partial()
-    print('Loading from {}'.format(checkpoint_path))
+    print('Restoring checkpoint from {}...'.format(checkpoint_path))
+    print()
 
     return model
 
@@ -175,7 +178,7 @@ def predict(model, fm, audio, config, threshold=0.5):
     tags = []
     for idx, val in enumerate(logits):
         if val >= threshold:
-            tags.append((fm.tag_num_to_tag(config.with_tags[idx]), val.numpy()))
+            tags.append((fm.tag_num_to_tag(config.tags[idx]), val.numpy()))
             
     # sort predictions from higher confidence to lower confidence
     tags = sorted(tags, key=lambda x: x[1], reverse=True)
@@ -199,12 +202,12 @@ def test(model, tfrecords_dir, audio_format, config):
     config: argparse.Namespace
         The namespace generated from config.json with parse_config().
     '''
-    _, _, test_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split = config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
-                                                                            sample_rate = config.sample_rate, batch_size = config.batch_size, 
-                                                                            block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
-                                                                            shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
-                                                                            window_length = config.window_length, window_random = config.window_random, 
-                                                                            num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge,
+    _, _, test_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.format, split = config.split, which_split=(True, True, True),
+                                                                      sample_rate = config.sample_rate, batch_size = config.batch_size, 
+                                                                      block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
+                                                                      shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
+                                                                      window_length = config.window_length, window_random = config.window_random, 
+                                                                      num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge,
 										                                    as_tuple = True)
 
     metric_1 = tf.keras.metrics.AUC(name='ROC_AUC',
@@ -214,7 +217,7 @@ def test(model, tfrecords_dir, audio_format, config):
                                         curve='PR',
                                         dtype=tf.float32)
 
-    for entry in test_dataset:
+    for entry in tqdm(test_dataset, leave=False):
         audio_batch, label_batch = entry[0], entry[1]
         logits = model(audio_batch, training=False)
         metric_1.update_state(label_batch, logits)
@@ -223,6 +226,8 @@ def test(model, tfrecords_dir, audio_format, config):
     print('ROC_AUC: ', np.round(metric_1.result().numpy()*100, 2), '; PR_AUC: ', np.round(metric_2.result().numpy()*100, 2))
 
 if __name__ == '__main__':
+
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
     parser = argparse.ArgumentParser()     
     subparsers = parser.add_subparsers(title='commands', dest='mode')
@@ -233,7 +238,7 @@ if __name__ == '__main__':
     testing.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
     testing.add_argument('--config', help='path to config.json', required=True)
     testing.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
-    testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from')
+    testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from (default to path on Boden)')
 
     predicting = subparsers.add_parser('predict', help='take a trained model and use it to make tag previctions on .mp3 audio tracks or an audio recording')
     predicting.add_argument('format', help='model audio format')
@@ -242,12 +247,12 @@ if __name__ == '__main__':
     predicting.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
 
     prediction = predicting.add_mutually_exclusive_group(required=True)
-    prediction.add_argument('--mp3', help='predict tags using specified .mp3 file (or .mp3 files contained in specified directory)')
-    prediction.add_argument('--record', action='store_true', help='predict tags using recorded audio from your microphone')
+    prediction.add_argument('--mp3', dest='mp3_path', help='predict tags using specified .mp3 file (or .mp3 files contained in specified directory)')
+    prediction.add_argument('--record', help='predict tags using recorded audio from your microphone', action='store_true')
     
-    predicting.add_argument('--record-length', help='length of audio recording (minimum length 15 sec)', type=int)
+    predicting.add_argument('--record-length', help='length of audio recording (minimum length 15 sec)', type=int, default=15)
     predicting.add_argument('--window-length', help='length (in seconds) of audio window to use for predictions', type=int)
-    predicting.add_argument('--n-slices', help='number of slices to use for predictions', type=int)
+    predicting.add_argument('--n-slices', help='number of slices to use for predictions', type=int, default=20)
     predicting.add_argument('-t', '--threshold', help='threshold for confidence values to count as confident predictions', type=float, default=0.1)
 
     args = parser.parse_args()
@@ -259,6 +264,13 @@ if __name__ == '__main__':
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
 
     if args.mode == 'test':
+        if not args.tfrecords_dir: # if --tfrecords-dir is not specified, use default path on our server
+            if config.sample_rate != 16000:
+                s = '-' + str(config.sample_rate // 1000) + 'kHz'
+            else:
+                s = ''
+            args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.format + s)
+
         test(model, args.tfrecords_dir, args.format, config)
     
     else:

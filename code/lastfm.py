@@ -175,7 +175,7 @@ class LastFm():
     def tag_num_to_tag(self, tag_num):
         ''' Returns tag given tag_num. '''
 
-        if isinstance(tag_num, int):
+        if np.issubdtype(type(tag_num), np.integer):
             return self.sql_tag_num_to_tag(str(tag_num))
         else:
             return self.tag_num_to_tag_vec([str(i) for i in tag_num])
@@ -205,7 +205,7 @@ class LastFm():
     def tid_num_to_tid(self, tid_num):
         ''' Returns tid, given tid_num. '''
 
-        if isinstance(tid_num, int):
+        if np.issubdtype(type(tid_num), np.integer):
             return self.sql_tid_num_to_tid(str(tid_num))
         else:
             return self.tid_num_to_tid_vec([str(i) for i in tid_num])
@@ -494,7 +494,7 @@ class LastFm2Pandas():
                 ndarray containing corresponding tids
         '''
 
-        if isinstance(tid_num, int):
+        if np.issubdtype(type(tid_num), np.integer):
             return self.tids.at[tid_num, 'tid']
         
         if order:
@@ -520,7 +520,7 @@ class LastFm2Pandas():
                 corresponding list of tag_nums
         '''
         
-        if isinstance(tid_num, int):
+        if np.issubdtype(type(tid_num), np.integer):
             return self.tid_tag.loc[self.tid_tag.tid == tid_num, 'tag'].values
 
         tag_nums = [self.tid_tag.loc[self.tid_tag.tid == num, 'tag'].values for num in tid_num]
@@ -571,7 +571,7 @@ class LastFm2Pandas():
                 ndarray containing corresponding tags
         '''
 
-        if isinstance(tag_num, int):
+        if np.issubdtype(type(tag_num), np.integer):
             return self.tags.at[tag_num, 'tag']
         
         if order:
