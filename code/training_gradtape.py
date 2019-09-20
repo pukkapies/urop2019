@@ -116,6 +116,8 @@ def parse_config(config_path, lastfm_path):
     config_optim = argparse.Namespace()
     config_optim.class_name = config_d['optimizer'].pop('name')
     config_optim.max_learning_rate = config_d['optimizer'].pop('max_learning_rate')
+    config_optim.lr_plateau_mult = config_d['optimizer'].pop('lr_plateau_mult')
+    config_optim.min_lr_plateau = config_d['optimizer'].pop('min_lr_plateau')
     config_optim.config = config_d['optimizer']
     
     return config, config_optim
@@ -190,6 +192,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             config_optim.config['learning_rate'] = tf.Variable(get_cyclic_learning_rate(0, config.iterations, config_optim.max_learning_rate))
 
         optimizer = tf.keras.optimizers.get({"class_name": config_optim.class_name, "config": config_optim.config})
+
         train_loss = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
         train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
         train_metrics_1 = tf.keras.metrics.AUC(curve='ROC', name='train_AUC-ROC', dtype=tf.float32)
@@ -288,9 +291,12 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                     with train_summary_writer.as_default():
                         tf.summary.scalar('ROC_AUC_itr', train_metrics_1.result(), step=optimizer.iterations)
                         tf.summary.scalar('PR_AUC_itr', train_metrics_2.result(), step=optimizer.iterations)
-                        tf.summary.scalar('Loss_itr', strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None), step=optimizer.iterations)
                         if lr_range:
                             tf.summary.scalar('Learning rate', optimizer.learning_rate, step=optimizer.iterations)
+                            tf.summary.scalar('Loss_itr', strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None), step=optimizer.iterations)
+                        else:
+                            tf.summary.scalar('Loss_itr', tf.multiply(train_mean_loss.result(), num_replica), step=optimizer.iterations)
+
                         train_summary_writer.flush()
 
         @tf.function
@@ -346,18 +352,18 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
                 tf.print('Val- Epoch', epoch, ': loss', tf.multiply(val_loss.result(), num_replica), ';ROC_AUC', val_metrics_1.result(), '; PR_AUC', val_metrics_2.result())
                 
                 # early stopping
-                if (config.early_stop_min_d) or (config.early_stop_patience):
-                    
-                    if not config.early_stop_min_d:
-                        config.early_stop_min_d = 0.
-                   
-                    if not config.early_stop_patience:
-                        config.early_stop_patience = 1
+                if (config.early_stop_min_d) and (config.early_stop_patience):
                     
                     if os.path.isfile(os.path.join(checkpoint_dir, 'early_stopping.npy')):
                         cumerror = int(np.load(os.path.join(checkpoint_dir, 'early_stopping.npy')))
-                    
-                    if val_metrics_2.result() > (max_metric + config.early_stop_min_d):
+
+                    if tf.less(config_optim.min_lr_plateau, optimizer.learning_rate):
+                        if config_optim.lr_plateau_mult:
+                            optimizer.learning_rate.assign(tf.multiply(optimizer.learning_rate, config_optim.lr_plateau_mult))
+                        else:
+                            optimizer.learning_rate.assign(tf.multiply(optimizer.learning_rate, ))
+
+                    elif val_metrics_2.result() > (max_metric + config.early_stop_min_d):
                         max_metric = val_metrics_2.result()
                         cumerror = 0
                         np.save(os.path.join(checkpoint_dir, 'early_stopping.npy'), cumerror)
@@ -385,8 +391,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, config_optim
             time_taken = time.time()-start_time
             tf.print('Epoch {}: {} s'.format(epoch, time_taken))
             
-            tf.keras.backend.clear_session()
-
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
