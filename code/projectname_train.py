@@ -21,6 +21,8 @@ import importlib
 import json
 import os
 
+import numpy as np
+
 from tensorflow import distribute
 
 import projectname_input
@@ -72,6 +74,8 @@ def parse_config(config_path, lastfm_path):
     config.n_output_neurons = len(tags) if tags is not None else config.n_tags
     config.tags = lastfm.tag_to_tag_num(tags) if tags is not None else None
     config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
+
+    config.tags = np.sort(config.tags)
     
     return config
 

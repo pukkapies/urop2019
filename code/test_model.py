@@ -155,7 +155,7 @@ def test(model, tfrecords_dir, audio_format, split, batch_size=64, window_length
 
     print('ROC_AUC: ', np.round(ROC_AUC.result().numpy()*100, 2), '; PR_AUC: ', np.round(PR_AUC.result().numpy()*100, 2))
 
-def get_slices(audio, audio_format, sample_rate, window_length=15):
+def get_audio_slices(audio, audio_format, sample_rate, window_length, n_slices=None):
     ''' Extracts slice of audio along an entire audio array
     
     Parameters
@@ -177,23 +177,6 @@ def get_slices(audio, audio_format, sample_rate, window_length=15):
     np.array of slices extracted
     '''
 
-    if audio_format == 'waveform':
-        slice_length = window_length*sample_rate
-        n_slices = audio.shape[0]//slice_length
-        slices = [audio[i*slice_length:(i+1)*slice_length] for i in range(n_slices)] 
-        slices.append(audio[-slice_length:])
-        return np.array(slices)
-
-    elif audio_format == 'log-mel-spectrogram':
-        slice_length = window_length*sample_rate//512
-        n_slices = audio.shape[1]//slice_length
-
-        slices = [audio[:,i*slice_length:(i+1)*slice_length] for i in range(n_slices)]
-        slices.append(audio[:,-slice_length:])
-        return np.array(slices)
-
-def get_audio_slices(audio, audio_format, sample_rate, window_length):
-
     assert audio_format in ('waveform', 'log-mel-spectrogram')
     
     slice_length = window_length * sample_rate // 512 if audio_format == 'log-mel-spectrogram' else window_length * sample_rate
@@ -201,19 +184,22 @@ def get_audio_slices(audio, audio_format, sample_rate, window_length):
     # compute output shape
     shape = audio.shape[:-1] + (audio.shape[-1] - slice_length + 1, slice_length)
     
-    # compute output 'strides' (see http://stackoverflow.com/questions/53097952/how-to-understand-numpy-strides-for-layman)
+    # compute output 'strides' (see https://stackoverflow.com/a/53099870)
     strides = audio.strides + (audio.strides[-1],)
     
-    # slice
+    # slice (see https://stackoverflow.com/a/6811241)
     slices = np.lib.stride_tricks.as_strided(audio, shape=shape, strides=strides)
     
     # transpose (if log-mel-spectrogram)
     if slices.ndim == 3:
         slices = np.transpose(slices, [1, 0, 2]) # want an array of shape (batch_size, *)
     
-    return slices
+    # pick 'n_slices' slices from array; or pick them all, if 'n_slices' is None
+    n_slices = n_slices or slices.shape[0]
+    
+    return np.take(slices, np.random.choice(slices.shape[0], size=n_slices, replace=False), axis=0)
 
-def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, window_length=15, db_path='/srv/data/urop/clean_lastfm.db'):
+def predict(model, audio, config, threshold=0.5, db_path='/srv/data/urop/clean_lastfm.db'):
     ''' Predicts tags given audio for one track 
     
     Paramters:
@@ -232,11 +218,8 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     sample_rate : int
         sample rate used for the audio
 
-    cutoff : float
+    threshold : float
         threshold for confidence value of tags to be returned
-
-    window_length : int
-        size of windows to be extracted along the audio
 
     db_path : str
         path to lastfm database
@@ -249,8 +232,6 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     '''
 
     fm = lastfm.LastFm(db_path)
-    # make sure tags are sorted
-    with_tags = np.sort(with_tags)
 
     # compute average by using a moving window
     logits = tf.reduce_mean(model(audio, training=False), axis=[0])
@@ -258,7 +239,7 @@ def predict(model, audio, audio_format, with_tags, sample_rate, cutoff=0.5, wind
     # get tags
     tags = []
     for idx, val in enumerate(logits):
-        if val >= cutoff:
+        if val >= threshold:
             tags.append([float(val.numpy()), fm.tag_num_to_tag(int(with_tags[idx]))])
             
     tags = sorted(tags, key=lambda x:x[0], reverse=True)
@@ -276,7 +257,7 @@ if __name__ == '__main__':
     parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
     parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_true")
     parser.add_argument("-s", "--recording-second", help="Number of seconds to record. Minimum length is 15 seconds", type=int, default='15')
-    parser.add_argument("--cutoff", type=float, help="Lower bound for what prediction values to print", default=0.1)
+    parser.add_argument("--threshold", type=float, help="Lower bound for what prediction values to print", default=0.1)
 
     args = parser.parse_args()
     print(args)
@@ -297,7 +278,7 @@ if __name__ == '__main__':
             if os.path.isfile(args.mp3_path):
                 try:
                     audio = get_audio(audio_format=args.format, config=config, mp3_path=args.mp3_path)
-                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, cutoff=args.cutoff, window_length=config.window_length))
+                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, threshold=args.threshold, window_length=config.window_length))
                 except audioread.NoBackendError:
                     print('skipping {} due to NoBackendError.'.format(args.mp3_path))
                 
@@ -310,7 +291,7 @@ if __name__ == '__main__':
                         continue
                 
                     print("file: ", path)
-                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, cutoff=args.cutoff, window_length=config.window_length))
+                    print("prediction: ", predict(model, audio, audio_format=args.format, with_tags=config.tags, sample_rate=config.sample_rate, threshold=args.threshold, window_length=config.window_length))
                     print()
                 
         else:
@@ -343,8 +324,8 @@ if __name__ == '__main__':
             
             audio = audio.transpose()
             audio = get_audio(config=config, array=audio, array_sr=sr_rec)
-            print("prediction: ", predict(model, audio, args.format, config.tags, sr_rec, cutoff=args.cutoff, db_path=args.lastfm_path))
-            print("prediction: ", predict(model, audio, args.format, config.tags, config.sample_rate, cutoff=args.cutoff, db_path=args.lastfm_path))
+            print("prediction: ", predict(model, audio, args.format, config.tags, sr_rec, threshold=args.threshold, db_path=args.lastfm_path))
+            print("prediction: ", predict(model, audio, args.format, config.tags, config.sample_rate, threshold=args.threshold, db_path=args.lastfm_path))
             
             
             
