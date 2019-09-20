@@ -258,7 +258,7 @@ if __name__ == '__main__':
     parser.add_argument("mode", choices=["predict", "test"], help="Choose functionality of script, testing or predict")
     parser.add_argument("config", help="Path to config JSON file")
     parser.add_argument("--checkpoint", help="Path to a checkpoints, will default to directory in config.")
-    parser.add_argument("--lastfm-path", help="Path to lastfm database", default="/home/calle/clean_lastfm.db")
+    parser.add_argument("--lastfm-path", help="Path to lastfm database", default="/srv/data/urop/clean_lastfm.db")
     parser.add_argument("--tfrecords-dir", help="Path to tfrecords directory, specify if test mode has been selected")
     parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
     parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_true")
