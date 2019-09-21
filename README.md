@@ -84,10 +84,10 @@ python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/uro
 ```
 
 This will expand the fetch.csv generated above to include some interpretations 
-of the silent information.
+of the silent information. In our experiement, we keep a song if it has minimum size of 200000 bytes, total silent length shorter than 5s, maximum interval of silent length shorter than 3s, and overall sum of non-silent length of 15s or more.
 
 ```
-python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 100000 --filter-tot-silence 15 --filter-max-silence 3
+python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 200000 --filter-tot-silence 5 --filter-max-silence 3 --filter-trim-length 15
 ```
 
 ### Errors in the Dataset 
@@ -103,7 +103,8 @@ For more information about how these functions are used, see [here](https://gith
 *Example:*
 
 ```
-python wrangle.py /srv/data/urop/wrangle_silence.csv /srv/data/urop/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt
+python wrangle.py /srv/data/urop/wrangle_silence.csv /srv/data/urop/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /srv/data/urop/msd_duplicates.txt
+.txt --path-txt-mism /path/to/mismatches.txt
 ```
 
 Alternatively, to save storage space and time, the following order of code 
@@ -114,7 +115,7 @@ python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital
 ```
 
 ```
-python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt --discard-dupl False
+python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /srv/data/urop/msd_duplicates.txt --path-txt-mism /srv/data/msd/lastfm/sid_mismatches.txt --discard-dupl False
 ```
 
 ```
@@ -122,11 +123,11 @@ python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv --root-dir-npz /srv/data/ur
 ```
 
 ```
-python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size ? --filter-tot-silence 15 --filter-max-silence ?
+python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 200000 --filter-tot-silence 5 --filter-max-silence 3 --filter-trim-length 15
 ```
 
 ```
-python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl ???? --path-txt-mism /srv/data/msd/sid_mismatches.txt
+python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /srv/data/urop/msd_duplicates.txt --path-txt-mism /srv/data/msd/sid_mismatches.txt
 ```
 
 With this order of execution, `wrangle.py` will remove tracks which 
@@ -318,13 +319,11 @@ In short, it contains five categories of parameters:
 
 1. **model**: any network-related parameters.
 
-2. **optimizer**: name and learning rate of the optimiser.
+2. **model_training**: any training-related parameters, including optimiser.
 
 3. **tags**: customised tags for dataset input pipeline.
 
 4. **tfrecords**: parameters used when generating the tfrecords.
-
-5. **config**: any parameters related to the training algorithm and the dataset input pipeline.
 
 If you wish to change any parameters, e.g. change learning rate to 0.005 and batch 
 size to 32, you may simply do:

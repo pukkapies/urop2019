@@ -48,7 +48,7 @@ where sub_threshold=10 indicates that the algorithm will only run a search on ta
 Step 5: Take a look at the generated datasets from step 4 and decide what further tags you may want to add, merge, or remove from the datasets. After that, run the function generate_final_df() with your chosen parameters. For example,
 
 ```python
-df_final = generate_final_df(from_csv_path=’/srv/data/urop’, threshold=2000, sub_threshold=10, combine_list=[[‘rhythm and blues’, ‘rnb’], [‘funky’, ‘funk’]], drop_list=[‘2000’, ‘00’, ‘90’, ‘80’, ‘70’, ‘60’])
+df_final = generate_final_df(from_csv_path='/srv/data/urop', threshold=2000, sub_threshold=10, combine_list=[[‘rhythm and blues’, ‘rnb’], [‘funky’, ‘funk’]], drop_list=[‘2000’, ‘00’, ‘90’, ‘80’, ‘70’, ‘60’])
 ```
 
 Alternatively, you may skip step 4 but directly run step 5. After taking a look at the output dataset, you may use the functions `combine_tags()`, `add_tags()`, `remove()` to customise your datasets.
