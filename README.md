@@ -290,7 +290,7 @@ tfrecords = ['/srv/data/urop/tfrecords-waveform/waveform_1.tfrecord', '/srv/data
 train_dataset, valid_dataset = projectname_input.generate_datasets(tfrecords, audio_format='waveform', split=[1,1,0], which=[True, True, False], with_tags=top_tags, merge_tags=['pop', 'alternative'])
 ```
 
-## Model and Configuration
+## Model and JSON Configuration
 
 
 The model we used was designed by (Pons, et al., 2018). See 
@@ -335,14 +335,14 @@ projectname.create_config_json('/srv/data/urop/config2.json', 'learning_rate'=0.
 ## Training
 
 We have written two separate scripts for the training algorithm, `training.py` 
-and `'training_gradtape.py`. The major difference between the two is that 
+and `'training_custom.py`. The major difference between the two is that 
 the former uses `model.fit` in Keras, whereas the latter contains a custom 
 training loop which performs optimisation by `tf.GradientTape()`. Therefore, 
 if you want to implement some special features from Keras such as callbacks, 
 you may easily amend the codes of `training.py` to achieve that. Otherwise, 
-since the training loop in `training_gradtape.py` is produced from scratch 
+since the training loop in `training_custom.py` is produced from scratch 
 (it only relies on `tf.GradientTape()`, you may edit the codes of the function 
-`train()`  to implement more advanced features. 
+`train()` to implement more advanced features. 
 
 If you simply want to train the model with default settings, both of the scripts 
 would work.
@@ -352,17 +352,25 @@ available. On the other hand, both scripts use the TensorBoard and checkpoints, 
 early stopping can be optionally enabled. The training algorithm in 'training.py' 
 also contains the Keras callback ReduceLROnPlateau as an input option.
 
+For ease of use, `projectname_train.py` is wrapper of the two scripts. You may specify 
+which of the training scripts you wish to use and `projectname_train.py` will generate 
+the datasets from tfrecords directly and feed them into the training algorithm.
+
 *Example:*
 
-To perform a simple training with default settings in waveform for ten epochs on GPU 0,1, 
+To perform a simple training with default settings in waveform for ten epochs on GPU 0,1 with `training.py`, 
 
 ```
-python training.py waveform, --root-dir /srv/data/urop/tfrecords-waveform --config-path /srvdata/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --epochs 10 --cuda 0 1
+python waveform --root-dir /srv/data/urop/tfrecords-waveform --config-path /srvdata/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --epochs 10 --cuda 0 1
 ```
-You may control all the parameters within the config.json file.
+You may control all the parameters within the config.json file. The parser of the config is in the `projectname_train.py` file if you need it.
 
-If you prefer to use `training_gradtape.py`, it works the same way as above to 
-start the training.
+If you prefer to use `training_custom.py`, it works the same way as above to 
+start the training by adding the `--custom--` parameter.
+
+```
+python waveform --custom --root-dir /srv/data/urop/tfrecords-waveform --config-path /srvdata/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --epochs 10 --cuda 0 1
+```
 
 Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt
 and recover from the last epoch (works for both scripts). Please refer to the documentation 
@@ -371,12 +379,14 @@ the `--resume-time` parameter.
 
 If you want to perform the model training with more flexibility in choosing 
 the training dataset and validation dataset, you may follow the instruction on 
-data input pipeline to generate the datasets and do the following:
+[Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline) 
+to generate the datasets and do the following:
 
 ```python
 import os
 import tensorflow as tf
 import training
+import projectname_train
 # initiate strategy
 strategy = tf.distribute.MirroredStrategy()
 
@@ -389,13 +399,13 @@ os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
 #parse config
-config, config_optim = training.parse_config('/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db')
+config, config_optim = projectname_train.parse_config('/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db')
 
 # train
 training.train(train_dataset, valid_dataset, frontend='waveform', strategy=strategy, config=config, config_optim=config_optim, epochs=10)
 ```
-If you prefer to use `training_gradtape.py`, do exactly the same procedure as above
-except replacing `training` with `training_gradtape`.
+If you prefer to use `training_custom.py`, do exactly the same procedure as above
+except replacing `training` with `training_custom`.
 
 
 ## Validating and Predicting
@@ -417,7 +427,7 @@ python log-mel-spectrogram test /srv/data/urop/config.json --checkpoint /srv/dat
 To make prediction to an audio file and display tags with minimum score 0.1:
 
 ```
-python log-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --mp3-path /srv/data/urop/song.mp3 --cutoff 0.2
+python log-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --mp3 /srv/data/urop/song.mp3 -t 0.2
 ```
 
 If you have a directory which contains only audio files (one or more), you may set `--mp3-path` as the directory path.
@@ -425,7 +435,7 @@ If you have a directory which contains only audio files (one or more), you may s
 To make prediction by recording a 30s audio with your microphone in terminal:
 
 ```
-python test_model.pylog-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --from-recording -s 30 --cutoff 0.2
+python test_model.pylog-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --record --record-length 30 --t 0.2
 ```
 #### Predict lite
 
@@ -481,13 +491,13 @@ The parameters used can be found [here](https://github.com/pukkapies/urop2019/bl
 
 ![alt text](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_1.png)
 
-|                                         | AUC-ROC |  AUC-PR |
-| --------------------------------------- |:-------:|:-------:|
-| Waveform (from us)                      | 86.96   | 39.95   |
-| Log mel-spectrogram (from us)           | 87.33   | 40.96   |
-| Log mel-spectrogram (cyclic learning rate)           | 87.68   | 42.05   |
-| Waveform (Pons, et al., 2018)           | 87.41   | 28.53   |
-| Log mel-spectrogram (Pons, et al., 2018)| 88.75   | 31.24   |
+|                                            | AUC-ROC |  AUC-PR |
+| ------------------------------------------ |:-------:|:-------:|
+| Waveform (from us)                         | 86.96   | 39.95   |
+| Log mel-spectrogram (from us)              | 87.33   | 40.96   |
+| Log mel-spectrogram (cyclic learning rate) | 87.68   | 42.05   |
+| Waveform (Pons, et al., 2018)              | 87.41   | 28.53   |
+| Log mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
 
 In general, we can see that training the MSD dataset on log mel-spectrogram has a better 
 performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018).
