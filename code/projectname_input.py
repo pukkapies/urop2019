@@ -93,6 +93,8 @@ def _merge(features_dict, tags):
     '''
 
     tags_databases = len(features_dict) - 2 # check if multiple databases have been provided
+    num_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
+
     
     tags = tf.dtypes.cast(tags, tf.int64)
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
@@ -101,8 +103,7 @@ def _merge(features_dict, tags):
     tags = tf.sparse.to_dense(tags)
     tags = tf.dtypes.cast(tags, tf.bool)
     
-    def _fn(tag_str): # avoid repetitions of code by defining a handy function
-        num_tags = tf.cast(tf.shape(features_dict[tag_str]), tf.int64)
+    def _fn(tag_str, num_tags=num_tags): # avoid repetitions of code by defining a handy function
         feature_tags = tf.dtypes.cast(features_dict[tag_str], tf.bool)
         # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
         features_dict[tag_str] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
