@@ -129,42 +129,42 @@ With this order of execution, `wrangle.py` will remove tracks which have no tags
 
 For more information on how you can customise the procedures, see the documentation in the corresponding scripts.
 
-### Last.fm Tags
+### L<span>ast.f</span>m Tags
+
 #### Performing Queries
-The `lastfm.py` module contains two classes, `LastFm` and `LastFm2Pandas`, and each of them contains all the basic tools for querying the Lastfm database. The former directly queries the database by SQL, whereas the latter converts the database into .csv files and queries the data using Pandas. In some of the functions in later sections, it may have a `lastfm` input parameter and require to be set as an instance of one of the classes. 
+
+The `lastfm.py` module contains three classes, `LastFm`, `LastFm2Pandas` and `Matrix`. The first two classes contain all the basic tools for querying the Lastfm database. The former directly queries the database by SQL, whereas the latter converts the database into dataframes and performs queries using Pandas. In some of the functions in later sections, a `lastfm` input parameter may require you to pass an instance of one of these two classes. The last one, on the other hand, contains some advanced tools to perform a thorough analysis of the tags distribution in the tags database.
 
 *Example:*
 
-To use `LastFm`,
+To use `LastFm`:
 
 ```python
 fm = lastfm.LastFm('/srv/data/msd/lastfm/SQLITE/lastfm_tags.db')
 ```
-To use `LastFm2Pandas`,
+To use `LastFm2Pandas`:
 
 ```python
 fm = lastfm.LastFm2Pandas('/srv/data/msd/lastfm/SQLITE/lastfm_tags.db')
 ```
-To use `LastFm2Pandas` from converted .csv's (instead of the original .db file),
+To use `LastFm2Pandas` from converted .csv's (instead of the original .db file):
 
 ```python
 # generate .csv's
 lastfm.LastFm('/srv/data/msd/lastfm/lastfm_tags.db').db_to_csv(output_dir='/srv/data/urop')
+
 # create tags, tids and tid_tag dataframes
 tags = pd.read_csv('/srv/data/urop/lastfm_tags.csv')
 tids = pd.read_csv('/srv/data/urop/lastfm_tids.csv')
 tid_tag = pd.read_csv('/srv/data/urop/lastfm_tid_tag.csv')
+
 # create class instance
 fm = lastfm.LastFm2Pandas.load_from(tags=tags, tids=tids, tid_tag=tid_tag)
 ```
 
-Note that the major difference between the two classes is that 
-`LastFm` is quicker to initiate, but some queries might take some time to 
-perform, whereas `LastFm2Pandas` may take longer to initiate due to the whole 
-dataset being loaded to the memory. However, it contains some more advanced methods, and it is quick to initialise if database is converted into .csv files in advance.
+The major difference between the two classes is that `LastFm` is quicker to initiate, but some queries might take some time to perform, whereas `LastFm2Pandas` may take longer to initiate (due to the whole dataset being loaded into the memory). However, `LastFm2Pandas` contains some more advanced methods, and it is reasonably quick to initialise if database is converted into .csv files in advance. Moreover, you will need to use `LastFm2Pandas` if you want to perform advanced an advanced analysis of the tags distribution using the `Matrix` class.
 
-
-Finally, in order to explore the Million Song Dataset summary file, `metadata.py` contains some basic tools to query the `msd_summary_file.h5` file. 
+Finally, `metadata.py` contains some basic tools to explore the `msd_summary_file.h5` file.
 
 #### Filtering
 
