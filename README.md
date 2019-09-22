@@ -1,22 +1,21 @@
-
 # Deep Learning for Music Tagging (aka 'Orpheus')
 
-This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed at developing an end-to-end music audio auto-tagger competitive with the state-of-the-art. We replicated the CNN architecture proposed by Pons et al. in [this]([https://arxiv.org/pdf/1711.02520.pdf](https://arxiv.org/pdf/1711.02520.pdf)) paper, and successfully reproduced the results they obtained with the Million Songs Dataset. Since our model learnt to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
+This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed at developing an end-to-end music audio auto-tagger competitive with the state-of-the-art. We replicated the CNN architecture proposed by Pons et al. in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and successfully reproduced the results they obtained with the Million Songs Dataset. Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
 
 ## Table of Contents
 
 * [Introduction](https://github.com/pukkapies/urop2019#introduction)
 * [System Requirements](https://github.com/pukkapies/urop2019#system-requirements)
 * [Data Cleaning](https://github.com/pukkapies/urop2019#data-cleaning)
-    * [Errors in the .MP3 Audio Files](https://github.com/pukkapies/urop2019#errors-in-the-mp3-audio-files)
-    * [Errors in the Dataset](https://github.com/pukkapies/urop2019#errors-in-the-dataset)
-    * [Last.fm Tags](https://github.com/pukkapies/urop2019#lastfm-tags)
+    * [Errors in the .MP3 Audio Files](https://github.com/pukkapies/urop2019#audio)
+    * [Errors in the Dataset](https://github.com/pukkapies/urop2019#database)
+    * [Last.fm Tags](https://github.com/pukkapies/urop2019#tags)
 * [Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline)
     * [TFRecords](https://github.com/pukkapies/urop2019#tfrecords)
-    * [TFRecords into a tf.data.Dataset](https://github.com/pukkapies/urop2019#tfrecords-into-a-tfdatadataset)
-* [Model and JSON Configuration](https://github.com/pukkapies/urop2019#model-and-json-configuration)
+    * [TFRecords into a tf.data.Dataset](https://github.com/pukkapies/urop2019#dataset-preparation)
+* [Model and JSON Configuration](https://github.com/pukkapies/urop2019#dataset-preparation)
 * [Training](https://github.com/pukkapies/urop2019#training)
-* [Validating & Predicting](https://github.com/pukkapies/urop2019#validating-and-predicting)
+* [Validating & Predicting](https://github.com/pukkapies/urop2019#evaluation-tools)
 * [Results](https://github.com/pukkapies/urop2019#results)
 * [References](https://github.com/pukkapies/urop2019#references)
 * [Contacts / Getting Help](https://github.com/pukkapies/urop2019#contacts--getting-help)
@@ -24,13 +23,11 @@ This is the repository of an Imperial College UROP 2019 project in deep learning
 
 ## Introduction
 
-This project makes use of the freely-available [Million Song Dataset]( http://millionsongdataset.com), and its integration with the [Last.fm](http://millionsongdataset.com/lastfm/) dataset. The former provides a link between all the useful information about the tracks (such as title, artist or year) and the audio track themselves, whereas the latter contains tags information on some of the tracks. A  preview of the audio tracks can be fetched from services such as 7Digital, but this is allegedly not an easy task. 
+This project makes use of the freely-available [Million Song Dataset](http://millionsongdataset.com/), and its integration with the [Last.fm](http://millionsongdataset.com/lastfm/) dataset. The former provides a link between all the useful information about the tracks (such as title, artist or year) and the audio track themselves, whereas the latter contains tags information on some of the tracks. A  preview of the audio tracks can be fetched from services such as 7Digital, but this is allegedly not an easy task. 
 
 If you are only interested in our final result, click [here](https://github.com/pukkapies/urop2019#results).
 
-If you are only interested in the 'lite' version of our prediction tool, click [here](TODO)
-
-Otherwise, if you would to use some of our code, or try to re-train our model on your own, read on. We will assume you somehow have access to the actual audio files. Here is the outline of the approach we followed:
+Otherwise, if you want to use some of our code, or try to re-train our model on your own, read on. We will assume you have access to the Million Song Dataset. Here is the outline of the approach we followed:
 
 1. we extracted all the useful information from the Million Song Dataset and cleaned both the audio tracks and the Last.fm tags database to produce final 'clean' dataset;
 
@@ -65,7 +62,7 @@ Firstly, you can use `fetcher.py` to scan the directory which contains all the a
 
 After that, you can use `mp3_to_numpy.py` to convert every working audio file into numpy arrays (one per audio channel). The numpy arrays of each track are then analysed using LibROSA in order to extract the location of any silent sections (yes, some tracks _can_ be opened, but they are completely silent). The information on silent sections, the audio arrays and the sample rate of each track can be optionally stored into .npz files. 
 
-During the project, we created .npz files for the entire dataset as we did not have the whole audio cleaning path outlined yet, and we needed to have the data easily accessible for frequent experimentations. However, we would recommend against creating this approach, as creating .npz files often requires a huge amounts of storage space (MP3 is a compressed audio format for a reason...).
+During the project, we created .npz files for the entire dataset as we did not have the whole audio cleaning path outlined yet, and we needed to have the data easily accessible for frequent experimentations. However, we would recommend against this approach, as creating .npz files often requires a huge amounts of storage space (MP3 is a compressed audio format for a reason...).
 
 Finally, you can use `wrangler_silence.py` to process and interpret the information on audio silence, and append the results (e.g. effective_clip_length, or max_silence_length) to the original Pandas dataframe. The audio files which do not satisfy certain user-set criteria (such as a low percentage of silence) are removed.
 
@@ -84,17 +81,16 @@ python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/uro
 ```
 
 This will expand the fetch.csv generated above to include some interpretations 
-of the silent information. In our experiement, we keep a song if it has minimum size of 200000 bytes, total silent length shorter than 5s, maximum interval of silent length shorter than 3s, and overall sum of non-silent length of 15s or more.
+of the silent information.
 
 ```
-python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 200000 --filter-tot-silence 5 --filter-max-silence 3 --filter-trim-length 15
+python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 100000 --filter-tot-silence 15 --filter-max-silence 3
 ```
 
 ### Errors in the Dataset 
 The raw HDF5 Million Song Dataset file, which contains three smaller datasets, 
 are converted into multiple Pandas dataframes. The relevant information is then 
-extracted and merged. According to the MSD website, there are mismatches between these datasets. For more details, see [here](http://millionsongdataset.com/blog/12-2-12-fixing-matching-errors/). To deal with this issue, `wrangler.py` takes a '.txt' file with a list of tids which could not be trusted, and remove the corresponding rows in the dataframe. Furthermore, MSD also provides a `.txt` file with a list of tracks that have duplicates. `wrangler.py` by default 
-keeps one version of the duplicate tracks of each song and removes the rest.
+extracted and merged. According to the MSD website, there are mismatches between these datasets. For more details, see [here](http://millionsongdataset.com/blog/12-2-12-fixing-matching-errors/). To deal with this issue, `wrangler.py` takes a '.txt' file with a list of tids which could not be trusted, and remove the corresponding rows in the dataframe. Furthermore, MSD also provides a `.txt` file with a list of tracks that have duplicates. `wrangler.py` by default  keeps one version of the duplicate tracks of each song and removes the rest.
 
 The dataframe from the above paragraph is merged with the dataframe produced by the above audio section followed by removing unnecessary columns to produce the 'ultimate' dataframe. This dataframe acts as a clean dataset containing all the essential information about the tracks and will be used throughout the project.
 
@@ -103,8 +99,7 @@ For more information about how these functions are used, see [here](https://gith
 *Example:*
 
 ```
-python wrangle.py /srv/data/urop/wrangle_silence.csv /srv/data/urop/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /srv/data/urop/msd_duplicates.txt
-.txt --path-txt-mism /path/to/mismatches.txt
+python wrangle.py /srv/data/urop/wrangle_silence.csv /srv/data/urop/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt
 ```
 
 Alternatively, to save storage space and time, the following order of code 
@@ -115,7 +110,7 @@ python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital
 ```
 
 ```
-python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /srv/data/urop/msd_duplicates.txt --path-txt-mism /srv/data/msd/lastfm/sid_mismatches.txt --discard-dupl False
+python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt --discard-dupl False
 ```
 
 ```
@@ -123,22 +118,20 @@ python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv --root-dir-npz /srv/data/ur
 ```
 
 ```
-python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 200000 --filter-tot-silence 5 --filter-max-silence 3 --filter-trim-length 15
+python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 200000 --filter-tot-silence 15 --filter-max-silence 3
 ```
 
 ```
-python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /srv/data/urop/msd_duplicates.txt --path-txt-mism /srv/data/msd/sid_mismatches.txt
+python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /path/to/info_dupl.txt --path-txt-mism /path/to/info_mism.txt
 ```
 
-With this order of execution, `wrangle.py` will remove tracks which 
-have no tags. This reduces the number of tracks from 1,000,000 to 500,000+.
+With this order of execution, `wrangle.py` will remove tracks which have no tags. This reduces the number of tracks from 1,000,000 to 500,000+.
 
-For more information on how you can customise the procedures, 
-see the documentation in the corresponding scripts.
+For more information on how you can customise the procedures, see the documentation in the corresponding scripts.
 
 ### Last.fm Tags
 #### Performing Queries
-The `lastfm.py` module contains two classes, `LastFm` and `LastFm2Pandas`, and each of them contains all the basic tools for querying the Lastfm database. The former directly queries the database by SQL, whereas the latter converts the database into .csv files and queries the data using Pandas. In some of the functions in latter sections, it may have a `lastfm` input parameter and require to be set as an instance of one of the classes. 
+The `lastfm.py` module contains two classes, `LastFm` and `LastFm2Pandas`, and each of them contains all the basic tools for querying the Lastfm database. The former directly queries the database by SQL, whereas the latter converts the database into .csv files and queries the data using Pandas. In some of the functions in later sections, it may have a `lastfm` input parameter and require to be set as an instance of one of the classes. 
 
 *Example:*
 
@@ -192,8 +185,7 @@ with 'and' instead respectively.
 string with '19x0s', 'x0s' with '20x0' (x denodes a number character) without 
 removing the trailing 's' respectively.
 
-See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for 
-how you may tailor the merging mechanism by defining a new fitlering fucntion.
+See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for how you may tailor the merging mechanism by defining a new fitlering fucntion.
 
 The `.txt` files containing the lists of tags we used in our experiment can be found in 
 the folder `~/msd/config`. Hence, if you prefer to use our dataset, you may simply 
@@ -207,8 +199,7 @@ if you are interested to view the dataset. Otherwise, `lastfm_clean.py` will aut
 generate this dataset and transform it into a clean Lastfm database. 
 
 Note that `lastfm_cleaning_utils` allows a great deal of customisation. 
-Please see [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning)
- for more details.
+Please see [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for more details.
 
 `lastfm_cleaning.py` creates a new database file using the cleaned tags 
 from lastfm_cleaning_utils.py. The database has the same structure as the 
@@ -216,7 +207,7 @@ from lastfm_cleaning_utils.py. The database has the same structure as the
 
 *Example:*
 ```
-python lastfm_cleaning.py /srv/data/msd/lastfm/SQLITE/lastfm_tags.db /srv/data/urop/clean_lastfm.db --val ?? 
+python lastfm_cleaning.py /srv/data/msd/lastfm/SQLITE/lastfm_tags.db /srv/data/urop/clean_lastfm.db
 ```
 
 ## Data Input Pipeline
@@ -236,7 +227,7 @@ the log mel-spectrogram form. It is also possible to specify the number of  `.tf
 In our case, we used 96 mel bins, a sample rate of 16kHz and split the data 
 into 100 .`tfrecord` files. We also had the data stored as `.npz` files, since 
 we have loaded the `.mp3` files as numpy for silence analysis and stored them 
-in a previous section. However, we would recommend users to convert directly 
+in a previous section. However, again, we would recommend users to convert directly 
 from `.mp3` files as the `.npz` files need a lot of storage. 
 
 Example:
@@ -262,9 +253,7 @@ function to only include some tags. The user can also choose the size of the win
 mentioned above and whether they are to be extracted from a random position or centred 
 on the audio array. 
 
-Note that the data input pipeline is optimised following 
-the [official guideline](https://www.tensorflow.org/beta/guide/data_performance) 
-from TensorFlow 2.0.
+Note that the data input pipeline is optimised following the [official guideline](https://www.tensorflow.org/beta/guide/data_performance) from TensorFlow 2.0.
 
 Datasets will automatically be input to the training algorithm. To manually generate 
 a dataset from one or more tfrecord files, you may use the generate_datasets() function 
@@ -292,21 +281,12 @@ train_dataset, valid_dataset = projectname_input.generate_datasets(tfrecords, au
 
 ## Model and JSON Configuration
 
+The model we used was designed by (Pons, et al., 2018). See [here](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. 
+In our experiment, as mentioned above, we have followed (Pons, et al., 2018) and convert the audio files into **waveform** and **log mel-spectrogram** respectively for training. Since the model pipeline written by (Pons, et al., 2018) is only compatible with TensorFlow 1.x, we have rewritten the model with TensorFlow 2.0 syntax in `projectname.py`.
 
-The model we used was designed by (Pons, et al., 2018). See 
-[here](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. 
-In our experiment, as mentioned above, we have followed (Pons, et al., 2018) and convert the audio files 
-into **waveform** and **log mel-spectrogram** respectively for training. Since the model pipeline 
-written by (Pons, et al., 2018) is only compatible with TensorFlow 1.x, we have rewritten the model with TensorFlow 2.0 
-syntax in `projectname.py`.
+In brief, `projectname.py` contains a frontend for waveform and log mel-spectrogram respectively and a single backend model. The `build_model()` function combines a frontend and the backend to produce a complete neural network that will be used in the training algorithm.
 
-In brief, `projectname.py` contains a frontend for waveform and log mel-spectrogram respectively and a backend model. 
-The `build_model()` function combines a frontend and the backend to produce a complete neural network that will 
-be used in the training algorithm.
-
-In the training phase, parameters are supplied by a json file, instead of being specified as input parameters of 
-the training loop functions. You may generate the json file with the default parameters (
-from our experiment with training parameters suggested by (Pons, et al., 2018)) using the `create_config_json` function.
+In the training phase, parameters are supplied by a json file, instead of being specified as input parameters of the training loop functions. You may generate the json file with the default parameters (from our experiment with training parameters suggested by (Pons, et al., 2018)) using the `create_config_json` function.
 
 *Example:*
 
@@ -314,16 +294,17 @@ from our experiment with training parameters suggested by (Pons, et al., 2018)) 
 projectname.create_config_json('/srv/data/urop/config.json')
 ```
 
-A list of available parameters and their properties can be found in the documentation within 'projectname.py'. 
-In short, it contains five categories of parameters:
+A list of available parameters and their properties can be found in the documentation within 'projectname.py'. In short, it contains five categories of parameters:
 
 1. **model**: any network-related parameters.
 
-2. **model_training**: any training-related parameters, including optimiser.
+2. **optimizer**: name and learning rate of the optimiser.
 
 3. **tags**: customised tags for dataset input pipeline.
 
 4. **tfrecords**: parameters used when generating the tfrecords.
+
+5. **config**: any parameters related to the training algorithm and the dataset input pipeline.
 
 If you wish to change any parameters, e.g. change learning rate to 0.005 and batch 
 size to 32, you may simply do:
@@ -410,11 +391,7 @@ except replacing `training` with `training_custom`.
 
 ## Validating and Predicting
 
-`test_model.py` is the script containing the evaluation tools. There is a `test_model()` function which 
-simply tests the model's performance on the test dataset from a certain checkpoint. The `predict()` function 
-takes an audio array, in the waveform or the log mel-spectrogram format, and uses the model on consecutive 15s 
-windows (with the last window 15s from the end of the track) of the input audio to return the 
-average prediction as tags in string form.
+`test_model.py` is the script containing the evaluation tools. There is a `test_model()` function which simply tests the model's performance on the test dataset from a certain checkpoint. The `predict()` function takes an audio array, in the waveform or the log mel-spectrogram format, and uses the model on consecutive 15s windows (with the last window being 15s from the end of the track) of the input audio to return the average prediction as tags in string form.
 
 *Example:*
 
@@ -427,7 +404,7 @@ python log-mel-spectrogram test /srv/data/urop/config.json --checkpoint /srv/dat
 To make prediction to an audio file and display tags with minimum score 0.1:
 
 ```
-python log-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --mp3 /srv/data/urop/song.mp3 -t 0.2
+python log-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --mp3 /srv/data/urop/song.mp3 --threshold 0.2
 ```
 
 If you have a directory which contains only audio files (one or more), you may set `--mp3-path` as the directory path.
@@ -435,17 +412,12 @@ If you have a directory which contains only audio files (one or more), you may s
 To make prediction by recording a 30s audio with your microphone in terminal:
 
 ```
-python test_model.pylog-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --record --record-length 30 --t 0.2
+python test_model.pylog-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --record -s 30 --threshold 0.2
 ```
+
 #### Predict lite
 
-To make prediction simplier, we have produced the `projectname_predict_lite.py` script. We have also uploaded
-our checkpoint files under the 'predict' folder so that you may make prediction to your music with our script
-without needing to train your own model. The script only relies on the checkpoint and nothing more. Note that
-the checkpoint files we uploaded should be the most up-to-date model which gives the best performance. Please
-refer to [Requirements](https://github.com/pukkapies/urop2019#requirements) for more details on what you need
-to install. 
-
+To make prediction simplier, we have produced the `projectname_predict_lite.py` script. We have also uploaded our checkpoint files under the 'predict' folder so that you may make prediction to your music with our script without needing to train your own model. The script only relies on the checkpoint and nothing more. Note that the checkpoint files we uploaded should be the most up-to-date model which gives the best performance. Please refer to [Requirements](https://github.com/pukkapies/urop2019#requirements) for more details on what you need to install. 
 
 *Example:*
 
@@ -453,8 +425,7 @@ to install.
 python projectname_predict_lite.py --checkpoint epoch-18 --mp3-path /srv/data/urop/song.mp3
 ```
 
-Similar to `test_model.py`, you may analyse an entire directory or you may record directly from terminal by
-changing the parameters. See `python projectname_predict_lite.py -h` for more details.
+Similar to `test_model.py`, you may analyse an entire directory or you may record directly from terminal by changing the parameters. See `python projectname_predict_lite.py -h` for more details.
 
 ## Results
 
@@ -485,9 +456,9 @@ Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic'
 
 **Experiment 2:**
 
-Using the same tags and model as the above log-mel-spectrogram experiment above, but this time a cyclical learning rate going between 0.0014/4 and 0.0014 linearly was used. In this experiment a slightly bigger batch size of 128 was also used.
+This experiment was used to test the effectiveness of cyclic learning rate () as well as an attempt to try and improve the model. To test this we ran an identical run of the above log-mel-spectrogram but instead of a constant learning rate of 0.001 a cyclic learning rate varying linearly between 0.0014/4 was used. 
 
-The parameters used can be found [here](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_config_1.json)
+All the parameters used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config.json)
 
 ![alt text](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_1.png)
 
@@ -500,19 +471,17 @@ The parameters used can be found [here](https://github.com/pukkapies/urop2019/bl
 | Log mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
 
 In general, we can see that training the MSD dataset on log mel-spectrogram has a better 
-performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018).
-Note that (Pons, et al., 2018) suggests that when the size of the dataset is large enough, the
-quality difference between waveform and log mel-spectrogram model is insignificant (with 1,000,000 songs)
+performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018). Note that (Pons, et al., 2018) suggests that when the size of the dataset is large enough, the quality difference between waveform and log mel-spectrogram model is insignificant (with 1,000,000 songs).
 
 On the other hand, in our experiment, we have cleaned the Last.fm database by
 removing tags which are more subjective or have vague meaning, which was not done in (Pons, et al., 2018). According to the results above, the AUC-PR of both waveform and log 
 mel-spectrogram has significantly improved from (Pons, et al., 2018) respectively. In the
 meantime, the AUC-ROC scores of our experiments are comparable to those produced by
-(Pons, et al., 2018). We have therefore shown that training the model using cleaner tags improves the quality of the model. 
+(Pons, et al., 2018). We have therefore shown that training the model using cleaner tags improves the quality of the model.
 
 ## References
 Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
-
+Smith, L. 2018. A DISCIPLINED APPROACH TO NEURAL-NETWORK HYPER-PARAMETERS: PART 1 – LEARNING RATE, BATCH SIZE, MOMENTUM, AND WEIGHT DECAY. TODO
 
 ## Contacts / Getting Help
 
