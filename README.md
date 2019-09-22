@@ -289,7 +289,7 @@ In order to avoid having to manually tinker with the training code every time a 
 
 1. `model`: contains parameters to set the number of dense units and convolutional filters in the model;
 
-2. `model-training`: contains important training parameters such as batch size or window length (as well as the all-important `optimizer` parameters which allow you to *fully* specify what optimizer to use);
+2. `model-training`: contains important training parameters such as batch size or window length and allow you to fully specify the optimizer to use;
 
 3. `tags`: contains parameters to specify which tags to use when parsing the TFRecords;
 
