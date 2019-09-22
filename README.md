@@ -415,18 +415,6 @@ To make prediction by recording a 30s audio with your microphone in terminal:
 python test_model.pylog-mel-spectrogram predict /srv/data/urop/config.json --checkpoint /srv/data/urop/model/log-mel-spectrogram_190826-103644/epoch-18 --lastfm-path /srv/data/urop/clean_lastfm.db --record -s 30 --threshold 0.2
 ```
 
-#### Predict lite
-
-To make prediction simplier, we have produced the `projectname_predict_lite.py` script. We have also uploaded our checkpoint files under the 'predict' folder so that you may make prediction to your music with our script without needing to train your own model. The script only relies on the checkpoint and nothing more. Note that the checkpoint files we uploaded should be the most up-to-date model which gives the best performance. Please refer to [Requirements](https://github.com/pukkapies/urop2019#requirements) for more details on what you need to install. 
-
-*Example:*
-
-```
-python projectname_predict_lite.py --checkpoint epoch-18 --mp3-path /srv/data/urop/song.mp3
-```
-
-Similar to `test_model.py`, you may analyse an entire directory or you may record directly from terminal by changing the parameters. See `python projectname_predict_lite.py -h` for more details.
-
 ## Results
 
 **Experiment 1:**
