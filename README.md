@@ -281,37 +281,35 @@ train_dataset, valid_dataset = projectname_input.generate_datasets(tfrecords, au
 
 ## Model and JSON Configuration
 
-The model we used was designed by (Pons, et al., 2018). See [here](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. 
-In our experiment, as mentioned above, we have followed (Pons, et al., 2018) and convert the audio files into **waveform** and **log mel-spectrogram** respectively for training. Since the model pipeline written by (Pons, et al., 2018) is only compatible with TensorFlow 1.x, we have rewritten the model with TensorFlow 2.0 syntax in `projectname.py`.
+The model we used was designed by (Pons, et al., 2018). See their GitHub [repository](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. In our experiment, as mentioned above, we have followed their approach and compared the performance when training with **waveform** or **log mel-spectrogram** audio format. Since the model they provide is written using TensorFlow 1.x syntax, we have rewritten the same model using TensorFlow 2.0. You can find the 'upgraded' model in `projectname.py`.
 
-In brief, `projectname.py` contains a frontend for waveform and log mel-spectrogram respectively and a single backend model. The `build_model()` function combines a frontend and the backend to produce a complete neural network that will be used in the training algorithm.
+In brief, `projectname.py` contains two frontend architectures (one for waveform and one for log mel-spectrogram) and a single backend architecture, with a `build_model()` function which combines the two to produce the complete model that will be used for training.
 
-In the training phase, parameters are supplied by a json file, instead of being specified as input parameters of the training loop functions. You may generate the json file with the default parameters (from our experiment with training parameters suggested by (Pons, et al., 2018)) using the `create_config_json` function.
+In order to avoid having to manually tinker with the training code every time a training parameter has to be changed, all the training parameters are set through a handy JSON file. You can create an empty `config.json` file by using the `create_config_json()` function. Here is an outline of how the JSON file is structured:
+
+1. `model`: contains parameters to set the number of dense units and convolutional filters in the model;
+
+2. `model-training`: contains important training parameters such as batch size or window length (as well as the all-important `optimizer` parameters which allow you to *fully* specify what optimizer to use);
+
+3. `tags`: contains parameters to specify which tags to use when parsing the TFRecords;
+
+4. `tfrecords`: contains parameters to specify how the audio tracks were encoded in the TFRecords such as sample rate or the number of frequency bands in the mel scale.
+
+See the inline comments for the `create_config_json()` function within `projectname.py` for more details. 
+
 
 *Example:*
 
 ```python
+import projectname
+
+# to create an empty .json
 projectname.create_config_json('/srv/data/urop/config.json')
+
+# to create an empty .json and manually enter some parameters (equivalent to editing the file after creation)
+projectname.create_config_json('/srv/data/urop/config.json', 'batch_size'=32)
 ```
 
-A list of available parameters and their properties can be found in the documentation within 'projectname.py'. In short, it contains five categories of parameters:
-
-1. **model**: any network-related parameters.
-
-2. **optimizer**: name and learning rate of the optimiser.
-
-3. **tags**: customised tags for dataset input pipeline.
-
-4. **tfrecords**: parameters used when generating the tfrecords.
-
-5. **config**: any parameters related to the training algorithm and the dataset input pipeline.
-
-If you wish to change any parameters, e.g. change learning rate to 0.005 and batch 
-size to 32, you may simply do:
-
-```python
-projectname.create_config_json('/srv/data/urop/config2.json', 'learning_rate'=0.005, 'batch_size'=32)
-```
 
 ## Training
 
