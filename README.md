@@ -2,7 +2,7 @@
 
 This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed to develop an end-to-end music auto-tagger competitive with the state-of-the-art. We replicated the convolutional neural network architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and reproduced the results they obtained on the [Million Song Dataset](http://millionsongdataset.com/). 
 
-Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
+Since our model learned to predict some audio features quite accurately, we decided to call it "Orpheus", like the legendary ancient Greek poet and musician.
 
 ## Table of Contents
 
