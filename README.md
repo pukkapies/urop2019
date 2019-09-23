@@ -419,8 +419,9 @@ We have therefore also confirmed that mindfully varying the learning rate throug
 
 ## References
 
-Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
-Smith, L. 2018. A DISCIPLINED APPROACH TO NEURAL-NETWORK HYPER-PARAMETERS: PART 1 – LEARNING RATE, BATCH SIZE, MOMENTUM, AND WEIGHT DECAY. TODO
+Pons, J., Nieto, O., Prockup, M., Schmidt, E., Ehmann, A., Serra, X.: END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Proc. of the 19th International Society for Music Information Retrieval Conference (ISMIR). Paris, France (2018)
+
+Smith, L.N.: A DISCIPLINED APPROACH TO NEURAL-NETWORK HYPER-PARAMETERS: PART 1 – LEARNING RATE, BATCH SIZE, MOMENTUM, AND WEIGHT DECAY. arXiv preprint [arXiv:1803.09820](https://arxiv.org/pdf/1803.09820.pdf) (2018)
 
 ## Contacts / Getting Help
 
