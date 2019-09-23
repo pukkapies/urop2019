@@ -1,6 +1,6 @@
 # Deep Learning for Music Tagging (aka 'Orpheus')
 
-This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed at developing an end-to-end music audio auto-tagger competitive with the state-of-the-art. We replicated the CNN architecture proposed by Pons et al. in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and successfully reproduced the results they obtained with the Million Songs Dataset. Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
+This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed at developing an end-to-end music audio auto-tagger competitive with the state-of-the-art. We replicated the CNN architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and successfully reproduced the results they obtained with the Million Songs Dataset. Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
 
 ## Table of Contents
 
@@ -17,9 +17,9 @@ This is the repository of an Imperial College UROP 2019 project in deep learning
 * [Training](https://github.com/pukkapies/urop2019#training)
 * [Validating & Predicting](https://github.com/pukkapies/urop2019#evaluation-tools)
 * [Results](https://github.com/pukkapies/urop2019#results)
+* [Conclusions](https://github.com/pukkapies/urop2019#conclusions)
 * [References](https://github.com/pukkapies/urop2019#references)
 * [Contacts / Getting Help](https://github.com/pukkapies/urop2019#contacts--getting-help)
-
 
 ## Introduction
 
@@ -221,6 +221,7 @@ python preprocessing.py waveform /srv/data/urop/tfrecords-waveform --root-dir /s
 Note that it is recommended to use tmux split screens to speed up the process.
 
 ### TFRecords into a tf.data.Dataset
+
 `projectname_input.py` was used to create ready-to-use TensorFlow datasets 
 from the `.tfrecord` files. Its main feature is to create 3 datasets for 
 train/val/test by parsing the `.tfrecord` files and extracting a 15s window 
@@ -296,7 +297,7 @@ projectname.create_config_json('/srv/data/urop/config.json', 'batch_size'=32)
 We have written two separate scripts for the training algorithm, `training.py` 
 and `'training_custom.py`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as outlined in [this](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) guide) where each training step is performed manually. While `training.py` only allows the introduction of advanced training features through Keras callbacks, `training_custom.py` allows total flexibility in the features you could introduce. 
 
-Both scripts assume you have one or more GPUs available, and make use of a MirroredStrategy to distribute training. Both scripts write (train and validation) summaries on TensorBoard and save checkpoints at the end of each epoch, and they also have the option to enable early stopping or learning rate reduction on plateau. Only the custom loop implements cyclical learning rate and the one-cycle policy, as described by Leslie N. Smith in [this](https://arxiv.org/pdf/1803.09820.pdf) paper.
+Both scripts assume you have one or more GPUs available, and make use of a MirroredStrategy to distribute training. Both scripts write (train and validation) summaries on TensorBoard and save checkpoints at the end of each epoch, and they also have the option to enable early stopping or learning rate reduction on plateau. Only the custom loop implements cyclical learning rate and the one-cycle policy, as described by (N. Smith, 2018) in [this](https://arxiv.org/pdf/1803.09820.pdf) paper.
 
 For ease of use, `projectname_train.py` is wrapper of the two scripts. By default, the custom loop is selected, unless a different choice is specified. You may control all the training parameters by tweaking the `config.json` file.
 
@@ -313,7 +314,7 @@ python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --confi
 
 Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt and recover from a saved checkpoint using the `--resume-time` parameter.
 
-The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow [this](https://github.com/pukkapies/urop2019#data- input- pipeline) guide to generate your datasets and do the following:
+The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow [this](https://www.tensorflow.org/beta/guide/data) guide to generate your own datasets and then do the following:
 
 ```python
 import os
@@ -339,7 +340,7 @@ If you prefer to use `training_custom.py`, do exactly the same procedure as abov
 
 The evaluation tools are contained in the script `orpheus.py`. There is a `test()` function which simply tests the model's performance on the test dataset from a certain checkpoint. There is also a `predict()` function which takes an audio array (in waveform or log mel-spectrogram format) and uses the model to return the most confident tag predicitons for that track. Optionally, the audio array might be sliced in `n_slices` sliding windows of length `window_length`, and the final tag predictions will average out the tag predictions for each single slice. In either case, you will need to pass a `threshold` to determine which tags are shown, based on their prediction confidence.
 
-*Example:*
+*Examples:*
 
 To test a log-mel-spectrogram model on the test dataset (as specified by `split` in the config JSON):
 
@@ -361,57 +362,63 @@ python orpheus.py predict log-mel-spectrogram --checkpoint /path/to/model/checkp
 
 ## Results
 
+Here are our results when performing different experiments using both waveform and log-mel-spectrogram. We always trained on the top 50 tags from our clean L<span>ast.f</span>m database. 
+
+Here are the exact tags we used, ordered by popularity: 'rock', 'female vocalist', 'pop', 'alternative', 'male vocalist', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout', 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 'folk', 'chill', 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 'rock n roll', 'country', 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop', 'trance' and 'trip-hop'.
+
 **Experiment 1:**
 
-Below are our results trained from waveform and log mel-spectrogram respectively with the following 50 tags.
+This experiment was used to try to replicate the results by (Pons, et al., 2018), and compare the performance obtained on our dataset using waveform and log-mel-spectrogram. We ran this experiments using a constant learning rate of 0.001.
 
-Waveform:
+*Waveform:*
 
-Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 
-'chillout', 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 
-'folk', 'chill', 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 
-'rock n roll', 'country', 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 
-'psychedelic', 'synthpop', 'trance', 'trip-hop'
+![alt text](https://github.com/pukkapies/urop2019/blob/master/waveform.png)
 
-The parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/results/waveform_config_1.json)
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json).
 
-![alt text](https://github.com/pukkapies/urop2019/blob/master/results/waveform_1.png)
+*Log mel-spectrogram:*
 
+![alt text](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram.png)
 
-Log mel-spectrogram:
-
-Tag used: ['rock', 'female', 'pop', 'alternative', 'male', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 
-'chillout', 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 
-'folk', 'chill', 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 
-'rock n roll', 'country', 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 
-'psychedelic', 'synthpop', 'trance', 'trip-hop']
-
-**Experiment 2:**
-
-This experiment was used to test the effectiveness of cyclic learning rate () as well as an attempt to try and improve the model. To test this we ran an identical run of the above log-mel-spectrogram but instead of a constant learning rate of 0.001 a cyclic learning rate varying linearly between 0.0014/4 was used. 
-
-All the parameters used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config.json)
-
-![alt text](https://github.com/pukkapies/urop2019/blob/master/logmelspectrogram_1.png)
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config).
 
 |                                            | AUC-ROC |  AUC-PR |
 | ------------------------------------------ |:-------:|:-------:|
-| Waveform (from us)                         | 86.96   | 39.95   |
-| Log mel-spectrogram (from us)              | 87.33   | 40.96   |
-| Log mel-spectrogram (cyclic learning rate) | 87.68   | 42.05   |
+| Waveform (ours)                        	 | 86.96   | 39.95   |
+| Log-mel-spectrogram (ours)                 | 87.33   | 40.96   |
 | Waveform (Pons, et al., 2018)              | 87.41   | 28.53   |
-| Log mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
+| Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
 
-In general, we can see that training the MSD dataset on log mel-spectrogram has a better 
-performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018). Note that (Pons, et al., 2018) suggests that when the size of the dataset is large enough, the quality difference between waveform and log mel-spectrogram model is insignificant (with 1,000,000 songs).
+**Experiment 2:**
 
-On the other hand, in our experiment, we have cleaned the Last.fm database by
-removing tags which are more subjective or have vague meaning, which was not done in (Pons, et al., 2018). According to the results above, the AUC-PR of both waveform and log 
-mel-spectrogram has significantly improved from (Pons, et al., 2018) respectively. In the
-meantime, the AUC-ROC scores of our experiments are comparable to those produced by
-(Pons, et al., 2018). We have therefore shown that training the model using cleaner tags improves the quality of the model.
+This experiment was used to test the effectiveness of cyclic learning rate as well as an attempt to try and improve the model. We ran this experiment on an identical run of the log-mel-spectrogram above, using cyclic learning rate varying linearly between 0.0014/4 instead of a constant learning rate of 0.001.
+
+![alt text](https://github.com/pukkapies/urop2019/blob/master/cyclic_learning_rate.png)
+
+![alt text](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic.png)
+
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config).
+
+|                                            | AUC-ROC |  AUC-PR |
+| ------------------------------------------ |:-------:|:-------:|
+| Log-mel-spectrogram (ours)                 | 87.33   | 40.96   |
+| Log-mel-spectrogram (ours, cyclic lr)      | 87.68   | 42.05   |
+| Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
+
+## Conclusions
+
+In general, we can see that training the MSD dataset on log mel-spectrogram has a better performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018). Note that (Pons, et al., 2018) suggests that when the size of the dataset is large enough, the quality difference between waveform and log-mel-spectrogram model is insignificant (with 1,000,000+ songs).
+
+In our experiments, we have also cleaned the L<span>ast.f</span>m database by removing tags which are more subjective or have vague meaning, which was not done in (Pons, et al., 2018). According to the results above, the AUC-PR of both waveform and log-mel-spectrogram has significantly improved from (Pons, et al., 2018), while in the meantime maintaining comparable AUC-ROC. 
+
+We have therefore shown that training the model using cleaner tags improves the quality of the model.
+
+In our experiments, we also tried to apply the 'disciplined approach to neural network hyper-parameters' techniques outlined in (N. Smith, 2018), and clearly obtained much better results on our validation dataset.
+
+We have therefore also confirmed that mindfully varying the learning rate throughout the training indeed results in better quality of the model.
 
 ## References
+
 Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
 Smith, L. 2018. A DISCIPLINED APPROACH TO NEURAL-NETWORK HYPER-PARAMETERS: PART 1 – LEARNING RATE, BATCH SIZE, MOMENTUM, AND WEIGHT DECAY. TODO
 
