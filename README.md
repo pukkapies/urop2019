@@ -388,9 +388,9 @@ The exact parameters we have used can be found [here](https://github.com/pukkapi
 
 This experiment was used to test the effectiveness of cyclic learning rate (Smith, 2018) as well as an attempt to try and improve the model. We ran this experiment on an identical run of the log-mel-spectrogram above, using cyclic learning rate varying linearly between 0.0014/4 instead of a constant learning rate of 0.001.
 
-![alt text](https://github.com/pukkapies/urop2019/blob/readme/cyclic-learning-rate.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/master/cyclic-learning-rate.png)
 
-![alt text](https://github.com/pukkapies/urop2019/blob/readme/log-mel-spectrogram-cyclic.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic.png)
 
 |                                            | AUC-ROC |  AUC-PR |
 | ------------------------------------------ |:-------:|:-------:|
