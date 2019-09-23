@@ -58,12 +58,14 @@ All the searching methods mentioned will be run automatically on the genre tags 
 and returns a transformed tag (based on the function) as an output (an example is the `clean_1()` function in the script). You might then do the following:
 
 ```python
-# define a dataframe which acts as the tag pool, in this example, the entire popularity dataset is used
+# define a dataframe which will act as the tag pool
 popularity = popularity.copy()
 
-# run the search with the new search function fn(), where tags with occurrence ≥ 10 from the popularity dataset will be in the tag pool
+# define a dataframe which will act as the 'base' dataframe to edit
 df = generate_genre_df()
-df = search_genre(popularity, df, search_method=fn, search_tags_list=None, sub_threshold=10)
+
+# run the search with your new search function fn(), where tags with occurrence ≥ 10 (from popularity) will be in the tag pool
+df_final = search_genre(popularity, df, search_method=fn, search_tags_list=None, sub_threshold=10)
 ```
 
 If `search_tags_list` is `None`, all the tags from the `df` dataframe will act as target tags. If `search_tags_list` is a list of tags, only tags in the list will act as the target tags. The algorithm will search for matching tags for each target tag. The set of target tags must be a subset of the set of tags in `df`.
