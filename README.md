@@ -9,15 +9,15 @@ Since our model learned to predict some audio features quite accurately, we deci
 * [Introduction](https://github.com/pukkapies/urop2019#introduction)
 * [System Requirements](https://github.com/pukkapies/urop2019#system-requirements)
 * [Data Cleaning](https://github.com/pukkapies/urop2019#data-cleaning)
-    * [Errors in the .MP3 Audio Files](https://github.com/pukkapies/urop2019#audio)
-    * [Errors in the Dataset](https://github.com/pukkapies/urop2019#database)
-    * [Last.fm Tags](https://github.com/pukkapies/urop2019#tags)
+    * [Errors in the .MP3 Audio Files](https://github.com/pukkapies/urop2019#errors-in-the-mp3-audio-files)
+    * [Errors in the Dataset](https://github.com/pukkapies/urop2019#errors-in-the-dataset)
+    * [Last.fm Tags](https://github.com/pukkapies/urop2019#lastfm-tags)
 * [Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline)
     * [TFRecords](https://github.com/pukkapies/urop2019#tfrecords)
-    * [TFRecords into a tf.data.Dataset](https://github.com/pukkapies/urop2019#dataset-preparation)
-* [Model and JSON Configuration](https://github.com/pukkapies/urop2019#dataset-preparation)
+    * [TFRecords into a tf.data.Dataset](https://github.com/pukkapies/urop2019#tfrecords-into-a-tfdatadataset)
+* [Model and JSON Configuration](https://github.com/pukkapies/urop2019#model-and-json-configuration)
 * [Training](https://github.com/pukkapies/urop2019#training)
-* [Validating & Predicting](https://github.com/pukkapies/urop2019#evaluation-tools)
+* [Validating & Predicting](https://github.com/pukkapies/urop2019#validating-and-predicting)
 * [Results](https://github.com/pukkapies/urop2019#results)
 * [Conclusion](https://github.com/pukkapies/urop2019#conclusion)
 * [References](https://github.com/pukkapies/urop2019#references)
@@ -48,9 +48,9 @@ In the following sections, we will provide a brief tutorial of how you may use t
 * Mac or Linux environment
 * [TensorFlow](https://www.tensorflow.org/beta)* 2.0.0 RC0 or above (GPU version)
 * [H5Py](https://www.h5py.org/) 2.3.1 -- to read the the HDF5 MSD summary 
-* [LibROSA](https://github.com/librosa/librosa)* 0.7.0 + [FFmpeg](https://www.ffmpeg.org/)* -- to read, load and analyse audio files
+* [LibROSA](https://librosa.github.io/librosa/)* 0.7.0 + [FFmpeg](https://www.ffmpeg.org/)* -- to read, load and analyse audio files
 * [mutagen](https://mutagen.readthedocs.io/en/latest/) 1.42.0 -- to read audio files
-* [sounddevice](https://python-sounddevice.readthedocs.io/en/0.3.12/installation.html)* 0.3.12 -- to record audio from your microphone through terminal
+* [sounddevice](https://python-sounddevice.readthedocs.io/en/latest/)* 0.3.12 -- to record audio from your microphone through terminal
 * [sparse](https://sparse.pydata.org/en/latest/) 0.8.9 -- to perform advanced operations on the tags database (and process data using sparse matrices)
 * Other common Python libraries such as [Pandas](https://pandas.pydata.org/) or [NumPy](https://numpy.org/)
 
@@ -292,7 +292,7 @@ python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --confi
 
 Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt and recover from a saved checkpoint using the `--resume-time` parameter.
 
-The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow the [official guidelines](https://www.tensorflow.org/beta/guide/data) to generate your own datasets using tf.data and then do the following:
+The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may generate your own datasets using the tf.data API and then do the following:
 
 ```python
 import os
@@ -360,7 +360,7 @@ This experiment was used to try to replicate the results by (Pons, et al., 2018)
 | Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
 
 
-The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json) (waveform) and [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config) (log-mel-spectrogram).
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json) (waveform) and [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config.json) (log-mel-spectrogram).
 
 ### Experiment 2
 
@@ -376,7 +376,7 @@ This experiment was used to test the effectiveness of cyclic learning rate (Smit
 | Log-mel-spectrogram (ours, cyclic lr)      | 87.68   | 42.05   |
 | Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
 
-The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config).
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config.json).
 
 ## Conclusion
 
