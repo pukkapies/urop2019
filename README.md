@@ -175,7 +175,7 @@ If you want to actually see the dataframe which contains all the clean tag info 
 *Example:*
 
 ```python
-from lastfm_cleaning utils import generate_final_df
+from lastfm_cleaning_utils import generate_final_df
 
 generate_final_df(from_csv_path='/srv/data/urop', threshold=2000, sub_threshold=10, combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], drop_list=['2000', '00', '90', '80', '70', '60'])
 ```
