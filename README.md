@@ -372,7 +372,7 @@ This experiment was used to test the effectiveness of cyclic learning rate (Smit
 
 The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config).
 
-## conclusion
+## Conclusion
 
 In general, we can see that training the MSD dataset on log mel-spectrogram has a better performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018). Note that (Pons, et al., 2018) suggests that when the size of the dataset is large enough, the quality difference between waveform and log-mel-spectrogram model is insignificant (with 1,000,000+ songs).
 
