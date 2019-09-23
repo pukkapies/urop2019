@@ -366,7 +366,7 @@ Here are our results when performing different experiments using both waveform a
 
 Here are the exact tags we used, ordered by popularity: 'rock', 'female vocalist', 'pop', 'alternative', 'male vocalist', 'indie', 'electronic', '00s', 'rnb', 'dance', 'hip-hop', 'instrumental', 'chillout', 'alternative rock', 'jazz', 'metal', 'classic rock', 'indie rock', 'rap', 'soul', 'mellow', '90s', 'electronica', '80s', 'folk', 'chill', 'funk', 'blues', 'punk', 'hard rock', 'pop rock', '70s', 'ambient', 'experimental', '60s', 'easy listening', 'rock n roll', 'country', 'electro', 'punk rock', 'indie pop', 'heavy metal', 'classic', 'progressive rock', 'house', 'ballad', 'psychedelic', 'synthpop', 'trance' and 'trip-hop'.
 
-**Experiment 1:**
+### Experiment 1
 
 This experiment was used to try to replicate the results by (Pons, et al., 2018), and compare the performance obtained on our dataset using waveform and log-mel-spectrogram. We ran this experiments using a constant learning rate of 0.001.
 
@@ -384,7 +384,7 @@ This experiment was used to try to replicate the results by (Pons, et al., 2018)
 
 The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json) (waveform) and [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config) (log-mel-spectrogram).
 
-**Experiment 2:**
+### Experiment 2
 
 This experiment was used to test the effectiveness of cyclic learning rate as well as an attempt to try and improve the model. We ran this experiment on an identical run of the log-mel-spectrogram above, using cyclic learning rate varying linearly between 0.0014/4 instead of a constant learning rate of 0.001.
 
