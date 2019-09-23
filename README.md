@@ -1,6 +1,8 @@
 # Deep Learning for Music Tagging (aka 'Orpheus')
 
-This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed at developing an end-to-end music audio auto-tagger competitive with the state-of-the-art. We replicated the CNN architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and successfully reproduced the results they obtained with the Million Songs Dataset. Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
+This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed to develop an end-to-end music auto-tagger competitive with the state-of-the-art. We replicated the CNN architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and reproduced the results they obtained on the [Million Songs Dataset](http://millionsongdataset.com/). 
+
+Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
 
 ## Table of Contents
 
@@ -23,21 +25,21 @@ This is the repository of an Imperial College UROP 2019 project in deep learning
 
 ## Introduction
 
-This project makes use of the freely-available [Million Song Dataset](http://millionsongdataset.com/), and its integration with the [Last.fm](http://millionsongdataset.com/lastfm/) dataset. The former provides a link between all the useful information about the tracks (such as title, artist or year) and the audio track themselves, whereas the latter contains tags information on some of the tracks. A  preview of the audio tracks can be fetched from services such as 7Digital, but this is allegedly not an easy task. 
+This project makes use of the freely-available [Million Song Dataset](http://millionsongdataset.com/), and its integration with the [Last.fm Dataset](http://millionsongdataset.com/lastfm/). The former provides a link between all the useful information about the tracks (such as title, artist or year) and the audio track themselves, whereas the latter contains tags information on some of the tracks. A preview of the audio tracks can be fetched from services such as 7Digital, but this is allegedly not an easy task. 
 
-If you are only interested in our final result, click [here](https://github.com/pukkapies/urop2019#results).
+If you are only interested in our final results, click [here](https://github.com/pukkapies/urop2019#results).
 
-Otherwise, if you want to use some of our code, or try to re-train our model on your own, read on. We will assume you have access to the Million Song Dataset. Here is the outline of the approach we followed:
+If you want to use some of our code, or try to re-train our model on your own, read on. We will assume you have access to the actual songs in the dataset. Here is the outline of the approach we followed:
 
-1. we extracted all the useful information from the Million Song Dataset and cleaned both the audio tracks and the Last.fm tags database to produce final 'clean' dataset;
+1. Extracte all the useful information from the Million Song Dataset and clean both the audio tracks and the Last.fm tags database to produce our final 'clean' data;
 
-2. we prepared the data input pipeline and transformed the data in a format which is easy to consume by the training algorithm;
+2. Prepare the data input pipeline and transform the data in a format which is easy to consume by the training algorithm;
 
-3. we wrote a flexible training script which allowed for multiple custom experiments (such as slightly different architectures, slightly different versions of the tags database, or different training parameters);
+3. Prepare a flexible training script which would allow for multiple experiments (such as slightly different architectures, slightly different versions of the tags database, or different training parameters);
 
-4.  we trained our model and provided tools to make sensible tag prediction from a given input audio.
+4. Train our model and use it to make sensible tag predictions from a given input audio.
 
-In the following sections, we will guide you through what we have done more in detail, and provide a brief tutorial of how you may use this repository to make genre predictions of your own, or carry out some further experiments.
+In the following sections, we will provide a brief tutorial of how you may use this repository to make genre predictions of your own, or carry out some further experiments.
 
 ## System Requirements
 
@@ -50,7 +52,6 @@ In the following sections, we will guide you through what we have done more in d
 * [mutagen](https://mutagen.readthedocs.io/en/latest/) 1.42.0 -- to read audio files
 * [sounddevice](https://python-sounddevice.readthedocs.io/en/0.3.12/installation.html)* 0.3.12 -- to record audio from your microphone through terminal
 * [sparse](https://sparse.pydata.org/en/latest/) 0.8.9 -- to perform advanced operations on the tags database (and process data using sparse matrices)
-* [tqdm](https://github.com/tqdm/tqdm) 4.36.1 -- to display fancy progress bars
 * Other common Python libraries such as [Pandas](https://pandas.pydata.org/) or [NumPy](https://numpy.org/)
 
 If you are just running the lite version of our prediction tool, all you need are the packages marked with *.
@@ -392,9 +393,9 @@ The exact parameters we have used can be found [here](https://github.com/pukkapi
 
 This experiment was used to test the effectiveness of cyclic learning rate (Smith, 2018) as well as an attempt to try and improve the model. We ran this experiment on an identical run of the log-mel-spectrogram above, using cyclic learning rate varying linearly between 0.0014/4 instead of a constant learning rate of 0.001.
 
-![alt text](https://github.com/pukkapies/urop2019/blob/readme/cyclic-learning-rate.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/master/cyclic-learning-rate.png)
 
-![alt text](https://github.com/pukkapies/urop2019/blob/readme/log-mel-spectrogram-cyclic.png)
+![alt text](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic.png)
 
 |                                            | AUC-ROC |  AUC-PR |
 | ------------------------------------------ |:-------:|:-------:|
