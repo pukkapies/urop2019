@@ -2,22 +2,22 @@
 
 This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed to develop an end-to-end music auto-tagger competitive with the state-of-the-art. We replicated the convolutional neural network architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and reproduced the results they obtained on the [Million Song Dataset](http://millionsongdataset.com/). 
 
-Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
+Since our model learned to predict some audio features quite accurately, we decided to call it "Orpheus", like the legendary ancient Greek poet and musician.
 
 ## Table of Contents
 
 * [Introduction](https://github.com/pukkapies/urop2019#introduction)
 * [System Requirements](https://github.com/pukkapies/urop2019#system-requirements)
 * [Data Cleaning](https://github.com/pukkapies/urop2019#data-cleaning)
-    * [Errors in the .MP3 Audio Files](https://github.com/pukkapies/urop2019#audio)
-    * [Errors in the Dataset](https://github.com/pukkapies/urop2019#database)
-    * [Last.fm Tags](https://github.com/pukkapies/urop2019#tags)
+    * [Errors in the .MP3 Audio Files](https://github.com/pukkapies/urop2019#errors-in-the-mp3-audio-files)
+    * [Errors in the Dataset](https://github.com/pukkapies/urop2019#errors-in-the-dataset)
+    * [Last.fm Tags](https://github.com/pukkapies/urop2019#lastfm-tags)
 * [Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline)
     * [TFRecords](https://github.com/pukkapies/urop2019#tfrecords)
-    * [TFRecords into a tf.data.Dataset](https://github.com/pukkapies/urop2019#dataset-preparation)
-* [Model and JSON Configuration](https://github.com/pukkapies/urop2019#dataset-preparation)
+    * [TFRecords into a tf.data.Dataset](https://github.com/pukkapies/urop2019#tfrecords-into-a-tfdatadataset)
+* [Model and JSON Configuration](https://github.com/pukkapies/urop2019#model-and-json-configuration)
 * [Training](https://github.com/pukkapies/urop2019#training)
-* [Validating & Predicting](https://github.com/pukkapies/urop2019#evaluation-tools)
+* [Validating & Predicting](https://github.com/pukkapies/urop2019#validating-and-predicting)
 * [Results](https://github.com/pukkapies/urop2019#results)
 * [Conclusion](https://github.com/pukkapies/urop2019#conclusion)
 * [References](https://github.com/pukkapies/urop2019#references)
@@ -48,9 +48,9 @@ In the following sections, we will provide a brief tutorial of how you may use t
 * Mac or Linux environment
 * [TensorFlow](https://www.tensorflow.org/beta)* 2.0.0 RC0 or above (GPU version)
 * [H5Py](https://www.h5py.org/) 2.3.1 -- to read the the HDF5 MSD summary 
-* [LibROSA](https://github.com/librosa/librosa)* 0.7.0 + [FFmpeg](https://www.ffmpeg.org/)* -- to read, load and analyse audio files
+* [LibROSA](https://librosa.github.io/librosa/)* 0.7.0 + [FFmpeg](https://www.ffmpeg.org/)* -- to read, load and analyse audio files
 * [mutagen](https://mutagen.readthedocs.io/en/latest/) 1.42.0 -- to read audio files
-* [sounddevice](https://python-sounddevice.readthedocs.io/en/0.3.12/installation.html)* 0.3.12 -- to record audio from your microphone through terminal
+* [sounddevice](https://python-sounddevice.readthedocs.io/en/latest/)* 0.3.12 -- to record audio from your microphone through terminal
 * [sparse](https://sparse.pydata.org/en/latest/) 0.8.9 -- to perform advanced operations on the tags database (and process data using sparse matrices)
 * Other common Python libraries such as [Pandas](https://pandas.pydata.org/) or [NumPy](https://numpy.org/)
 
@@ -158,7 +158,13 @@ Finally, `metadata.py` contains some basic tools to explore the `msd_summary_fil
 
 In the L<span>ast.f</span>m database there are more than 500,000 different tags. Such a high number of tags is clearly useless, and the tags need to be cleaned in order for the training algorithm to learn to make some sensible predictions. The tags are cleaned using `lastfm_cleaning_utils.py` and `lastfm_cleaning.py`, and the exact mechanisms of how they work can be found in the documentation of the scripts.
 
-In brief, the tags are divided into two categories: genre tags, and vocal tags (which in our case are 'male vocalist', 'female vocalist', 'rap' and 'instrumental'). For genre tags, we first obtained a list of tags from the L<span>ast.f</span>m database which have appeared for more than 2000 times, then we manually filtered out the tags that we considered rubbish (such as 'cool' or 'favourite song'). We fed the remaining 'good' tags into `generate_genre_df()`, which searched for similar spelling of the same tag within a 500,000+ tags pool (tags with occurrence ≥ 10). We generated a handy dataframe with manually chosen tags in one column, and similar matching tags from the pool in the other.  For vocal tags, we obtained a long list of potentially matching tags for each of the four vocal tags, then we manually seperated the 'real' matching tags from the rest, for each of the tag lists. We fed the tag lists into `generate_vocal_df()`, and we produced a dataframe with structure previously outlined. Finally, the function `generate_final_df()` merged the two dataframes into one, and passed it to the next script.
+In brief, the tags are divided into two categories: genre tags, and vocal tags (which in our case are 'male vocalist', 'female vocalist', 'rap' and 'instrumental').
+
+For genre tags, we first obtained a list of tags from the L<span>ast.f</span>m database which have appeared for more than 2000 times, then we manually filtered out the tags that we considered rubbish (such as 'cool' or 'favourite song'). We fed the remaining 'good' tags into `generate_genre_df()`, which searched for similar spelling of the same tag within a 500,000+ tags pool (tags with occurrence ≥ 10), and we produced a handy dataframe with manually chosen tags in one column, and similar matching tags from the pool in the other.
+
+For vocal tags, we first obtained a long list of potentially matching tags for each of the four vocal tags, then we manually separated the 'real' matching tags from the rest, for each of the tag lists. We fed the tag lists into `generate_vocal_df()`, and we produced a dataframe with the structure previously outlined.
+
+Finally, the `generate_final_df()` function merged the two dataframes into one, and passed it to the next script.
 
 To search for similar tags, we did the following:
 
@@ -180,7 +186,7 @@ from lastfm_cleaning_utils import generate_final_df
 generate_final_df(from_csv_path='/srv/data/urop', threshold=2000, sub_threshold=10, combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], drop_list=['2000', '00', '90', '80', '70', '60'])
 ```
 
-If you want just to use of our clean dataset, `lastfm_cleaning.py` will automatically make use of tools above to produce a new clean `.db` file. The final database has the same structure as the original`lastfm_tags.db` database. Therefore, it can be queried by the same `lastfm.py` module. 
+If you want just to use of our clean dataset, `lastfm_cleaning.py` will automatically make use of tools above to produce a new clean `.db` file. The final database has the same structure as the original`lastfm_tags.db` database. Therefore, it can be queried using the same `lastfm.py` module. 
 
 *Example:*
 
@@ -286,7 +292,7 @@ python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --confi
 
 Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt and recover from a saved checkpoint using the `--resume-time` parameter.
 
-The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow the [official guidelines](https://www.tensorflow.org/beta/guide/data) to generate your own datasets using tf.data and then do the following:
+The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may generate your own datasets using the tf.data API and then do the following:
 
 ```python
 import os
@@ -354,7 +360,7 @@ This experiment was used to try to replicate the results by (Pons, et al., 2018)
 | Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
 
 
-The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json) (waveform) and [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config) (log-mel-spectrogram).
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json) (waveform) and [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config.json) (log-mel-spectrogram).
 
 ### Experiment 2
 
@@ -370,7 +376,7 @@ This experiment was used to test the effectiveness of cyclic learning rate (Smit
 | Log-mel-spectrogram (ours, cyclic lr)      | 87.68   | 42.05   |
 | Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
 
-The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config).
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config.json).
 
 ## Conclusion
 
