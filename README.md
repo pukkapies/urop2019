@@ -1,6 +1,6 @@
 # Deep Learning for Music Tagging (aka 'Orpheus')
 
-This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed to develop an end-to-end music auto-tagger competitive with the state-of-the-art. We replicated the CNN architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and reproduced the results they obtained on the [Million Songs Dataset](http://millionsongdataset.com/). 
+This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed to develop an end-to-end music auto-tagger competitive with the state-of-the-art. We replicated the convolutional neural network architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and reproduced the results they obtained on the [Million Songs Dataset](http://millionsongdataset.com/). 
 
 Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
 
@@ -33,7 +33,7 @@ If you want to use some of our code, or try to re-train our model on your own, r
 
 1. Extracte all the useful information from the Million Song Dataset and clean both the audio tracks and the Last.fm tags database to produce our final 'clean' data;
 
-2. Prepare the data input pipeline and transform the data in a format which is easy to consume by the training algorithm;
+2. Prepare a flexible data input pipeline and transform the data in a format which is easy to consume by the training algorithm;
 
 3. Prepare a flexible training script which would allow for multiple experiments (such as slightly different architectures, slightly different versions of the tags database, or different training parameters);
 
