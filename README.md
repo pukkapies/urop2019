@@ -370,17 +370,9 @@ Here are the exact tags we used, ordered by popularity: 'rock', 'female vocalist
 
 This experiment was used to try to replicate the results by (Pons, et al., 2018), and compare the performance obtained on our dataset using waveform and log-mel-spectrogram. We ran this experiments using a constant learning rate of 0.001.
 
-*Waveform:*
-
 ![alt text](https://github.com/pukkapies/urop2019/blob/master/waveform.png)
 
-The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json).
-
-*Log mel-spectrogram:*
-
 ![alt text](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram.png)
-
-The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config).
 
 |                                            | AUC-ROC |  AUC-PR |
 | ------------------------------------------ |:-------:|:-------:|
@@ -388,6 +380,9 @@ The exact parameters we have used can be found [here](https://github.com/pukkapi
 | Log-mel-spectrogram (ours)                 | 87.33   | 40.96   |
 | Waveform (Pons, et al., 2018)              | 87.41   | 28.53   |
 | Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
+
+
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/waveform_config.json) (waveform) and [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram_config) (log-mel-spectrogram).
 
 **Experiment 2:**
 
@@ -397,13 +392,13 @@ This experiment was used to test the effectiveness of cyclic learning rate as we
 
 ![alt text](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic.png)
 
-The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config).
-
 |                                            | AUC-ROC |  AUC-PR |
 | ------------------------------------------ |:-------:|:-------:|
 | Log-mel-spectrogram (ours)                 | 87.33   | 40.96   |
 | Log-mel-spectrogram (ours, cyclic lr)      | 87.68   | 42.05   |
 | Log-mel-spectrogram (Pons, et al., 2018)   | 88.75   | 31.24   |
+
+The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config).
 
 ## Conclusions
 
