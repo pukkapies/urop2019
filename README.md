@@ -168,50 +168,42 @@ Finally, `metadata.py` contains some basic tools to explore the `msd_summary_fil
 
 #### Filtering
 
-In the Last.fm database there are more than 500,000 different tags. Such a high number of tags is clearly useless, and the tags need to be cleaned in order for the training algorithm to learn to make some sensible predictions. The tags are cleaned using `lastfm_cleaning_utils.py` and `lastfm_cleaning.py`, and the exact mechanisms of how they work can be found in the documentation of the scripts.
+In the L<span>ast.f</span>m database there are more than 500,000 different tags. Such a high number of tags is clearly useless, and the tags need to be cleaned in order for the training algorithm to learn to make some sensible predictions. The tags are cleaned using `lastfm_cleaning_utils.py` and `lastfm_cleaning.py`, and the exact mechanisms of how they work can be found in the documentation of the scripts.
 
-In brief, the tags are divided into two categories: genre tags, and vocal tags (which in our case are 'male vocalist', 'female vocalist', 'rap' and 'instrumental'). For genre tags, we first obtained a list of tags from the Last.fm database which have appeared for more than 2000 times, then we manually filtered out the tags that we considered rubbish (such as 'cool' or 'favourite song'). We fed the remaining 'good' tags into `generate_genre_df()`, which searched for similar spelling of the same tag within a 500,000+ tags pool (tags with occurrence ≥ 10). We generated a handy dataframe with manually chosen tags in one column, and similar matching tags from the pool in the other.  For vocal tags, we obtained a long list of potentially matching tags for each of the four vocal tags, then we manually seperated the 'real' matching tags from the rest, for each of the tag lists. We fed the tag lists into `generate_vocal_df()`, and we produced a dataframe with structure previously outlined. Finally, the function `generate_final_df()` merged the two dataframes into one, and passed it to the next script.
+In brief, the tags are divided into two categories: genre tags, and vocal tags (which in our case are 'male vocalist', 'female vocalist', 'rap' and 'instrumental'). For genre tags, we first obtained a list of tags from the L<span>ast.f</span>m database which have appeared for more than 2000 times, then we manually filtered out the tags that we considered rubbish (such as 'cool' or 'favourite song'). We fed the remaining 'good' tags into `generate_genre_df()`, which searched for similar spelling of the same tag within a 500,000+ tags pool (tags with occurrence ≥ 10). We generated a handy dataframe with manually chosen tags in one column, and similar matching tags from the pool in the other.  For vocal tags, we obtained a long list of potentially matching tags for each of the four vocal tags, then we manually seperated the 'real' matching tags from the rest, for each of the tag lists. We fed the tag lists into `generate_vocal_df()`, and we produced a dataframe with structure previously outlined. Finally, the function `generate_final_df()` merged the two dataframes into one, and passed it to the next script.
 
 To search for similar tags, we did the following:
-1. Remove all the non-alphabet and non-number characters and any single trailing 's' 
-from the raw tags with occurance ≥ 10 and the target tags (the classified genre tags 
-and vocal tags). If any transformed raw tag is identical to any target tag, 
-the raw tag is merged into target tag.
 
-2. Repeat the same merging mechanism as 1, but replace '&' with 'n', '&' with 'and', ' n '
-with 'and' instead respectively.
+1. Remove all the non-alphabet and non-number characters and any single trailing 's' from the raw tags with occurance ≥ 10 and the target tags (the classified genre tags and vocal tags). If any transformed raw tag is identical to any target tag, the raw tag is merged into target tag;
 
-3. Repeat the same merging mechanism as 1, but replace any 'x0s' 
-string with '19x0s', 'x0s' with '20x0' (x denodes a number character) without 
-removing the trailing 's' respectively.
+2. Repeat the same merging mechanism as 1, but replace '&' with 'n', '&' with 'and' and 'n' with 'and';
 
-See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for how you may tailor the merging mechanism by defining a new fitlering fucntion.
+3. Repeat the same merging mechanism as 1, but replace 'x0s' with '19x0s' and 'x0s' with '20x0' (without removing the trailing 's'; *x* denotes a number character here).
 
-The `.txt` files containing the lists of tags we used in our experiment can be found in 
-the folder `~/msd/config`. Hence, if you prefer to use our dataset, you may simply 
-generate this by:
+See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for more details on how you may tailor the merging mechanism by defining a new fitlering fucntion.
 
+If you want to actually see the dataframe which contains all the clean tag info (which will then be used by `lastfm_cleaning.py` to produce the new `.db` file), you can generate it using the `generate_final_df()` functions, which combines all the tools mentioned above, and which allows a lot of room for customization and fine-tuning.
+
+*Example:*
 ```python
+from lastfm_cleaning utils import generate_final_df
+
 generate_final_df(from_csv_path='/srv/data/urop', threshold=2000, sub_threshold=10, combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], drop_list=['2000', '00', '90', '80', '70', '60'])
 ```
 
-if you are interested to view the dataset. Otherwise, `lastfm_clean.py` will automatically 
-generate this dataset and transform it into a clean Lastfm database. 
-
-Note that `lastfm_cleaning_utils` allows a great deal of customisation. 
-Please see [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for more details.
-
-`lastfm_cleaning.py` creates a new database file using the cleaned tags 
-from lastfm_cleaning_utils.py. The database has the same structure as the 
-`lastfm_tags.db` database, and can be queried by `lastfm.py`.
+If you want just to use of our clean dataset, `lastfm_cleaning.py` will automatically make use of tools above to produce a new clean `.db` file. The final database has the same structure as the original`lastfm_tags.db` database. Therefore, it can be queried by the same `lastfm.py` module. 
 
 *Example:*
 ```
 python lastfm_cleaning.py /srv/data/msd/lastfm/SQLITE/lastfm_tags.db /srv/data/urop/clean_lastfm.db
 ```
 
+Finally, the `.txt` files containing the lists of tags we used in our experiment can be found in the folder `./code/msd/config`. 
+
 ## Data Input Pipeline
+
 ### TFRecords
+
 To store the necessary information we need in training, we used the `.tfrecord` 
 file format. The `preprocessing.py` script does exactly this. In each entry of 
 the `.tfrecord` file, it stores the audio as an array in either 
