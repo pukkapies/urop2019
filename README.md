@@ -123,7 +123,7 @@ This reduces the number of useful tracks from 1,000,000 to 400,000+.
 
 #### Performing Queries
 
-The `lastfm.py` module contains three classes, `LastFm`, `LastFm2Pandas` and `Matrix`. The first two classes contain all the basic tools for querying the Lastfm database. The former directly queries the database by SQL, whereas the latter converts the database into dataframes and performs queries using Pandas. In some of the functions in later sections, a `lastfm` input parameter may require you to pass an instance of one of these two classes. The last one, on the other hand, contains some advanced tools to perform a thorough analysis of the tags distribution in the tags database.
+The `lastfm.py` module contains three classes, `LastFm`, `LastFm2Pandas` and `Matrix`. The first two classes contain all the basic tools for querying the Lastfm database. The former directly queries the database by SQL, whereas the latter converts the database into dataframes and performs queries using Pandas. In some of the functions in later sections, an input parameter may require you to pass an instance of one of these two classes. The last one, on the other hand, contains some advanced tools to perform a thorough analysis of the tags distribution in the tags database.
 
 *Example:*
 
@@ -295,7 +295,7 @@ projectname.create_config_json('/srv/data/urop/config.json', 'batch_size'=32)
 ## Training
 
 We have written two separate scripts for the training algorithm, `training.py` 
-and `'training_custom.py`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as outlined in [this](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) guide) where each training step is performed manually. While `training.py` only allows the introduction of advanced training features through Keras callbacks, `training_custom.py` allows total flexibility in the features you could introduce. 
+and `'training_custom.py`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as described in the [official guideline](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) for TensorFlow 2.0) where each training step is performed manually. While `training.py` only allows the introduction of advanced training features through Keras callbacks, `training_custom.py` allows total flexibility in the features you could introduce. 
 
 Both scripts assume you have one or more GPUs available, and make use of a MirroredStrategy to distribute training. Both scripts write (train and validation) summaries on TensorBoard and save checkpoints at the end of each epoch, and they also have the option to enable early stopping or learning rate reduction on plateau. Only the custom loop implements cyclical learning rate and the one-cycle policy, as described by (N. Smith, 2018) in [this](https://arxiv.org/pdf/1803.09820.pdf) paper.
 
@@ -314,7 +314,7 @@ python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --confi
 
 Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt and recover from a saved checkpoint using the `--resume-time` parameter.
 
-The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow [this](https://www.tensorflow.org/beta/guide/data) guide to generate your own datasets and then do the following:
+The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow the [official guideline](https://www.tensorflow.org/beta/guide/data) guide to generate your own datasets using tf.data and then do the following:
 
 ```python
 import os
@@ -340,7 +340,7 @@ If you prefer to use `training_custom.py`, do exactly the same procedure as abov
 
 The evaluation tools are contained in the script `orpheus.py`. There is a `test()` function which simply tests the model's performance on the test dataset from a certain checkpoint. There is also a `predict()` function which takes an audio array (in waveform or log mel-spectrogram format) and uses the model to return the most confident tag predicitons for that track. Optionally, the audio array might be sliced in `n_slices` sliding windows of length `window_length`, and the final tag predictions will average out the tag predictions for each single slice. In either case, you will need to pass a `threshold` to determine which tags are shown, based on their prediction confidence.
 
-*Examples:*
+*Example:*
 
 To test a log-mel-spectrogram model on the test dataset (as specified by `split` in the config JSON):
 
@@ -408,7 +408,7 @@ In our experiments, we have also cleaned the L<span>ast.f</span>m database by re
 
 We have therefore shown that training the model using cleaner tags improves the quality of the model.
 
-In our experiments, we also tried to apply the 'disciplined approach to neural network hyper-parameters' techniques outlined in (N. Smith, 2018), and clearly obtained much better results on our validation dataset.
+In our experiments, we also tried to apply the 'disciplined approach to neural network hyper-parameters' techniques outlined in (Smith, 2018), and clearly obtained much better results on our validation dataset.
 
 We have therefore also confirmed that mindfully varying the learning rate throughout the training indeed results in better quality of the model.
 
@@ -416,7 +416,7 @@ We have therefore also confirmed that mindfully varying the learning rate throug
 
 Pons, J., Nieto, O., Prockup, M., Schmidt, E., Ehmann, A., Serra, X.: END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Proc. of the 19th International Society for Music Information Retrieval Conference (ISMIR). Paris, France (2018)
 
-Smith, L.N.: A DISCIPLINED APPROACH TO NEURAL-NETWORK HYPER-PARAMETERS: PART 1 – LEARNING RATE, BATCH SIZE, MOMENTUM, AND WEIGHT DECAY. arXiv preprint [arXiv:1803.09820](https://arxiv.org/pdf/1803.09820.pdf) (2018)
+Smith, L. N.: A DISCIPLINED APPROACH TO NEURAL-NETWORK HYPER-PARAMETERS: PART 1 – LEARNING RATE, BATCH SIZE, MOMENTUM, AND WEIGHT DECAY. arXiv preprint [arXiv:1803.09820](https://arxiv.org/pdf/1803.09820.pdf) (2018)
 
 ## Contacts / Getting Help
 
