@@ -17,7 +17,7 @@ This is the repository of an Imperial College UROP 2019 project in deep learning
 * [Training](https://github.com/pukkapies/urop2019#training)
 * [Validating & Predicting](https://github.com/pukkapies/urop2019#evaluation-tools)
 * [Results](https://github.com/pukkapies/urop2019#results)
-* [Conclusions](https://github.com/pukkapies/urop2019#conclusions)
+* [conclusion](https://github.com/pukkapies/urop2019#conclusion)
 * [References](https://github.com/pukkapies/urop2019#references)
 * [Contacts / Getting Help](https://github.com/pukkapies/urop2019#contacts--getting-help)
 
@@ -94,6 +94,7 @@ The raw HDF5 Million Song Dataset file, which contains three smaller datasets, a
 The dataframe from the above paragraph is merged with the dataframe produced by the above audio section followed by removing unnecessary columns to produce the 'ultimate' dataframe, which contains essential information about the tracks that will be used throughout the project.
 
 *Example:*
+
 ```
 python wrangler.py /path/to/fetcher.csv /path/to/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt
 ```
@@ -101,6 +102,7 @@ python wrangler.py /path/to/fetcher.csv /path/to/ultimate.csv --path-h5 /srv/dat
 In order to save storage space and time, a different order of code execution was instead used though.
 
 *Example:*
+
 ```
 python fetcher.py /path/to/output/fetcher.csv --root-dir /srv/data/msd/7digital
 ```
@@ -117,7 +119,7 @@ python wrangler_silence.py --root-dir-npz /output/dir/npz/ --root-dir-mp3 /srv/d
 python wrangler_silence.py --min-size 200000 --filter-trim-length 15 --filter-tot-silence 3 --filter-max-silence 1 /path/to/output/wrangler_silence.csv /path/to/ultimate.csv
 ```
 
-This reduces the number of useful tracks from 1,000,000 to 400,000+.
+This reduces the number of useful tracks from 1,000,000 to ~300,000.
 
 ### L<span>ast.f</span>m Tags
 
@@ -137,7 +139,7 @@ To use `LastFm2Pandas`:
 ```python
 fm = lastfm.LastFm2Pandas('/srv/data/msd/lastfm/SQLITE/lastfm_tags.db')
 ```
-To use `LastFm2Pandas` from converted .csv's (instead of the original .db file):
+To use `LastFm2Pandas` from converted `.csv`'s (instead of the original .db file):
 
 ```python
 # generate .csv's
@@ -152,7 +154,7 @@ tid_tag = pd.read_csv('/srv/data/urop/lastfm_tid_tag.csv')
 fm = lastfm.LastFm2Pandas.load_from(tags=tags, tids=tids, tid_tag=tid_tag)
 ```
 
-The major difference between the two classes is that `LastFm` is quicker to initiate, but some queries might take some time to perform, whereas `LastFm2Pandas` may take longer to initiate (due to the whole dataset being loaded into the memory). However, `LastFm2Pandas` contains some more advanced methods, and it is reasonably quick to initialise if database is converted into .csv files in advance. Moreover, you will need to use `LastFm2Pandas` if you want to perform advanced an advanced analysis of the tags distribution using the `Matrix` class.
+The major difference between the two classes is that `LastFm` is quicker to initiate, but some queries might take some time to perform, whereas `LastFm2Pandas` may take longer to initiate (due to the whole dataset being loaded into the memory). However, `LastFm2Pandas` contains some more advanced methods, and it is reasonably quick to initialise if database is converted into `.csv` files in advance. Moreover, you will need to use `LastFm2Pandas` if you want to perform advanced an advanced analysis of the tags distribution using the `Matrix` class.
 
 Finally, `metadata.py` contains some basic tools to explore the `msd_summary_file.h5` file.
 
@@ -175,6 +177,7 @@ See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-clean
 If you want to actually see the dataframe which contains all the clean tag info (which will then be used by `lastfm_cleaning.py` to produce the new `.db` file), you can generate it using the `generate_final_df()` functions, which combines all the tools mentioned above, and which allows a lot of room for customization and fine-tuning.
 
 *Example:*
+
 ```python
 from lastfm_cleaning utils import generate_final_df
 
@@ -184,11 +187,12 @@ generate_final_df(from_csv_path='/srv/data/urop', threshold=2000, sub_threshold=
 If you want just to use of our clean dataset, `lastfm_cleaning.py` will automatically make use of tools above to produce a new clean `.db` file. The final database has the same structure as the original`lastfm_tags.db` database. Therefore, it can be queried by the same `lastfm.py` module. 
 
 *Example:*
+
 ```
 python lastfm_cleaning.py /srv/data/msd/lastfm/SQLITE/lastfm_tags.db /srv/data/urop/clean_lastfm.db
 ```
 
-Finally, the `.txt` files containing the lists of tags we used in our experiment can be found in the folder `./code/msd/config`. 
+Finally, the `.txt` files containing the lists of tags we used in our experiment can be found in [this](https://github.com/pukkapies/urop2019/tree/readme/code/msd/config) folder. 
 
 ## Data Input Pipeline
 
@@ -212,7 +216,7 @@ we have loaded the `.mp3` files as numpy for silence analysis and stored them
 in a previous section. However, again, we would recommend users to convert directly 
 from `.mp3` files as the `.npz` files need a lot of storage. 
 
-Example:
+*Example:*
 
 ```
 python preprocessing.py waveform /srv/data/urop/tfrecords-waveform --root-dir /srv/data/urop2019/npz --tag-path /srv/data/urop/clean_lastfm.db --csv-path /srv/data/urop/ultimate.csv --sr 16000 --num-files 100 --start-stop 1 1
@@ -400,7 +404,7 @@ This experiment was used to test the effectiveness of cyclic learning rate (Smit
 
 The exact parameters we have used can be found [here](https://github.com/pukkapies/urop2019/blob/master/log-mel-spectrogram-cyclic_config).
 
-## Conclusions
+## conclusion
 
 In general, we can see that training the MSD dataset on log mel-spectrogram has a better performance than training on waveform, which agrees with the result produced by (Pons, et al., 2018). Note that (Pons, et al., 2018) suggests that when the size of the dataset is large enough, the quality difference between waveform and log-mel-spectrogram model is insignificant (with 1,000,000+ songs).
 
