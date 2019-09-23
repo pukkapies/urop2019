@@ -87,47 +87,37 @@ of the silent information.
 python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 100000 --filter-tot-silence 15 --filter-max-silence 3
 ```
 
-### Errors in the Dataset 
-The raw HDF5 Million Song Dataset file, which contains three smaller datasets, 
-are converted into multiple Pandas dataframes. The relevant information is then 
-extracted and merged. According to the MSD website, there are mismatches between these datasets. For more details, see [here](http://millionsongdataset.com/blog/12-2-12-fixing-matching-errors/). To deal with this issue, `wrangler.py` takes a '.txt' file with a list of tids which could not be trusted, and remove the corresponding rows in the dataframe. Furthermore, MSD also provides a `.txt` file with a list of tracks that have duplicates. `wrangler.py` by default  keeps one version of the duplicate tracks of each song and removes the rest.
+### Errors in the Dataset
 
-The dataframe from the above paragraph is merged with the dataframe produced by the above audio section followed by removing unnecessary columns to produce the 'ultimate' dataframe. This dataframe acts as a clean dataset containing all the essential information about the tracks and will be used throughout the project.
+The raw HDF5 Million Song Dataset file, which contains three smaller datasets, are converted into multiple Pandas dataframes. The relevant information is then extracted and merged. According to the MSD website, there are [mismatches](http://millionsongdataset.com/blog/12-2-12-fixing-matching-errors/) between these datasets. To deal with the issue, `wrangler.py` takes a `.txt` file with a list of tids which could not be trusted, and remove the corresponding rows in the dataframe. Furthermore, MSD also provides a `.txt` file with a list of tracks which have [duplicates](http://millionsongdataset.com/blog/11-3-15-921810-song-dataset-duplicates/). To deal with this other issue, `wrangler.py` by default only keeps one version of each duplicate (picked randomly), and removes the rest.
 
-For more information about how these functions are used, see [here](https://github.com/pukkapies/urop2019/blob/master/code/msd/README.md)
+The dataframe from the above paragraph is merged with the dataframe produced by the above audio section followed by removing unnecessary columns to produce the 'ultimate' dataframe, which contains essential information about the tracks that will be used throughout the project.
 
 *Example:*
-
 ```
-python wrangle.py /srv/data/urop/wrangle_silence.csv /srv/data/urop/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt
-```
-
-Alternatively, to save storage space and time, the following order of code 
-execution was used instead:
-
-```
-python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital
+python wrangler.py /path/to/fetcher.csv /path/to/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt
 ```
 
+In order to save storage space and time, a different order of code execution was instead used though.
+
+*Example:*
 ```
-python wrangle.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/fetch2.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt --discard-dupl False
+python fetcher.py /path/to/output/fetcher.csv --root-dir /srv/data/msd/7digital
+```
+```
+python wrangler.py --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt --discard-dupl --discard-no-tag /path/to/output/fetcher.csv /path/to/output/wrangler.csv 
+```
+```
+python mp3_to_numpy.py --root-dir-npz /output/dir/npz --root-dir-mp3 /srv/data/msd/7digital /path/to/output/wrangler.csv
+```
+```
+python wrangler_silence.py --root-dir-npz /output/dir/npz/ --root-dir-mp3 /srv/data/msd/7digital/ /path/to/output/wrangler.csv /path/to/output/wrangler_silence.csv
+```
+```
+python wrangler_silence.py --min-size 200000 --filter-trim-length 15 --filter-tot-silence 3 --filter-max-silence 1 /path/to/output/wrangler_silence.csv /path/to/ultimate.csv
 ```
 
-```
-python mp3_to_numpy.py /srv/data/urop2019/fetch2.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital
-```
-
-```
-python wrangler_silence.py /srv/data/urop2019/fetch2.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 200000 --filter-tot-silence 15 --filter-max-silence 3
-```
-
-```
-python wrangle.py /srv/data/urop2019/wrangle_silence.csv /srv/data/urop2019/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/SQLITE/lastfm_tags.db --path-txt-dupl /path/to/info_dupl.txt --path-txt-mism /path/to/info_mism.txt
-```
-
-With this order of execution, `wrangle.py` will remove tracks which have no tags. This reduces the number of tracks from 1,000,000 to 500,000+.
-
-For more information on how you can customise the procedures, see the documentation in the corresponding scripts.
+This reduces the number of useful tracks from 1,000,000 to 400,000+.
 
 ### L<span>ast.f</span>m Tags
 
@@ -180,7 +170,7 @@ To search for similar tags, we did the following:
 
 3. Repeat the same merging mechanism as 1, but replace 'x0s' with '19x0s' and 'x0s' with '20x0' (without removing the trailing 's'; *x* denotes a number character here).
 
-See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for more details on how you may tailor the merging mechanism by defining a new fitlering fucntion.
+See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for more details on how you may tailor the merging mechanism by defining a new filtering fucntion.
 
 If you want to actually see the dataframe which contains all the clean tag info (which will then be used by `lastfm_cleaning.py` to produce the new `.db` file), you can generate it using the `generate_final_df()` functions, which combines all the tools mentioned above, and which allows a lot of room for customization and fine-tuning.
 
