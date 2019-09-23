@@ -192,73 +192,45 @@ Finally, the `.txt` files containing the lists of tags we used in our experiment
 
 ### TFRecords
 
-To store the necessary information we need in training, we used the `.tfrecord` 
-file format. The `preprocessing.py` script does exactly this. In each entry of 
-the `.tfrecord` file, it stores the audio as an array in either 
-waveform or log mel-spectrogram format. It will also store the TID to identify each 
-track as well as the tags from the `clean_lastfm.db` database in a one-hot vector format.
+To store the necessary information we needed for training, we used the TFRecords format. The `preprocessing.py` script does exactly this. In each entry of the `.tfrecord` file, it stores the audio as an array in either waveform or log-mel-spectrogram format. It will also store the track ID to identify each track, and the tags from the clean tags database in a one-hot vector format. It will accept audio as either `.mp3` files, or as `.npz` files where each entry contains the audio as an array and the sample rate. The user can choose the sample rate to store the data in as well as the number of mel bins (when storing the audios as log-mel-spectrogram). The user can also specify the number of  `.tfrecord` files to split the data between.
 
-`preprocessing.py` leaves quite a lot of room for user customisation. It will 
-accept audio as `.mp3` files, or as `.npz` files where each entry contains the 
-audio as an array and the sample rate. The user can choose the sample rate to 
-store the data in as well as the number of mel bins when storing the audios in 
-the log mel-spectrogram form. It is also possible to specify the number of  `.tfrecord` files to split the data between.
-
-In our case, we used 96 mel bins, a sample rate of 16kHz and split the data 
-into 100 .`tfrecord` files. We also had the data stored as `.npz` files, since 
-we have loaded the `.mp3` files as NumPy for silence analysis and stored them 
-in a previous section. However, again, we would recommend users to convert directly 
-from `.mp3` files as the `.npz` files need a lot of storage. 
+In our case, we used 96 mel bins, a sample rate of 16kHz and split the data into 100 .`tfrecord` files. We also had the data stored as `.npz` files, since we had previously converted the `.mp3` files into NumPy format for silence analysis. We would once again recommend users to convert directly from `.mp3` files, as the `.npz` files need a lot of storage. 
 
 *Example:*
 
-```
-python preprocessing.py waveform /srv/data/urop/tfrecords-waveform --root-dir /srv/data/urop2019/npz --tag-path /srv/data/urop/clean_lastfm.db --csv-path /srv/data/urop/ultimate.csv --sr 16000 --num-files 100 --start-stop 1 1
+```bash
+python preprocessing.py waveform /output/dir/ --root-dir /srv/data/npz --tag-path /srv/data/urop/clean_lastfm.db --csv-path /srv/data/urop/ultimate.csv --sr 16000 --num-files 100 --start-stop 1 10
 ```
 
-Note that it is recommended to use tmux split screens to speed up the process.
+It is recommended to use [tmux](https://github.com/tmux/tmux/wiki) split screens to speed up the process.
 
 ### TFRecords into a tf.data.Dataset
 
-`projectname_input.py` was used to create ready-to-use TensorFlow datasets 
-from the `.tfrecord` files. Its main feature is to create 3 datasets for 
-train/val/test by parsing the `.tfrecord` files and extracting a 15s window 
-of the audio and then normalizing the data. If waveform is used, the normalization 
-is simple batch normalization, but if log mel-spectrogram  is used, we normalized 
-with respect to the spectrograms themselves (Pons, et al., 2018). The file will also create 
-mini-batches of a chosen size.
+The `projectname_input.py` module was used to create ready-to-use TensorFlow datasets from the `.tfrecord` files. Its main feature is to create three datasets for train/validating/testing by parsing the `.tfrecord` files and extracting a 15 sec window from the audio, then normalizing the data. If waveform is used, we normalized the batch, but if log mel-spectrogram is used, we normalized with respect to the spectrograms themselves (Pons, et al., 2018). The module will also create mini-batches of a chosen size.
 
-Again we have left a lot of room for customization. There are functions to exclude 
-certain TIDs from the dataset, to merge certain tags, e.g. rap and hip hop, and a 
-function to only include some tags. The user can also choose the size of the windows 
-mentioned above and whether they are to be extracted from a random position or centred 
-on the audio array. 
+The `projectname_input.py` module again leaves a lot of room for customisation. There are functions to exclude certain track IDs from the dataset, to merge certain tags (e.g. 'rap' and 'hip hop'), or to only include some tags. The user can also choose the size of the audio window and whether the window is to be extracted at random, or centred on the audio array. 
 
-Note that the data input pipeline is optimised following the [official guideline](https://www.tensorflow.org/beta/guide/data_performance) from TensorFlow 2.0.
-
-Datasets will automatically be input to the training algorithm. To manually generate 
-a dataset from one or more tfrecord files, you may use the generate_datasets() function 
-in projectname_input.py
+In the training script, we use the `generate_datasets_from_dir()` function to automatically use all the `.tfrecord` files in the specified directory. In order to manually generate one or more datasets from a list of `.tfrecord` files, you can use the `generate_datasets()` function.
 
 *Example:*
 
-If you want to create a train, a validation dataset from one tfrecord file 
-respectively, with top 10 tags from the popularity dataset based on the new 
-`clean_lastfm.db` (ranking before tags merge), with 'pop', and 'alternative' 
-merged, this is how you may do it,
-
 ```python
-import projectname_input
 import lastfm
 
-#get top ten tags
+# instantiate lastfm
 lf = lastfm.LastFm('/srv/data/urop/clean_lastfm.db')
+
+# list top ten tags from popularity dataframe
 top_tags = lf.popularity()['tags'][:10].tolist()
 
-#create datasets
-tfrecords = ['/srv/data/urop/tfrecords-waveform/waveform_1.tfrecord', '/srv/data/urop/tfrecords-waveform/waveform_2.tfrecord']
-train_dataset, valid_dataset = projectname_input.generate_datasets(tfrecords, audio_format='waveform', split=[1,1,0], which=[True, True, False], with_tags=top_tags, merge_tags=['pop', 'alternative'])
+# list .tfrecord files to parse
+files = ['/srv/data/urop/tfrecords-waveform/waveform_1.tfrecord', '/srv/data/urop/tfrecords-waveform/waveform_2.tfrecord']
+
+# create two datasets from two .tfrecord files, use only top ten tags, merge together tags 'pop' and 'alternative'
+train_dataset, valid_dataset = generate_datasets(files, audio_format='waveform', split=[1,1,0], which=[True, True, False], with_tags=top_tags, merge_tags=['pop', 'alternative']) # split=[50, 50, 0] would have had the same effect here; or also split=[50, 50] together with which=[True, True]
 ```
+
+Finally, this data input pipeline is optimised following the [official guidelines](https://www.tensorflow.org/beta/guide/data_performance) for TensorFlow 2.0.
 
 ## Model and JSON Configuration
 
@@ -293,7 +265,7 @@ projectname.create_config_json('/srv/data/urop/config.json', 'batch_size'=32)
 ## Training
 
 We have written two separate scripts for the training algorithm, `training.py` 
-and `'training_custom.py`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as described in the [official guideline](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) for TensorFlow 2.0) where each training step is performed manually. While `training.py` only allows the introduction of advanced training features through Keras callbacks, `training_custom.py` allows total flexibility in the features you could introduce. 
+and `'training_custom.py`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as described in the [official guidelines](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) for TensorFlow 2.0) where each training step is performed manually. While `training.py` only allows the introduction of advanced training features through Keras callbacks, `training_custom.py` allows total flexibility in the features you could introduce. 
 
 Both scripts assume you have one or more GPUs available, and make use of a MirroredStrategy to distribute training. Both scripts write (train and validation) summaries on TensorBoard and save checkpoints at the end of each epoch, and they also have the option to enable early stopping or learning rate reduction on plateau. Only the custom loop implements cyclical learning rate and the one-cycle policy, as described by (N. Smith, 2018) in [this](https://arxiv.org/pdf/1803.09820.pdf) paper.
 
@@ -312,7 +284,7 @@ python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --confi
 
 Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt and recover from a saved checkpoint using the `--resume-time` parameter.
 
-The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow the [official guideline](https://www.tensorflow.org/beta/guide/data) guide to generate your own datasets using tf.data and then do the following:
+The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow the [official guidelines](https://www.tensorflow.org/beta/guide/data) to generate your own datasets using tf.data and then do the following:
 
 ```python
 import os
