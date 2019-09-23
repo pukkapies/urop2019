@@ -170,7 +170,7 @@ To search for similar tags, we did the following:
 
 3. Repeat the same merging mechanism as 1, but replace 'x0s' with '19x0s' and 'x0s' with '20x0' (without removing the trailing 's'; *x* denotes a number character here).
 
-See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for more details on how you may tailor the merging mechanism by defining a new filtering fucntion.
+See [here](https://github.com/pukkapies/urop2019/tree/master/code/msd#tags-cleaning) for more details on how you may tailor the merging mechanism by defining a new filtering function.
 
 If you want to actually see the dataframe which contains all the clean tag info (which will then be used by `lastfm_cleaning.py` to produce the new `.db` file), you can generate it using the `generate_final_df()` functions, which combines all the tools mentioned above, and which allows a lot of room for customization and fine-tuning.
 
