@@ -1,4 +1,6 @@
-This folder contains the script needed to properly clean the Million Songs Dataset. We implicitly assume you _do_ have access to the dataset (how to get it? really good question...). We also assume you downloaded the Last.fm database from [here](http://millionsongdataset.com/lastfm/), or that you manually obtained it using the Last.fm API. 
+This folder contains the script needed to properly clean the Million Songs Dataset. 
+
+We implicitly assume you _do_ have access to the dataset (how to get it? really good question...). We also assume you downloaded the Last.fm database from [here](http://millionsongdataset.com/lastfm/), or that you manually obtained it using the Last.fm API. 
 
 ## Data Cleaning
 
