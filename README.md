@@ -158,7 +158,13 @@ Finally, `metadata.py` contains some basic tools to explore the `msd_summary_fil
 
 In the L<span>ast.f</span>m database there are more than 500,000 different tags. Such a high number of tags is clearly useless, and the tags need to be cleaned in order for the training algorithm to learn to make some sensible predictions. The tags are cleaned using `lastfm_cleaning_utils.py` and `lastfm_cleaning.py`, and the exact mechanisms of how they work can be found in the documentation of the scripts.
 
-In brief, the tags are divided into two categories: genre tags, and vocal tags (which in our case are 'male vocalist', 'female vocalist', 'rap' and 'instrumental'). For genre tags, we first obtained a list of tags from the L<span>ast.f</span>m database which have appeared for more than 2000 times, then we manually filtered out the tags that we considered rubbish (such as 'cool' or 'favourite song'). We fed the remaining 'good' tags into `generate_genre_df()`, which searched for similar spelling of the same tag within a 500,000+ tags pool (tags with occurrence ≥ 10). We generated a handy dataframe with manually chosen tags in one column, and similar matching tags from the pool in the other.  For vocal tags, we obtained a long list of potentially matching tags for each of the four vocal tags, then we manually seperated the 'real' matching tags from the rest, for each of the tag lists. We fed the tag lists into `generate_vocal_df()`, and we produced a dataframe with structure previously outlined. Finally, the function `generate_final_df()` merged the two dataframes into one, and passed it to the next script.
+In brief, the tags are divided into two categories: genre tags, and vocal tags (which in our case are 'male vocalist', 'female vocalist', 'rap' and 'instrumental').
+
+For genre tags, we first obtained a list of tags from the L<span>ast.f</span>m database which have appeared for more than 2000 times, then we manually filtered out the tags that we considered rubbish (such as 'cool' or 'favourite song'). We fed the remaining 'good' tags into `generate_genre_df()`, which searched for similar spelling of the same tag within a 500,000+ tags pool (tags with occurrence ≥ 10), and we produced a handy dataframe with manually chosen tags in one column, and similar matching tags from the pool in the other.
+
+For vocal tags, we first obtained a long list of potentially matching tags for each of the four vocal tags, then we manually separated the 'real' matching tags from the rest, for each of the tag lists. We fed the tag lists into `generate_vocal_df()`, and we produced a dataframe with the structure previously outlined.
+
+Finally, the `generate_final_df()` function merged the two dataframes into one, and passed it to the next script.
 
 To search for similar tags, we did the following:
 
@@ -180,7 +186,7 @@ from lastfm_cleaning_utils import generate_final_df
 generate_final_df(from_csv_path='/srv/data/urop', threshold=2000, sub_threshold=10, combine_list=[['rhythm and blues', 'rnb'], ['funky', 'funk']], drop_list=['2000', '00', '90', '80', '70', '60'])
 ```
 
-If you want just to use of our clean dataset, `lastfm_cleaning.py` will automatically make use of tools above to produce a new clean `.db` file. The final database has the same structure as the original`lastfm_tags.db` database. Therefore, it can be queried by the same `lastfm.py` module. 
+If you want just to use of our clean dataset, `lastfm_cleaning.py` will automatically make use of tools above to produce a new clean `.db` file. The final database has the same structure as the original`lastfm_tags.db` database. Therefore, it can be queried using the same `lastfm.py` module. 
 
 *Example:*
 
