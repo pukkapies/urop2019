@@ -310,26 +310,26 @@ If you prefer to use `training_custom.py`, do exactly the same procedure as abov
 
 ## Validating and Predicting
 
-The evaluation tools are contained in the script `orpheus.py`. There is a `test()` function which simply tests the model's performance on the test dataset from a certain checkpoint. There is also a `predict()` function which takes an audio array (in waveform or log mel-spectrogram format) and uses the model to return the most confident tag predicitons for that track. Optionally, the audio array might be sliced in `n_slices` sliding windows of length `window_length`, and the final tag predictions will average out the tag predictions for each single slice. In either case, you will need to pass a `threshold` to determine which tags are shown, based on their prediction confidence.
+The evaluation tools are contained in the script `projectname.py`. There is a `test()` function which simply tests the model's performance on the test dataset from a certain checkpoint. There is also a `predict()` function which takes an audio array (in waveform or log mel-spectrogram format) and uses the model to return the most confident tag predicitons for that track. Optionally, the audio array might be sliced in `n_slices` sliding windows of length `window_length`, and the final tag predictions will average out the tag predictions for each single slice. In either case, you will need to pass a `threshold` to determine which tags are shown, based on their prediction confidence.
 
 *Example:*
 
 To test a log-mel-spectrogram model on the test dataset (as specified by `split` in the config JSON):
 
 ```
-python orpheus.py test log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db --tfrecords-dir /srv/data/urop/tfrecords-log-mel-spectrogram
+python projectname.py test log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db --tfrecords-dir /srv/data/urop/tfrecords-log-mel-spectrogram
 ```
 
 To use the same model to predict tags with threshold 0.1 for a single audio track (or multiple tracks in the same folder):
 
 ```
-python orpheus.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --mp3 /path/to/your/song.mp3
+python projectname.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --mp3 /path/to/your/song.mp3
 ```
 
 To use the same model to predict tags with threshold 0.1 for a 30 sec recording:
 
 ```
-python orpheus.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --record --record-length 30
+python projectname.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --record --record-length 30
 ```
 
 ## Results
