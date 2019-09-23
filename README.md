@@ -135,7 +135,7 @@ To use `LastFm2Pandas`:
 ```python
 fm = lastfm.LastFm2Pandas('/srv/data/msd/lastfm/SQLITE/lastfm_tags.db')
 ```
-To use `LastFm2Pandas` from converted `.csv`'s (instead of the original .db file):
+To use `LastFm2Pandas` from converted `.csv`'s (instead of the original `.db` file):
 
 ```python
 # generate .csv's
