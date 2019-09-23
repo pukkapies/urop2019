@@ -279,7 +279,6 @@ In order to avoid having to manually tinker with the training code every time a 
 
 See the inline comments for the `create_config_json()` function within `projectname.py` for more details. 
 
-
 *Example:*
 
 ```python
@@ -292,82 +291,49 @@ projectname.create_config_json('/srv/data/urop/config.json')
 projectname.create_config_json('/srv/data/urop/config.json', 'batch_size'=32)
 ```
 
-
 ## Training
 
 We have written two separate scripts for the training algorithm, `training.py` 
-and `'training_custom.py`. The major difference between the two is that 
-the former uses `model.fit` in Keras, whereas the latter contains a custom 
-training loop which performs optimisation by `tf.GradientTape()`. Therefore, 
-if you want to implement some special features from Keras such as callbacks, 
-you may easily amend the codes of `training.py` to achieve that. Otherwise, 
-since the training loop in `training_custom.py` is produced from scratch 
-(it only relies on `tf.GradientTape()`, you may edit the codes of the function 
-`train()` to implement more advanced features. 
+and `'training_custom.py`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as outlined in [this](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) guide) where each training step is performed manually. While `training.py` only allows the introduction of advanced training features through Keras callbacks, `training_custom.py` allows total flexibility in the features you could introduce. 
 
-If you simply want to train the model with default settings, both of the scripts 
-would work.
+Both scripts assume you have one or more GPUs available, and make use of a MirroredStrategy to distribute training. Both scripts write (train and validation) summaries on TensorBoard and save checkpoints at the end of each epoch, and they also have the option to enable early stopping or learning rate reduction on plateau. Only the custom loop implements cyclical learning rate and the one-cycle policy, as described by Leslie N. Smith in [this](https://arxiv.org/pdf/1803.09820.pdf) paper.
 
-Note that both scripts use MirroredStrategy and assume you have one or more GPUs 
-available. On the other hand, both scripts use the TensorBoard and checkpoints, and 
-early stopping can be optionally enabled. The training algorithm in 'training.py' 
-also contains the Keras callback ReduceLROnPlateau as an input option.
-
-For ease of use, `projectname_train.py` is wrapper of the two scripts. You may specify 
-which of the training scripts you wish to use and `projectname_train.py` will generate 
-the datasets from tfrecords directly and feed them into the training algorithm.
+For ease of use, `projectname_train.py` is wrapper of the two scripts. By default, the custom loop is selected, unless a different choice is specified. You may control all the training parameters by tweaking the `config.json` file.
 
 *Example:*
 
-To perform a simple training with default settings in waveform for ten epochs on GPU 0,1 with `training.py`, 
+```bash
+# train for 10 epochs on GPUs 0,1 using waveform
+python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --config-path /srv/data/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --cuda 0 1
+``` 
+```bash
+# train for 10 epochs on GPUs 0,1 using waveform and the custom loop
+python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --config-path /srv/data/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --cuda 0 1 --custom
+``` 
 
-```
-python waveform --root-dir /srv/data/urop/tfrecords-waveform --config-path /srvdata/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --epochs 10 --cuda 0 1
-```
-You may control all the parameters within the config.json file. The parser of the config is in the `projectname_train.py` file if you need it.
+Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt and recover from a saved checkpoint using the `--resume-time` parameter.
 
-If you prefer to use `training_custom.py`, it works the same way as above to 
-start the training by adding the `--custom--` parameter.
-
-```
-python waveform --custom --root-dir /srv/data/urop/tfrecords-waveform --config-path /srvdata/urop/config.json --lastfm-path /srv/data/urop/clean_lastfm.db --epochs 10 --cuda 0 1
-```
-
-Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt
-and recover from the last epoch (works for both scripts). Please refer to the documentation 
-of the corresponding script for more details on how to do this with 
-the `--resume-time` parameter. 
-
-If you want to perform the model training with more flexibility in choosing 
-the training dataset and validation dataset, you may follow the instruction on 
-[Data Input Pipeline](https://github.com/pukkapies/urop2019#data-input-pipeline) 
-to generate the datasets and do the following:
+The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may follow [this](https://github.com/pukkapies/urop2019#data- input- pipeline) guide to generate your datasets and do the following:
 
 ```python
 import os
 import tensorflow as tf
+
 import training
 import projectname_train
-# initiate strategy
+
 strategy = tf.distribute.MirroredStrategy()
+#train_dataset = strategy.experimental_distribute_dataset(train_dataset)
+#valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
 
-# wrap the datasets
-train_dataset = strategy.experimental_distribute_dataset(train_dataset)
-valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
-
-#set GPUs
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
-#parse config
-config, config_optim = projectname_train.parse_config('/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db')
+config = projectname_train.parse_config('/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db')
 
-# train
-training.train(train_dataset, valid_dataset, frontend='waveform', strategy=strategy, config=config, config_optim=config_optim, epochs=10)
+training.train(train_dataset, valid_dataset, frontend='waveform', strategy=strategy, config=config, epochs=10)
 ```
-If you prefer to use `training_custom.py`, do exactly the same procedure as above
-except replacing `training` with `training_custom`.
-
+If you prefer to use `training_custom.py`, do exactly the same procedure as above, except replacing `training` with `training_custom` and uncommenting the two `strategy.experimental_distribute_dataset()` lines.
 
 ## Validating and Predicting
 
