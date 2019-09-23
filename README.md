@@ -1,6 +1,6 @@
 # Deep Learning for Music Tagging (aka 'Orpheus')
 
-This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed to develop an end-to-end music auto-tagger competitive with the state-of-the-art. We replicated the convolutional neural network architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and reproduced the results they obtained on the [Million Songs Dataset](http://millionsongdataset.com/). 
+This is the repository of an Imperial College UROP 2019 project in deep learning for music tagging. We aimed to develop an end-to-end music auto-tagger competitive with the state-of-the-art. We replicated the convolutional neural network architecture proposed by (Pons, et al., 2018) in [this](https://arxiv.org/pdf/1711.02520.pdf) paper, and reproduced the results they obtained on the [Million Song Dataset](http://millionsongdataset.com/). 
 
 Since our model learned to predict some audio features quite accurately, we decided to call it 'Orpheus', like the legendary ancient Greek poet and musician.
 
@@ -59,33 +59,26 @@ If you are just running the lite version of our prediction tool, all you need ar
 ## Data Cleaning
 
 ### Errors in the .MP3 Audio Files
-Firstly, you can use `fetcher.py` to scan the directory which contains all the audio files, and store file path, file size, duration and number of channels in a Pandas dataframe. The audio files that cannot be opened correctly (that is, which have file size zero or duration zero) are removed.  
 
-After that, you can use `mp3_to_numpy.py` to convert every working audio file into numpy arrays (one per audio channel). The numpy arrays of each track are then analysed using LibROSA in order to extract the location of any silent sections (yes, some tracks _can_ be opened, but they are completely silent). The information on silent sections, the audio arrays and the sample rate of each track can be optionally stored into .npz files. 
+You can use `fetcher.py` to scan the directory which contains your audio files and store their file path, file size, duration and number of channels in a Pandas dataframe. As it turns out, some files cannot be opened, and some others *can* be opened but are completely (or mostly) silent. To tackle the first issue, `fetcher.py` can automatically purge the faulty tracks from the final output (most of them have either zero or extremely small file size). To tackle the second issue, we made use of LibROSA and its `librosa.effects.split()` function, which splits an audio signal into non-silent intervals.
 
-During the project, we created .npz files for the entire dataset as we did not have the whole audio cleaning path outlined yet, and we needed to have the data easily accessible for frequent experimentations. However, we would recommend against this approach, as creating .npz files often requires a huge amounts of storage space (MP3 is a compressed audio format for a reason...).
+In order to do so, LibROSA first needs to convert an audio file into a waveform array, stored in NumPy format. The information on audio silence will then be processed by `wrangler_silence.py`, which will remove from the original Pandas dataframe all the tracks which do not satisfy certain user-set criteria. You have two options here: either you use `mp3_to_numpy.py` to create in advance `.npz` files for your entire dataset, or you generate and process the audio arrays on the fly when using `wrangler_silence.py` (a feature which we will add very soon). We originally created `.npz` files for the entire dataset, as we did not have the whole audio cleaning path outlined yet, and we needed to have the data easily accessible for frequent experimentations. We would however recommend against this approach, as creating `.npz` files often requires a huge amounts of storage space.
 
-Finally, you can use `wrangler_silence.py` to process and interpret the information on audio silence, and append the results (e.g. effective_clip_length, or max_silence_length) to the original Pandas dataframe. The audio files which do not satisfy certain user-set criteria (such as a low percentage of silence) are removed.
+You will then have a Pandas dataframe (saved into a `.csv` file) containing only the good audio files.
 
 *Example:*
 
-This will create a .csv that contains the information of tracks mentioned above.
-
+```bash
+# save a .csv file containing audio tracks and tracks info
+python fetch.py --root-dir /srv/data/msd/7digital /path/to/output/fetcher.csv
 ```
-python fetch.py /srv/data/urop2019/fetch.csv --root-dir /srv/data/msd/7digital
+```bash
+# convert audio tracks into .npz
+python mp3_to_numpy.py /path/to/output/fetcher.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital
 ```
-
-This will generate npz files mentioned above.
-
-```
-python mp3_to_numpy.py /srv/data/urop2019/fetch.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital
-```
-
-This will expand the fetch.csv generated above to include some interpretations 
-of the silent information.
-
-```
-python wrangler_silence.py /srv/data/urop2019/fetch.csv /srv/data/urop2019/wrangle_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 100000 --filter-tot-silence 15 --filter-max-silence 3
+```bash
+# save a .csv file containing audio silence info, optionally also discard 'silent' tracks
+python wrangler_silence.py /path/to/output/fetcher.csv /path/to/output/wrangler_silence.csv --root-dir-npz /srv/data/urop2019/npz --root-dir-mp3 /srv/data/msd/7digital --min-size 100000 --filter-tot-silence 15 --filter-max-silence 3
 ```
 
 ### Errors in the Dataset
@@ -97,7 +90,7 @@ The dataframe from the above paragraph is merged with the dataframe produced by 
 *Example:*
 
 ```
-python wrangler.py /path/to/fetcher.csv /path/to/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt
+python wrangler.py /path/to/output/fetcher.csv /path/to/ultimate.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt
 ```
 
 In order to save storage space and time, a different order of code execution was instead used though.
@@ -105,19 +98,19 @@ In order to save storage space and time, a different order of code execution was
 *Example:*
 
 ```
-python fetcher.py /path/to/output/fetcher.csv --root-dir /srv/data/msd/7digital
+python fetcher.py --root-dir /srv/data/msd/7digital /path/to/output/fetcher.csv
 ```
 ```
-python wrangler.py --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt --discard-dupl --discard-no-tag /path/to/output/fetcher.csv /path/to/output/wrangler.csv 
+python wrangler.py /path/to/output/fetcher.csv /path/to/output/wrangler.csv --path-h5 /srv/data/msd/entp/msd_summary_file.h5 --path-db /srv/data/msd/lastfm/lastfm_tags.db --path-txt-dupl /path/to/duplicates.txt --path-txt-mism /path/to/mismatches.txt --discard-dupl --discard-no-tag
 ```
 ```
-python mp3_to_numpy.py --root-dir-npz /output/dir/npz --root-dir-mp3 /srv/data/msd/7digital /path/to/output/wrangler.csv
+python mp3_to_numpy.py /path/to/output/wrangler.csv --root-dir-npz /output/dir/npz --root-dir-mp3 /srv/data/msd/7digital
 ```
 ```
-python wrangler_silence.py --root-dir-npz /output/dir/npz/ --root-dir-mp3 /srv/data/msd/7digital/ /path/to/output/wrangler.csv /path/to/output/wrangler_silence.csv
+python wrangler_silence.py /path/to/output/wrangler.csv /path/to/output/wrangler_silence.csv --root-dir-npz /output/dir/npz/ --root-dir-mp3 /srv/data/msd/7digital/
 ```
 ```
-python wrangler_silence.py --min-size 200000 --filter-trim-length 15 --filter-tot-silence 3 --filter-max-silence 1 /path/to/output/wrangler_silence.csv /path/to/ultimate.csv
+python wrangler_silence.py /path/to/output/wrangler_silence.csv /path/to/ultimate.csv --min-size 200000 --filter-trim-length 15 --filter-tot-silence 3 --filter-max-silence 1
 ```
 
 This reduces the number of useful tracks from 1,000,000 to ~300,000.
@@ -213,7 +206,7 @@ the log mel-spectrogram form. It is also possible to specify the number of  `.tf
 
 In our case, we used 96 mel bins, a sample rate of 16kHz and split the data 
 into 100 .`tfrecord` files. We also had the data stored as `.npz` files, since 
-we have loaded the `.mp3` files as numpy for silence analysis and stored them 
+we have loaded the `.mp3` files as NumPy for silence analysis and stored them 
 in a previous section. However, again, we would recommend users to convert directly 
 from `.mp3` files as the `.npz` files need a lot of storage. 
 
