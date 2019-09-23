@@ -770,11 +770,10 @@ def search_genre(df_input, df_output, search_method=clean_1, search_tags_list=No
         searches will be run on all the tags in the df_output. Note that 
         threshold does not have any effect if search_tags_list is not None.
     
-    search_tags_list: pd.DataFrame
-        A reduced version of the popularity dataframe or a dataframe with 
-        columns: 'tag', 'count'. The 'tag' column consists of all the tags
-        that a search will be run on. None that f search_tags_list is not None, threshold 
-        will have no effect.
+    search_tags_list: list
+        A list of tags that act as a list of target tags that a search will be
+        run to find matching tags for each tag in the list. If None, searches
+        will be run on all the tags in df_output.
         
     sub_threshold: int
         Only the tags with count greater than or equal to sub_threshold in the
