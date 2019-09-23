@@ -19,7 +19,7 @@ Since our model learned to predict some audio features quite accurately, we deci
 * [Training](https://github.com/pukkapies/urop2019#training)
 * [Validating & Predicting](https://github.com/pukkapies/urop2019#evaluation-tools)
 * [Results](https://github.com/pukkapies/urop2019#results)
-* [conclusion](https://github.com/pukkapies/urop2019#conclusion)
+* [Conclusion](https://github.com/pukkapies/urop2019#conclusion)
 * [References](https://github.com/pukkapies/urop2019#references)
 * [Contacts / Getting Help](https://github.com/pukkapies/urop2019#contacts--getting-help)
 
