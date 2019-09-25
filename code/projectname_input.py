@@ -360,13 +360,13 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     
     num_tags_db: int
         The total number of tags databases used.
-    
+        
     default_tags_db: int
-        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
+        The index of the tags database that you want to use, when multiple databases are available.
 
     default_tags_db_valid: int
-        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided, when producing test/validation dataset).
-
+        The index of the tags database that you want to use for validation/testing, when multiple databases are available.
+        
     with_tids: list
         If not None, contains the tids to be trained on.
 
@@ -528,11 +528,11 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         The total number of tags databases used.
     
     default_tags_db: int
-        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
+        The index of the tags database that you want to use, when multiple databases are available.
 
     default_tags_db_valid: int
-        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided, when producing test/validation dataset).
-
+        The index of the tags database that you want to use for validation/testing, when multiple databases are available.
+        
     with_tids: list
         If not None, contains the tids to be trained on.
 
