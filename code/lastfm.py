@@ -359,6 +359,7 @@ class LastFm():
         
         # create df
         pop = pd.DataFrame(data=l, columns=['tag', 'tag_num', 'count'])
+        pop.sort_values('count', ascending=False, inplace=True)
         pop.index += 1
         return pop
 
@@ -413,37 +414,61 @@ class LastFm2Pandas():
         Return a dataframe containing the tags ordered by popularity, together with the number of times they appear.
     '''
 
-    def __init__(self, path, no_tags=False, no_tids=False, no_tid_tag=False):
+    def __init__(self, path, tags=None, no_tags=False, tids=None, no_tids=False, tid_tag=None, no_tid_tag=False):
         '''
         Parameters
         ----------
         path: str
             Path to tags database. Defaults to path on Boden.
 
+        tags: pd.DataFrame
+            If path is None, you can directly provide a tags dataframe.
+
         no_tags: bool
             If True, do not store tags table.
 
+        tids: pd.DataFrame
+            If path is None, you can directly provide a tids dataframe.
+
         no_tids: bool
             If True, do not store tids table.
+        
+        tid_tag: pd.DataFrame
+            If path is None, you can directly provide a tids dataframe.
 
         no_tid_tag: bool
             If True, do not store tid_tag table.
         '''
 
-        if not os.path.isfile(path):
-            raise OSError("file " + path + " does not exist!")
+        if path is not None:
+            if not os.path.isfile(path):
+                raise OSError("file " + path + " does not exist!")
 
-        conn = sqlite3.connect(path)
-        if not no_tags:
-            self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
-            self.tags.index += 1
-        if not no_tids:
-            self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
-            self.tids.index += 1
-        if not no_tid_tag:
-            self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
-            self.tid_tag.index += 1
-        conn.close()
+            conn = sqlite3.connect(path)
+            if not no_tags:
+                self.tags = pd.read_sql_query('SELECT * FROM tags', conn)
+                self.tags.index += 1
+            else:
+                self.tags = None
+            if not no_tids:
+                self.tids = pd.read_sql_query('SELECT * FROM tids', conn)
+                self.tids.index += 1
+            else:
+                self.tids = None
+            if not no_tid_tag:
+                self.tid_tag = pd.read_sql_query('SELECT * FROM tid_tag', conn)
+                self.tid_tag.index += 1
+            else:
+                self.tid_tag = None
+            conn.close()
+        else:
+            self.tags = tags
+            self.tids = tids
+            self.tid_tag = tid_tag
+
+    @classmethod
+    def load_from(cls, tags=None, tids=None, tid_tag=None): # skip the queue, and load straight from the dataframes
+        return cls(path=None, tags=tags, tids=tids, tid_tag=tid_tag)
 
     def tid_to_tid_num(self, tid, order=False):
         ''' Returns tid_num(s) given tid(s).
@@ -663,7 +688,7 @@ class LastFm2Pandas():
         return self.tid_tag[['tid', 'tag']][self.tid_tag['val'] > threshold]
 
     def with_tag(self, tag):
-        ''' Return all tids with a given tag. '''
+        ''' Returns all tids with a given tag. '''
         
         tag_idx = self.tag_to_tag_num(tag)
         tids = self.tid_tag['tid'][self.tid_tag['tag'] == tag_idx]
@@ -681,6 +706,7 @@ class LastFm2Pandas():
         self.pop.reset_index(inplace=True)
         self.pop.rename(columns={'index':'tag_num'}, inplace=True)
         self.pop = pd.concat([self.pop['tag'], self.pop['tag_num'], self.pop['count']], axis=1)
+        self.pop.sort_values('count', ascending=False, inplace=True)
         self.pop.index += 1
         return self.pop
 
@@ -756,7 +782,7 @@ class Matrix():
         return cls(None, None, load_from=path)
 
     def matrix(self, lastfm, tags=None, dim=3, save_to=None):
-        ''' Compute a n-dimensional matrix where the (i_1, ... ,i_n)-th entry contains the number of tracks having all the i_1-th, ..., i_n-th tags (where the i's are the indexes in self.m_tags).
+        ''' Computes a n-dimensional matrix where the (i_1, ... ,i_n)-th entry contains the number of tracks having all the i_1-th, ..., i_n-th tags (where the i's are the indexes in self.m_tags).
 
         Notes
         -----
@@ -838,7 +864,7 @@ class Matrix():
         return matrix, tags
 
     def matrix_load(self, path):
-        ''' Load a previously saved matrix from a .npz file (containing the matrix) and a .nfo file (containing the matrix tags). '''
+        ''' Loads a previously saved matrix from a .npz file (containing the matrix) and a .nfo file (containing the matrix tags). '''
 
         # load matrix
         matrix = sparse.load_npz(os.path.splitext(path)[0] + '.npz')
@@ -1030,7 +1056,7 @@ class Matrix():
         return matrix
 
     def correlation_plot(self, correlation_matrix, tags=None, title=None, save_to=None):
-        ''' Plot a 2-dimensional correlation matrix graphically. 
+        ''' Plots a 2-dimensional correlation matrix graphically. 
         
         Parameters
         ----------
