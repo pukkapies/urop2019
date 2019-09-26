@@ -83,7 +83,8 @@ if __name__ == '__main__':
     parser.add_argument('--config-path', help='path to config.json (default to path on Boden)', default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
     parser.add_argument('--lastfm-path', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     parser.add_argument('--multi-db', help='specify the number of different tags features in the .tfrecord files', type=int, default=1)
-    parser.add_argument('--multi-db-default', help='specify the index of the default tags database, when there are more than one tags features in the .tfrecord files', type=int)
+    parser.add_argument('--multi-default', help='specify the index of the default tags database, when there are more than one tags features in the .tfrecord files', type=int)
+    parser.add_argument('--multi-default-valid', help='specify the index of the default tags database to use for validation/test, when there are more than one tags features in the .tfrecord files', type=int)
     parser.add_argument('--epochs', help='specify the number of epochs to train on', type=int, required=True)
     parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)', type=int)
     parser.add_argument('--no-shuffle', action='store_true', help='force no shuffle, override config setting')
@@ -133,7 +134,7 @@ if __name__ == '__main__':
                                                                                 block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                                                 shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                                                 window_length = config.window_length, window_random = config.window_random, 
-                                                                                num_mels = config.n_mels, num_tags = config.n_tags, num_tags_db = args.multi_db, default_tags_db = args.multi_db_default, with_tags = config.tags, merge_tags = config.tags_to_merge,
+                                                                                num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge, num_tags_db = args.multi_db, default_tags_db = args.multi_default, default_tags_db_valid=args.multi_default_valid,
 										                                        as_tuple = True)
 
     # set up training strategy
