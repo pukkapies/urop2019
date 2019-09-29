@@ -46,10 +46,11 @@ Functions
 import os
 import sqlite3
 
-import tables
+import h5py
+import numpy as np
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5' # default path to msd summary file
-path_db = '/srv/data/urop/track_metadata.db'  # default path to 'database version' of msd summary file
+path_db = '/srv/data/urop/track_metadata.db'  # default path to msd summary file (in its .db version)
 
 def set_path_h5(new_path):
     global path_h5
@@ -62,20 +63,19 @@ def set_path_db(new_path):
 def get_trackid_from_7digitalid(ids: list):
     ''' Returns the track_id of the song specified by the 7digital_id. '''
 
-    if isinstance(ids, str) or not hasattr(ids, '__iter__'): ids = [ids]
+    if isinstance(ids, int) or not hasattr(ids, '__iter__'): ids = [ids]
 
-    with tables.open_file(path_h5, mode='r') as f:
-        output = []
-        ids = [str(id) for id in ids]
+    with h5py.File(path_h5, 'r') as f:
+
+        dataset_1 = f['metadata']['songs']
+        dataset_2 = f['analysis']['songs']
+
+        output = {}
+
         for id in ids:
-            idx = f.root.metadata.songs.get_where_list('track_7digitalid==' + id)
+            tid = dataset_2[np.where(dataset_1['track_7digitalid'] == id)[0][0]]['track_id'].decode('UTF-8')
+            output[id] = tid
 
-            # check whether the given id corresponds to one and only one track
-            assert len(idx) == 1
-
-            tid = f.root.analysis.songs[idx]['track_id'][0].decode('UTF-8')
-            output.append(tid)
-        
         if len(output) > 1:
             return output
         else:
@@ -86,17 +86,17 @@ def get_7digitalid_from_trackid(ids: list):
 
     if isinstance(ids, str) or not hasattr(ids, '__iter__'): ids = [ids]
 
-    with tables.open_file(path_h5, mode='r') as f:
-        output = []
+    with h5py.File(path_h5, 'r') as f:
+
+        dataset_1 = f['metadata']['songs']
+        dataset_2 = f['analysis']['songs']
+
+        output = {}
+
         for id in ids:
-            idx = f.root.analysis.songs.get_where_list('track_id=="' + id + '"')
+            tid = dataset_1[np.where(dataset_2['track_id'] == id.encode('UTF-8'))[0][0]]['track_7digitalid']
+            output[id] = tid
 
-            # check whether the given id corresponds to one and only one track
-            assert len(idx) == 1
-
-            tid = f.root.metadata.songs[idx]['track_7digitalid'][0]
-            output.append(tid)
-        
         if len(output) > 1:
             return output
         else:
