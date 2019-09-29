@@ -21,16 +21,18 @@ import importlib
 import json
 import os
 
+import numpy as np
+
 from tensorflow import distribute
 
 import projectname_input
 
 from lastfm import LastFm
 
-def parse_config(config_path, lastfm_path):
+def parse_config(config_path, lastfm):
 
-    # load tags database
-    lastfm = LastFm(os.path.expanduser(lastfm_path))
+    if not isinstance(lastfm, object):
+        lastfm = LastFm(os.path.expanduser(lastfm))
 
     # if config_path is a folder, assume the folder contains a config.json
     if os.path.isdir(os.path.expanduser(config_path)):
@@ -72,6 +74,8 @@ def parse_config(config_path, lastfm_path):
     config.n_output_neurons = len(tags) if tags is not None else config.n_tags
     config.tags = lastfm.tag_to_tag_num(tags) if tags is not None else None
     config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
+
+    config.tags = np.sort(config.tags)
     
     return config
 
@@ -79,9 +83,9 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('frontend', choices=['waveform', 'log-mel-spectrogram'])
-    parser.add_argument('--root-dir', dest='tfrecords_dir', help='directory to read the .tfrecord files from (default to path on Boden)')
-    parser.add_argument('--config-path', help='path to config.json (default to path on Boden)', default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
-    parser.add_argument('--lastfm-path', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
+    parser.add_argument('--tfrecords-dir', dest='tfrecords_dir', help='directory to read the .tfrecord files from (default to path on Boden)')
+    parser.add_argument('--config', help='path to config.json (default to path on Boden)', default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
+    parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     parser.add_argument('--multi-db', help='specify the number of different tags features in the .tfrecord files', type=int, default=1)
     parser.add_argument('--multi-db-default', help='specify the index of the default tags database, when there are more than one tags features in the .tfrecord files', type=int)
     parser.add_argument('--epochs', help='specify the number of epochs to train on', type=int, required=True)
@@ -115,10 +119,10 @@ if __name__ == '__main__':
     # parse config
     config = parse_config(args.config_path, args.lastfm_path)
 
-    # if root_dir is not specified, use default path on our server
+    # if --tfrecords-dir is not specified, use default path on our server
     if not args.tfrecords_dir:
         if config.sample_rate != 16000:
-            s = '-' + str(config.sr // 1000) + 'kHz'
+            s = '-' + str(config.sample_rate // 1000) + 'kHz'
         else:
             s = ''
         args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.frontend + s)
