@@ -109,11 +109,12 @@ def create_config_json(config_path, **kwargs):
         "batch_size": 0,                # global batch size
         "interleave_cycle_length": 0,   # number of input elements that are processed concurrently (when using tf.data.Dataset.interleave)
         "interleave_block_length": 0,   # number of consecutive input elements that are consumed at each cycle (when using tf.data.Dataset.interleave) (see https://www.tensorflow.org/api_docs/python/tf/data/Dataset#interleave)
-        "reduceLRoP_factor": 0.,        # the factor the learning rate is deacreased by, when using ReduceLROnPlateau callback
-        "early_stop_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment' (please put None if EarlyStopping is not used)
-        "reduceLRoP_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment' (please put None if ReduceLROnPlateau is not used)
         "early_stop_patience": 0,       # the number epochs with 'no improvement' to wait before triggering EarlyStopping (please put None if EarlyStopping is not used)
         "reduceLRoP_patience": 0,       # the number epochs with 'no improvement' to wait before triggering ReduceLROnPlateau and reduce lr by a 'reduceLRoP_factor' (please put None if ReduceLROnPlateau is not used)
+        "early_stop_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
+        "reduceLRoP_min_delta": 0.,     # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
+        "reduceLRoP_min_lr": 0.,        # the lower bound for the learning rate, when using ReduceLROnPlateau callback
+        "reduceLRoP_factor": 0.,        # the factor the learning rate is deacreased by at each step, when using ReduceLROnPlateau callback
         "log_dir": "~/",                # directory where tensorboard logs and checkpoints will be stored
         "shuffle": True,                # if True, shuffle the dataset
         "shuffle_buffer_size": 0,       # buffer size to use to shuffle the dataset (only applies if shuffle is True)

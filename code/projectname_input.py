@@ -93,16 +93,16 @@ def _merge(features_dict, tags):
     '''
 
     tags_databases = len(features_dict) - 2 # check if multiple databases have been provided
+    num_tags = tf.cast(tf.shape(features_dict['tags']), tf.int64)
     
     tags = tf.dtypes.cast(tags, tf.int64)
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    vals = tf.constant(1, dtype=tf.int64, shape=tags.get_shape())
     tags = tf.SparseTensor(indices=idxs, values=vals, dense_shape=num_tags)
     tags = tf.sparse.to_dense(tags)
     tags = tf.dtypes.cast(tags, tf.bool)
     
-    def _fn(tag_str): # avoid repetitions of code by defining a handy function
-        num_tags = tf.cast(tf.shape(features_dict[tag_str]), tf.int64)
+    def _fn(tag_str, num_tags=num_tags): # avoid repetitions of code by defining a handy function
         feature_tags = tf.dtypes.cast(features_dict[tag_str], tf.bool)
         # if at least one of the feature tags is in the current 'tags' list, write True in the bool-hot-encoded vector for all tags in 'tags'; otherwise, leave feature tags as they are
         features_dict[tag_str] = tf.where(tf.math.reduce_any(tags & feature_tags), tags | feature_tags, feature_tags)
@@ -142,7 +142,7 @@ def _tag_filter(features_dict, tags, which_tags=None):
     num_tags = tf.cast(tf.shape(features_dict[dict_key]), tf.int64)
     feature_tags = tf.math.equal(tf.unstack(features_dict[dict_key]), tf.constant(1, dtype=tf.int64)) # bool tensor where True/False correspond to has/doesn't have tag
     idxs = tf.subtract(tf.reshape(tf.sort(tags), [-1,1]), tf.constant(1, dtype=tf.int64))
-    vals = tf.constant(1, dtype=tf.int64, shape=[len(tags)])
+    vals = tf.constant(1, dtype=tf.int64, shape=tags.get_shape())
     tags_mask = tf.SparseTensor(indices=idxs, values=vals, dense_shape=num_tags)
     tags_mask = tf.sparse.to_dense(tags_mask)
     tags_mask = tf.dtypes.cast(tags_mask, tf.bool)
@@ -310,7 +310,7 @@ def _tuplify(features_dict, which_tags=None):
         assert isinstance(which_tags, int), 'which_tags must be an integer'
         return (features_dict['audio'], features_dict['tags_' + str(which_tags)])
 
-def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, repeat=None, as_tuple=True):
+def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, default_tags_db_valid=None, repeat=None, as_tuple=True):
     ''' Reads the TFRecords and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -360,10 +360,13 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
     
     num_tags_db: int
         The total number of tags databases used.
-    
+        
     default_tags_db: int
-        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
+        The index of the tags database that you want to use, when multiple databases are available.
 
+    default_tags_db_valid: int
+        The index of the tags database that you want to use for validation/testing, when multiple databases are available.
+        
     with_tids: list
         If not None, contains the tids to be trained on.
 
@@ -386,13 +389,11 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
 
     # check if multiple databases have been provided
     if num_tags_db == 1:
-        
         # add feature 'tags'
         AUDIO_FEATURES_DESCRIPTION['tags'] = tf.io.FixedLenFeature((num_tags, ), tf.int64)
     
     else:
         default_tags_db = default_tags_db or 0
-        
         # add feature 'tags_i' for each i-th tags database provided
         for i in range(num_tags_db):
             AUDIO_FEATURES_DESCRIPTION['tags_' + str(i)] = tf.io.FixedLenFeature((num_tags, ), tf.int64)
@@ -404,11 +405,11 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
 
     if split:
         if np.sum(split) == 100:
-            split = np.cumsum(split) * len(tfrecords) // 100
+            np_split = np.cumsum(split) * len(tfrecords) // 100
         else:
             assert np.sum(split) <= len(tfrecords) , 'split exceeds the number of available .tfrecord files'
-            split = np.cumsum(split)
-        tfrecords_split = np.split(tfrecords, split)
+            np_split = np.cumsum(split)
+        tfrecords_split = np.split(tfrecords, np_split)
         tfrecords_split = tfrecords_split[:-1] # discard last empty split
     else:
         tfrecords_split = [tfrecords]
@@ -456,23 +457,29 @@ def generate_datasets(tfrecords, audio_format, split=None, which_split=None, sam
             dataset = dataset.map(lambda x: _tuplify(x, which_tags=default_tags_db), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         dataset = dataset.repeat(repeat)
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE) # performance optimization
+        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
         datasets.append(dataset)
-    
+
+        # after having produced train dataset, check if different dataset is needed for test/validation (if multiple databases are provided)
+        default_tags_db = default_tags_db_valid if default_tags_db is not None and default_tags_db_valid is not None else default_tags_db
+
+    if split:
+        datasets = np.where(np.array(split) != 0, datasets, None) # useful when split contains zeros
+
     if which_split is not None:
         if split is not None:
             assert len(which_split) == len(split), 'split and which_split must have the same length'
             datasets = np.array(datasets)[np.array(which_split, dtype=np.bool)].tolist()
         else:
-            datasets = datasets + [None] * (which_split.count(1) - 1) # useful when trying to unpack datasets, but split has not been provided
+            datasets = datasets + [None] * (which_split.count(1) - 1) # useful when trying to unpack datasets (if you need a fixed number of datasets), but split has not been provided
     
     if len(datasets) == 1:
         return datasets[0]
     else:
         return datasets
 
-def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, repeat=1, as_tuple=True):
+def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_split=None, sample_rate=16000, num_mels=96, batch_size=32, block_length=1, cycle_length=1, shuffle=True, shuffle_buffer_size=10000, window_length=15, window_random=False, with_tids=None, with_tags=None, merge_tags=None, num_tags=155, num_tags_db=1, default_tags_db=None, default_tags_db_valid=None, repeat=1, as_tuple=True):
     ''' Reads the TFRecords from the input directory and produces a list tf.data.Dataset objects ready for training/evaluation.
     
     Parameters:
@@ -521,8 +528,11 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
         The total number of tags databases used.
     
     default_tags_db: int
-        Specifies the tags database to use when filtering tags or converting into tuple (if multiple databases are provided).
+        The index of the tags database that you want to use, when multiple databases are available.
 
+    default_tags_db_valid: int
+        The index of the tags database that you want to use for validation/testing, when multiple databases are available.
+        
     with_tids: list
         If not None, contains the tids to be trained on.
 
@@ -549,5 +559,5 @@ def generate_datasets_from_dir(tfrecords_dir, audio_format, split=None, which_sp
                              sample_rate = sample_rate, batch_size = batch_size, 
                              block_length = block_length, cycle_length = cycle_length, shuffle = shuffle, shuffle_buffer_size = shuffle_buffer_size, 
                              window_length = window_length, window_random = window_random, 
-                             num_mels = num_mels, num_tags = num_tags, with_tids = with_tids, with_tags = with_tags, merge_tags = merge_tags, num_tags_db = num_tags_db, default_tags_db = default_tags_db,
+                             num_mels = num_mels, num_tags = num_tags, with_tids = with_tids, with_tags = with_tags, merge_tags = merge_tags, num_tags_db = num_tags_db, default_tags_db = default_tags_db, default_tags_db_valid=default_tags_db_valid,
                              repeat = repeat, as_tuple = as_tuple)
