@@ -168,7 +168,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath
 from lastfm import LastFm
 from lastfm import LastFm2Pandas
 
-txt_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config')
+txt_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'txt')
     
 def set_txt_path(new_path):
     ''' Sets new_path as default path for opening all the supplementary .txt files, and the output path of any .csv's files.

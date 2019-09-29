@@ -8,12 +8,6 @@ page should contain all the options you might possibly need.
 
 This module relies on the training functions defined in training.py and training_custom.py. Please read
 either of the two modules for full specificatons on how our training process is set up.
-
-
-Functions
----------
-- parse_config
-    Parse the config.json and sets all the training parameters. 
 '''
 
 import argparse
@@ -25,59 +19,7 @@ import numpy as np
 
 from tensorflow import distribute
 
-import projectname_input
-
-from lastfm import LastFm
-
-def parse_config(config_path, lastfm):
-
-    if not isinstance(lastfm, object):
-        lastfm = LastFm(os.path.expanduser(lastfm))
-
-    # if config_path is a folder, assume the folder contains a config.json
-    if os.path.isdir(os.path.expanduser(config_path)):
-        path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
-    else:
-        path = os.path.expanduser(config_path)
-
-    # load json
-    with open(path, 'r') as f:
-        config_dict = json.loads(f.read())
-
-    # create config namespace
-    config = argparse.Namespace(**config_dict['model'], **config_dict['model-training'], **config_dict['tfrecords'])
-    config.path = os.path.abspath(config_path)
-
-    # update config (optimizer will be instantiated with tf.get_optimizer using {"class_name": config.optimizer_name, "config": config.optimizer})
-    config.optimizer_name = config.optimizer.pop('name')
-
-    # read tags from popularity dataframe
-    top = config_dict['tags']['top']
-    if (top is not None) and (top !=config.n_tags):
-        top_tags = lastfm.popularity()['tag'][:top].tolist()
-        tags = set(top_tags)
-    else:
-        tags=None
-
-    # find tags to use
-    if tags is not None:
-        if config_dict['tags']['with']:
-            tags.update(config_dict['tags']['with'])
-        
-        if config_dict['tags']['without']:
-            tags.difference_update(config_dict['tags']['without'])
-        tags = list(tags)
-    else:
-        raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
-    
-    
-    config.n_output_neurons = len(tags) if tags is not None else config.n_tags
-    config.tags = lastfm.tag_to_tag_num(tags) if tags is not None else None
-    config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
-
-    config.tags = np.sort(config.tags)
-    
-    return config
+from data_input import generate_datasets_from_dir
 
 if __name__ == '__main__':
     

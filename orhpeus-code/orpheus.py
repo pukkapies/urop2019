@@ -10,10 +10,10 @@ import tensorflow as tf
 from tqdm.auto import tqdm
 
 import lastfm
-import projectname_input
-import projectname
 
-from projectname_train import parse_config
+from data_input import generate_datasets_from_dir
+from orpheus_model import build_model
+from orpheus_model import parse_config_json_json
 
 def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     ''' Loads the model from a specified checkpoint.
@@ -24,7 +24,7 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
         The audio format.
 
     config: argparse.Namespace()
-        The config namespace generated with parse_config().
+        The config namespace generated with parse_config_json().
 
     checkpoint_path: str or None
         The path to the checkpoint to be used (or only to the folder containing it, if latest checkpoint 
@@ -36,7 +36,7 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     model: tf.keras.Model
     '''
 
-    model = projectname.build_model(audio_format, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
+    model = build_model(audio_format, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
     
     checkpoint_path = checkpoint_path or config.log_dir # if checkpoint_path is not specified, use 'log_dir' from config.json
 
@@ -160,7 +160,7 @@ def predict(model, fm, audio, config, threshold=0.5):
         The audio format.
 
     config: argparse.Namespace
-        The namespace generated from config.json with parse_config().
+        The namespace generated from config.json with parse_config_json().
 
     threshold: float
         Only the tag predictions with 'confidence' higher than the threshold will be returned. 
@@ -200,15 +200,15 @@ def test(model, tfrecords_dir, audio_format, config):
         The audio format.
 
     config: argparse.Namespace
-        The namespace generated from config.json with parse_config().
+        The namespace generated from config.json with parse_config_json().
     '''
-    _, _, test_dataset = projectname_input.generate_datasets_from_dir(args.tfrecords_dir, args.format, split = config.split, which_split=(True, True, True),
-                                                                      sample_rate = config.sample_rate, batch_size = config.batch_size, 
-                                                                      block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
-                                                                      shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
-                                                                      window_length = config.window_length, window_random = config.window_random, 
-                                                                      num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge,
-										                                    as_tuple = True)
+    _, _, test_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.format, split = config.split, which_split=(True, True, True),
+                                                    sample_rate = config.sample_rate, batch_size = config.batch_size, 
+                                                    block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
+                                                    shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
+                                                    window_length = config.window_length, window_random = config.window_random, 
+                                                    num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge,
+										            as_tuple = True)
 
     metric_1 = tf.keras.metrics.AUC(name='ROC_AUC',
                                         curve='ROC',
@@ -259,7 +259,7 @@ if __name__ == '__main__':
 
     fm = lastfm.LastFm(args.lastfm)
 
-    config = parse_config(args.config, fm)
+    config = parse_config_json(args.config, fm)
 
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
 

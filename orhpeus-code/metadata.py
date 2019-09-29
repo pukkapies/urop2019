@@ -49,7 +49,6 @@ import sqlite3
 import tables
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5' # default path to msd summary file
-
 path_db = '/srv/data/urop/track_metadata.db'  # default path to 'database version' of msd summary file
 
 def set_path_h5(new_path):

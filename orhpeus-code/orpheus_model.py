@@ -16,13 +16,16 @@ This module can be divded into four parts:
 
 Functions
 ---------
-- create_config_json
-    Create a json file storing the parameters. See inline documentation for more details.
+- write_config_json
+    Write the .json file storing the training parameters. See inline documentation for more details.
 
-- wave_frontend
+- parse_config_json
+    Parse the .json file storing the training parameters.
+
+- frontend_wave
     Model frontend for waveform input.
 
-- log_mel_spec_frontend
+- frontend_log_mel_spect
     Model frontend for log-mel-spectrogram input.
 
 - backend
@@ -64,20 +67,24 @@ References
     Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
 '''
 
+import argparse
 import json
 import os
 
+import numpy as np
 import tensorflow as tf
 
-from utils import MyJSONEncoder, NoIndent
+import lastfm
+
+from prettyprint import MyJSONEncoder, NoIndent
         
-def create_config_json(config_path, **kwargs):
-    ''' Creates an "empty" configuration file for training specs.
+def write_config_json(config_path, **kwargs):
+    ''' Write an "empty" configuration file for training specs.
 
     Parameters
     -----------
     config_path: str
-        The path to the json file, or the directory where it will be saved.
+        The path to the .json file.
         
     Outputs
     -------
@@ -89,7 +96,7 @@ def create_config_json(config_path, **kwargs):
 
     Examples
     --------
-    >>> create_config_json(config_path, learning_rate=0.00001, n_filters=64)
+    >>> write_config_json(config_path, learning_rate=0.00001, n_filters=64)
     '''
 
     # specify how to build the model
@@ -154,9 +161,72 @@ def create_config_json(config_path, **kwargs):
         d = {'model': model, 'model-training': model_training, 'tags': tags, 'tfrecords': tfrecords}
         s = json.dumps(d, cls=MyJSONEncoder, indent=2)
         f.write(s)
+
+def parse_config_json(config_path, lastfm):
+    ''' Parse a JSON configuration file into a handy Namespace.
+
+    Parameters
+    -----------
+    config_path: str
+        The path to the .json file, or the directory where it is saved.
+
+    lastfm: LastFm, LastFm2Pandas, str
+        Instance of the tags database. If a string is passed, try to instantiate the tags database from the (string as a) path.
+        
+    Returns
+    -------
+    config: argparse.Namespace
+    '''
+
+    if not isinstance(lastfm, object):
+        lastfm = lastfm.LastFm(os.path.expanduser(lastfm))
+
+    # if config_path is a folder, assume the folder contains a config.json
+    if os.path.isdir(os.path.expanduser(config_path)):
+        path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
+    else:
+        path = os.path.expanduser(config_path)
+
+    # load json
+    with open(path, 'r') as f:
+        config_dict = json.loads(f.read())
+
+    # create config namespace
+    config = argparse.Namespace(**config_dict['model'], **config_dict['model-training'], **config_dict['tfrecords'])
+    config.path = os.path.abspath(config_path)
+
+    # update config (optimizer will be instantiated with tf.get_optimizer using {"class_name": config.optimizer_name, "config": config.optimizer})
+    config.optimizer_name = config.optimizer.pop('name')
+
+    # read tags from popularity dataframe
+    top = config_dict['tags']['top']
+    if (top is not None) and (top !=config.n_tags):
+        top_tags = lastfm.popularity()['tag'][:top].tolist()
+        tags = set(top_tags)
+    else:
+        tags=None
+
+    # find tags to use
+    if tags is not None:
+        if config_dict['tags']['with']:
+            tags.update(config_dict['tags']['with'])
+        
+        if config_dict['tags']['without']:
+            tags.difference_update(config_dict['tags']['without'])
+        tags = list(tags)
+    else:
+        raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
     
-def wave_frontend(input):
-    ''' Creates the frontend model for waveform input. '''
+    config.n_output_neurons = len(tags) if tags is not None else config.n_tags
+    config.tags = lastfm.tag_to_tag_num(tags) if tags is not None else None
+    config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
+
+    config.tags = np.sort(config.tags)
+    
+    return config
+    
+def frontend_wave(input):
+    ''' Create the frontend model for waveform input. '''
 
     initializer = tf.keras.initializers.VarianceScaling()
     
@@ -205,8 +275,8 @@ def wave_frontend(input):
     exp_dim = tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, [3]), name='expdim2_wave')(pool6)
     return exp_dim
 
-def log_mel_spec_frontend(input, y_input=96, num_filts=32):
-    ''' Creates the frontend model for log-mel-spectrogram input. '''
+def frontend_log_mel_spect(input, y_input=96, num_filts=32):
+    ''' Create the frontend model for log-mel-spectrogram input. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
     input = tf.expand_dims(input, 3)
@@ -310,7 +380,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filts=32):
     return exp_dim
 
 def backend(input, num_output_neurons, num_units=1024):
-    ''' Creates the backend model. '''
+    ''' Create the backend model. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
     
@@ -353,7 +423,7 @@ def backend(input, num_output_neurons, num_units=1024):
                  kernel_initializer=initializer, name='dense2_back')(dense_dropout)
 
 def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500, num_filts=16, batch_size=None):
-    ''' Generates the final model by combining frontend and backend.
+    ''' Generate the final model by combining frontend and backend.
     
     Parameters
     ----------
@@ -379,11 +449,11 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500
 
     if frontend_mode == 'waveform':
         input = tf.keras.Input(shape=[None], batch_size=batch_size)
-        front_out = wave_frontend(input)
+        front_out = frontend_wave(input)
 
     elif frontend_mode == 'log-mel-spectrogram':
         input = tf.keras.Input(shape=[y_input, None], batch_size=batch_size)
-        front_out = log_mel_spec_frontend(input, y_input=y_input, num_filts=num_filts)
+        front_out = frontend_log_mel_spect(input, y_input=y_input, num_filts=num_filts)
 
     else:
         raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
