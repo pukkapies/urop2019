@@ -3,8 +3,8 @@
 
 Notes
 -----
-This file can be run as a script. To do so, just type 'python track_wrangle.py' in the terminal. The help 
-page should contain all the options you might possibly need. You will first need to run track_fetch.py and
+This file can be run as a script. To do so, just type 'python wrangler.py' in the terminal. The help 
+page should contain all the options you might possibly need. You will first need to run fetcher.py and
 provide the output of that script as an input argument for this one.
 
 IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
@@ -63,7 +63,7 @@ from itertools import islice
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')))
 
-import lastfm as q_fm
+import lastfm
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5'
 path_txt_mismatches = '/srv/data/msd/sid_mismatches.txt'
@@ -132,7 +132,7 @@ def df_purge_faulty_mp3_2(merged_df: pd.DataFrame):
     df = merged_df[-merged_df['clip_length'].isna()]
     return df
 
-def df_purge_no_tag(merged_df: pd.DataFrame, lf: q_fm.LastFm):
+def df_purge_no_tag(merged_df: pd.DataFrame, lf: lastfm.LastFm):
     ''' Remove tracks which are not matched to any tag. '''
 
     tids_with_tag = lf.get_tids()
@@ -173,7 +173,7 @@ def df_purge_duplicates(merged_df: pd.DataFrame, random = False):
     df.drop(to_drop, inplace=True)
     return df.reset_index()
 
-def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, discard_dupl = False):
+def ultimate_output(df: pd.DataFrame, lf: lastfm.LastFm, discard_no_tag = False, discard_dupl = False):
     ''' Produce a dataframe with the following columns: 'track_id', 'track_7digitalid', 'file_path', 'file_size', 'channels', 'clip_length'.
     
     Parameters
@@ -181,7 +181,7 @@ def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, d
     df: pd.DataFrame
         The dataframe to purge.
 
-    lf: q_fm.LastFm
+    lf: lastfm.LastFm
         An instance of the tags database.
     
     discard_no_tag: bool
@@ -206,10 +206,10 @@ def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, d
     print("done")
 
     print("Purging faulty .mp3 files...")
-    print("    Checking .mp3 files which have size 0...", end=" ", flush=True)
+    print("    Checking .mp3 files which have file size = 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_1(merged_df)
     print("done")
-    print("    Checking .mp3 files which can't be opened and have length 0...", end=" ", flush=True)
+    print("    Checking .mp3 files which can't be opened and/or have length = 0...", end=" ", flush=True)
     merged_df = df_purge_faulty_mp3_2(merged_df)
     print("done")
     
@@ -219,7 +219,7 @@ def ultimate_output(df: pd.DataFrame, lf: q_fm.LastFm, discard_no_tag = False, d
         print("done")
     
     if discard_dupl:
-        print("Purging duplicate tracks...", end=" ", flush=True)
+        print("Purging duplicates...", end=" ", flush=True)
         merged_df = df_purge_duplicates(merged_df)
         print("done")
     
@@ -247,7 +247,7 @@ if __name__ == "__main__":
         output = args.output
 
     if os.path.isfile(output):
-       raise OSError("file " + output + " already exists!")
+       raise FileExistsError("file " + output + " already exists!")
 
     if args.path_h5:
         path_h5 = os.path.abspath(os.path.expanduser(args.path_h5))
@@ -260,14 +260,12 @@ if __name__ == "__main__":
 
     assert 'file_size' in df and 'clip_length' in df
 
+    arts.path_db = args.path_db or lastfm.DEFAULT
+
     if args.path_db:
         if not os.path.isfile(args.path_db):
-            raise OSError("file " + args.path_db + " does not exist!")
-        lastfm = q_fm.LastFm(args.path_db)
-    else:
-        if not os.path.isfile(q_fm.DEFAULT):
-            raise OSError("file " + q_fm.DEFAULT + " does not exist!")
-        lastfm = q_fm.LastFm(q_fm.DEFAULT)
+            raise FileNotFoundError("file " + args.path_db + " does not exist!")
+        lastfm = lastfm.LastFm(args.path_db)
 
     df = ultimate_output(df, lastfm, args.discard_no_tag, args.discard_dupl)
     

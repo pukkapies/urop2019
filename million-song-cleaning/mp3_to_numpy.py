@@ -108,14 +108,14 @@ def mp3_path_to_npz_path(path):
     return os.path.join(npz_root_dir, os.path.relpath(os.path.join(mp3_root_dir, path), mp3_root_dir))[:-9] + '.npz'
 
 def savez(path, path_npz):
-    ''' Obtains properties from a given .mp3 file and saves these to a corresponding .npz file 
+    ''' Obtains properties from a given .mp3 file and saves these to a corresponding .npz file.
 
     Parameters
     ----------
     path:
         The path of the .mp3 file.
     path_npz:
-        The path to the future .npz file.
+        The path to the .npz file. If None, don't save the .npz file but only return the processed array.
         
     Notes 
     -----
@@ -135,7 +135,11 @@ def savez(path, path_npz):
 
     array, sample_rate = librosa.core.load(path, sr=None, mono=False)
     array_split = librosa.effects.split(librosa.core.to_mono(array))
-    np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
+
+    if path_npz:
+        np.savez(path_npz, array=array, sr=sample_rate, split=array_split)
+    
+    return array, sample_rate, array_split
 
 def no_sound(df, start=0, end=None, verbose=True):
     ''' Applies savez() to the tracks provided provided by the input dataframe.
@@ -164,7 +168,7 @@ def no_sound(df, start=0, end=None, verbose=True):
             multi-channel is preserved (each row represents a channel).
             
         'sr':
-            The sampling rate of the mp3 file.
+            The sample rate of the .mp3 file.
             
         'split':
             The sections of the track which is non-silent (>=60dB). 
@@ -213,7 +217,6 @@ def no_sound_count(df, final_check=False):
     
     count = 0
     l = []
-     
 
     for idx, path in enumerate(df['file_path']):
         path_npz = os.path.join(npz_root_dir, path[:-9] + '.npz')
