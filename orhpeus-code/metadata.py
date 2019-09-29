@@ -50,7 +50,7 @@ import h5py
 import numpy as np
 
 path_h5 = '/srv/data/msd/msd_summary_file.h5' # default path to msd summary file
-path_db = '/srv/data/urop/track_metadata.db'  # default path to msd summary file (in its .db version)
+path_db = ''                                  # default path to msd summary file (in its .db version)
 
 def set_path_h5(new_path):
     global path_h5
@@ -79,7 +79,7 @@ def get_trackid_from_7digitalid(ids: list):
         if len(output) > 1:
             return output
         else:
-            return output[0]
+            return output[id]
 
 def get_7digitalid_from_trackid(ids: list):
     ''' Returns the 7digital_id of the song specified by the track_id. '''
@@ -100,7 +100,7 @@ def get_7digitalid_from_trackid(ids: list):
         if len(output) > 1:
             return output
         else:
-            return output[0]
+            return output[id]
 
 def get_attribute(attr: str, ids: list):
     ''' Returns the specified attribute corresponding to each track passed as input.
