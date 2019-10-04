@@ -77,8 +77,9 @@ from _ctypes import PyObj_FromPtr
 import numpy as np
 import tensorflow as tf
 
-import lastfm
-        
+from lastfm import LastFm
+from lastfm import LastFm2Pandas
+
 def write_config_json(config_path, **kwargs):
     ''' Write an "empty" configuration file for training specs.
 
@@ -171,7 +172,7 @@ def parse_config_json(config_path, lastfm):
     config_path: str
         The path to the .json file, or the directory where it is saved.
 
-    lastfm: LastFm, LastFm2Pandas, str
+    lastfm: str, LastFm, LastFm2Pandas
         Instance of the tags database. If a string is passed, try to instantiate the tags database from the (string as a) path.
         
     Returns
@@ -179,17 +180,17 @@ def parse_config_json(config_path, lastfm):
     config: argparse.Namespace
     '''
 
-    if not isinstance(lastfm, object):
-        lastfm = lastfm.LastFm(os.path.expanduser(lastfm))
+    if not isinstance(lastfm, (LastFm, LastFm2Pandas)):
+        lastfm = LastFm(os.path.expanduser(lastfm))
 
     # if config_path is a folder, assume the folder contains a config.json
     if os.path.isdir(os.path.expanduser(config_path)):
-        path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
+        config_path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
     else:
-        path = os.path.expanduser(config_path)
+        config_path = os.path.expanduser(config_path)
 
     # load json
-    with open(path, 'r') as f:
+    with open(config_path, 'r') as f:
         config_dict = json.loads(f.read())
 
     # create config namespace
@@ -448,16 +449,16 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500
         For log-mel-spectrogram, this is the number of filters of the first CNN layer. See (Pons, et al., 2018) for more details.
     '''
 
-    if frontend_mode == 'waveform':
+    if frontend_mode not in ('waveform', 'log-mel-spectrogram'):
+        raise ValueError("please specify the correct frontend: 'waveform' or 'log-mel-spectrogram'")
+
+    elif frontend_mode == 'waveform':
         input = tf.keras.Input(shape=[None], batch_size=batch_size)
         front_out = frontend_wave(input)
 
     elif frontend_mode == 'log-mel-spectrogram':
         input = tf.keras.Input(shape=[y_input, None], batch_size=batch_size)
         front_out = frontend_log_mel_spect(input, y_input=y_input, num_filts=num_filts)
-
-    else:
-        raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
 
     model = tf.keras.Model(input,
                            backend(front_out,

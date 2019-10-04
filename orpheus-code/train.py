@@ -42,6 +42,7 @@ import datetime
 import gc
 import os
 import shutil
+import time
 
 import numpy as np
 import tensorflow as tf
@@ -49,7 +50,6 @@ import tensorflow as tf
 from data_input import generate_datasets_from_dir
 from orpheus_model import build_model
 from orpheus_model import parse_config_json
-
 
 def train_with_fit(train_dataset, valid_dataset, frontend, strategy, config, epochs, steps_per_epoch=None, timestamp_to_resume=None, update_freq=1, profile_batch=0):
     ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
@@ -432,7 +432,7 @@ if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = args.verbose
 
     # parse config
-    config = parse_config_json(args.config_path, args.lastfm_path)
+    config = parse_config_json(args.config, args.lastfm)
 
     # if --tfrecords-dir is not specified, use default path on our server
     if not args.tfrecords_dir:
