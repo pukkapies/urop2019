@@ -70,13 +70,14 @@ References
 import argparse
 import json
 import os
+import re
+
+from _ctypes import PyObj_FromPtr
 
 import numpy as np
 import tensorflow as tf
 
 import lastfm
-
-from prettyprint import MyJSONEncoder, NoIndent
         
 def write_config_json(config_path, **kwargs):
     ''' Write an "empty" configuration file for training specs.
@@ -123,7 +124,7 @@ def write_config_json(config_path, **kwargs):
         "log_dir": "~/",                # directory where tensorboard logs and checkpoints will be stored
         "shuffle": True,                # if True, shuffle the dataset
         "shuffle_buffer_size": 0,       # buffer size to use to shuffle the dataset (only applies if shuffle is True)
-        "split": NoIndent([0, 0]),      # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
+        "split": MyJSONEnc_NoIndent([0, 0]),      # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
         "window_length": 0,             # length (in seconds) of the audio 'window' to input into the model
         "window_random": True,          # if True, the window is picked randomly along the track length; if False, the window is always picked from the middle
     }
@@ -131,8 +132,8 @@ def write_config_json(config_path, **kwargs):
     # specify which tags to use
     tags = {
         "top": 0,                   # e.g. use only the most popular 50 tags from the tags database will go into training (if None, all tags go into training)
-        "with": NoIndent([]),       # tags that will be added to the list above        
-        "without": NoIndent([]),    # tags that will be excluded from the list above
+        "with": MyJSONEnc_NoIndent([]),       # tags that will be added to the list above        
+        "without": MyJSONEnc_NoIndent([]),    # tags that will be excluded from the list above
         "merge": None,              # tags to merge together (e.g. use 'merge': [[1,2], [3,4]] to merge tags 1 and 2, 3 and 4)
     }
 
@@ -159,7 +160,7 @@ def write_config_json(config_path, **kwargs):
     
     with open(config_path, 'w') as f:
         d = {'model': model, 'model-training': model_training, 'tags': tags, 'tfrecords': tfrecords}
-        s = json.dumps(d, cls=MyJSONEncoder, indent=2)
+        s = json.dumps(d, cls=MyJSONEnc, indent=2)
         f.write(s)
 
 def parse_config_json(config_path, lastfm):
@@ -463,3 +464,35 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500
                                    num_output_neurons=num_output_neurons,
                                    num_units=num_units))
     return model
+
+class MyJSONEnc(json.JSONEncoder): # see https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
+    FORMAT_SPEC = '@@{}@@'
+    regex = re.compile(FORMAT_SPEC.format(r'(\d+)'))
+
+    def __init__(self, **kwargs):
+        # save copy of any keyword argument values needed for use here
+        self.__sort_keys = kwargs.get('sort_keys', None)
+        super(MyJSONEnc, self).__init__(**kwargs)
+
+    def default(self, obj):
+        return (self.FORMAT_SPEC.format(id(obj)) if isinstance(obj, MyJSONEnc_NoIndent)
+                else super(MyJSONEnc, self).default(obj))
+
+    def encode(self, obj):
+        format_spec = self.FORMAT_SPEC
+        json_repr = super(MyJSONEnc, self).encode(obj) # default JSON repr
+
+        # replace any marked-up object ids in the JSON repr with the value returned from the json.dumps() of the corresponding wrapped object
+        for match in self.regex.finditer(json_repr):
+            id = int(match.group(1))
+            no_indent = PyObj_FromPtr(id)
+            json_obj_repr = json.dumps(no_indent.value, sort_keys=self.__sort_keys)
+
+            # replace the matched id string with json formatted representation of the corresponding object
+            json_repr = json_repr.replace(
+                            '"{}"'.format(format_spec.format(id)), json_obj_repr)
+        return json_repr
+
+class MyJSONEnc_NoIndent(): # value wrapper
+    def __init__(self, value):
+        self.value = value
