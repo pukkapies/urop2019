@@ -3,7 +3,7 @@
 
 Notes
 -----
-This file can be run as a script. To do so, just type 'python track_fetch.py' in the terminal. The help 
+This file can be run as a script. To do so, just type 'python fetcher.py' in the terminal. The help 
 page should contain all the options you might possibly need.
 
 IMPORTANT: If using this script elsewhere than on Boden then rememer to use the option --root-dir to
@@ -59,7 +59,6 @@ def find_tracks(abs_path = False):
     -------
     paths: list
         Contains paths (str) to all .mp3 files in mp3_root_dir.
-    
     '''
 
     paths = []
@@ -106,8 +105,6 @@ def check_size(df):
         
         'file_size': float
             The file size of the .mp3 file.
-        
-    
     '''
 
     s = []

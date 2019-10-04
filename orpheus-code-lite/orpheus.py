@@ -26,18 +26,19 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 '''
 
-import time
 import argparse
-import tensorflow as tf
 import os
+import time
+
+import audioread
 import librosa
 import numpy as np
-import audioread
+import tensorflow as tf
 
 def log_mel_spec_frontend(input, y_input=96, num_filts=32):
-    ''' Creates the frontend model for log-mel-spectrogram input. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
+
     input = tf.expand_dims(input, 3)
     
     input_pad_7 = tf.keras.layers.ZeroPadding2D(((0, 0), (3, 3)), name='pad7_spec')(input)
@@ -136,10 +137,11 @@ def log_mel_spec_frontend(input, y_input=96, num_filts=32):
                           bn_conv9, bn_conv10])
     
     exp_dim = tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, 3), name='expdim1_spec')(concat)
+    
     return exp_dim
 
+
 def backend(input, num_output_neurons, num_units=1024):
-    ''' Creates the backend model. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
     
@@ -178,21 +180,20 @@ def backend(input, num_output_neurons, num_units=1024):
     bn_dense = tf.keras.layers.BatchNormalization(name='bn_dense_back')(dense)
     dense_dropout = tf.keras.layers.Dropout(rate=0.5, name='drop2_back')(bn_dense)
     
-    return tf.keras.layers.Dense(activation='sigmoid', units=num_output_neurons,
-                 kernel_initializer=initializer, name='dense2_back')(dense_dropout)
+    return tf.keras.layers.Dense(activation='sigmoid', units=num_output_neurons, kernel_initializer=initializer, name='dense2_back')(dense_dropout)
+
 
 def build_model(num_output_neurons=155, y_input=96, num_units=500, num_filts=16, batch_size=None):
 
     input = tf.keras.Input(shape=[y_input, None], batch_size=batch_size)
-    front_out = log_mel_spec_frontend(input, y_input=y_input, num_filts=num_filts)
+
+    frontend_out = log_mel_spec_frontend(input, y_input=y_input, num_filts=num_filts)
 
     model = tf.keras.Model(input,
-                           backend(front_out,
+                           backend(frontend_out,
                                    num_output_neurons=num_output_neurons,
                                    num_units=num_units))
     return model
-
-
 
 
 def generate_config():
@@ -264,8 +265,9 @@ def generate_config():
     config.window_len = config_dict['model-training']['window_length']
     config.tag_to_tag_num = tag_to_tag_num
     config.tag_num_to_tag = tag_num_to_tag
-    return config
     
+    return config
+
 
 def get_audio(config, mp3_path=None, array=None, array_sr=None):
     if mp3_path:
@@ -285,108 +287,96 @@ def get_audio(config, mp3_path=None, array=None, array_sr=None):
     return array
 
 
-def get_slices(audio, sample_rate, window_size=15):
+def get_audio_slices(audio, sample_rate, window_size=15):
 
     slice_length = window_size*sample_rate//512
+    
     n_slices = audio.shape[1]//slice_length
 
     slices = [audio[:,i*slice_length:(i+1)*slice_length] for i in range(n_slices)]
     slices.append(audio[:,-slice_length:])
+    
     return np.array(slices)
-
 
 
 def predict(model, config, audio, cutoff=0.5, window_size=15):
 
-    # make sure tags are sorted
-    with_tags = np.sort(config.tags)
+    with_tags = np.sort(config.tags) # make sure tags are sorted
 
-    # compute average by using a moving window
-    slices = get_slices(audio, config.sr, window_size)
+    slices = get_audio_slices(audio, config.sr, window_size)
     logits = tf.reduce_mean(model(slices, training=False), axis=[0])
     
-    # get tags
     tags = []
     for idx, val in enumerate(logits):
         if val >= cutoff:
             tags.append([float(val.numpy()), config.tag_num_to_tag[int(with_tags[idx])]])
     tags = sorted(tags, key=lambda x:x[0], reverse=True)
+    
     return tags
 
+ 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()     
-    parser.add_argument("--checkpoint", help="Path to a checkpoints", default='epoch-18')
-    parser.add_argument("--mp3-path", help="Path to mp3 dir or mp3 file to predict")
-    parser.add_argument("--from-recording", help="If True, the input audio will be recorded from your microphone", action="store_true")
-    parser.add_argument("-s", "--recording-second", help="Number of seconds to record. Minimum length is 15 seconds", type=int, default='15')
-    parser.add_argument("--cutoff", type=float, help="Lower bound for what prediction values to print", default=0.1)
+    parser.add_argument('--checkpoint', help='path to checkpoint to restore', default='epoch')
+
+    p_mode = parser.add_mutually_exclusive_group(required=True)
+    p_mode.add_argument('--mp3', dest='mp3_path', help='predict tags using specified .mp3 file (or .mp3 files contained in specified directory)')
+    p_mode.add_argument('--record', help='predict tags using recorded audio from your microphone', action='store_true')
+
+    parser.add_argument('--record-length', help='length of audio recording (minimum length 15 sec)', type=int, default=15)
+    parser.add_argument('-t', '--threshold', help='threshold for confidence values to count as confident predictions', type=float, default=0.1)
 
     args = parser.parse_args()
-    print(args)
     
-    #load config
+    # load config
     config = generate_config()
+
+    # build model and restore from checkpoint
+    model = build_model(num_output_neurons=config.n_output_neurons, y_input=config.n_mels, num_units=config.n_dense_units, num_filts=config.n_filters)
     
-    # load from checkpoint
-    model = build_model(num_output_neurons=config.n_output_neurons, y_input=config.n_mels,
-                        num_units=config.n_dense_units, num_filts=config.n_filters)
-    
-    # restoring from checkpoint
     checkpoint = tf.train.Checkpoint(model=model)
-    print('Loading from {}'.format(args.checkpoint))
     checkpoint.restore(args.checkpoint)
 
-    if not (args.mp3_path or args.from_recording):
-        raise ValueError("If predicting, must either specify mp3 file(s) to predict, or set --from-recording as True")
-    elif (args.mp3_path and args.from_recording):
-        raise ValueError("If predicting, must either specify mp3 file(s) to predict, or set --from-recording as True")
-    elif args.mp3_path:
+    if args.mp3_path:
         if os.path.isfile(args.mp3_path):
             try:
                 audio = get_audio(config=config, mp3_path=args.mp3_path)
-                print("prediction: ", predict(model, config, audio, cutoff=args.cutoff))
+                print("Predictions: ", predict(model, config, audio, cutoff=args.threshold))
             except audioread.NoBackendError:
-                print('skipping {} due to NoBackendError.'.format(args.mp3_path))
-            
+                print('Skipping {} because a NoBackendError occurred...'.format(args.mp3_path))
         else:
-            for path in os.listdir(args.mp3_path): 
+            for mp3_path in os.listdir(args.mp3_path): 
                 try:
-                    audio = get_audio(config=config, mp3_path=os.path.join(args.mp3_path, path))
+                    audio = get_audio(config=config, mp3_path=os.path.join(args.mp3_path, mp3_path))
+                    print('File: ', mp3_path)
+                    print('Predictions: ', predict(model, config, audio, cutoff=args.threshold))
                 except audioread.NoBackendError:
-                    print('skipping {} due to NoBackendError.'.format(path))
+                    print('Skipping {} because a NoBackendError occurred...'.format(mp3_path))
                     continue
-                
-                print("file: ", path)
-                print("prediction: ", predict(model, config, audio, cutoff=args.cutoff))
-                print()
-                
     else:
-        assert args.recording_second >=15
+        assert args.record_length >= 15
+
+        import sounddevice as sd  # in case this is not installed automatically
         
-        # In case this is not installed automatically
-        import sounddevice as sd
-        sr_rec = 44100  # Sample rate
-        seconds = int(args.recording_second)  # Duration of recording
+        sr_rec = 44100  # recording sample rate
+
         while True:
             val = input('Press Enter to begin')
             if val is not None:
                 break
 
-        print('record starts in')
-        print('3')
+        print('3', end='/r')
         time.sleep(1)
-        print('2')
+        print('2', end='/r')
         time.sleep(1)
-        print('1')
+        print('1', end='/r')
         time.sleep(1)
-        print('0')
-        print('Recording')
-        audio = sd.rec(int(seconds * sr_rec), samplerate=sr_rec, channels=2)
-        sd.wait()  # Wait until recording is finished
-        from scipy.io.wavfile import write
-        write('hi.wav', sr_rec, audio)  # Save as WAV file
+        print('Recording...', end='/r')
+
+        audio = sd.rec(int(args.record_length * sr_rec), samplerate=sr_rec, channels=2)
+        sd.wait() # wait until recording is finished
 
         audio = audio.transpose()
-        audio = get_audio(config=config, array=audio, array_sr=sr_rec)
-        print("prediction: ", predict(model, config, audio, cutoff=args.cutoff))
+        audio = get_audio(mp3_path = None, sample_rate=config.sample_rate, n_mels=config.n_mels, array=audio, array_sr=sr_rec)
+        print('Predictions: ', predict(model, config, audio, cutoff=args.threshold))

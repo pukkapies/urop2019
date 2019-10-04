@@ -45,9 +45,9 @@ import sys
 import numpy as np
 import pandas as pd
 
-import lastfm_cleaning_utils as lastfm_utils
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../orpheus-code')))
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')))
+import lastfm_cleaning_utils as lastfm_utils
 
 from lastfm import LastFm
 from lastfm import LastFm2Pandas

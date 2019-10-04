@@ -16,13 +16,16 @@ This module can be divded into four parts:
 
 Functions
 ---------
-- create_config_json
-    Create a json file storing the parameters. See inline documentation for more details.
+- write_config_json
+    Write the .json file storing the training parameters. See inline documentation for more details.
 
-- wave_frontend
+- parse_config_json
+    Parse the .json file storing the training parameters.
+
+- frontend_wave
     Model frontend for waveform input.
 
-- log_mel_spec_frontend
+- frontend_log_mel_spect
     Model frontend for log-mel-spectrogram input.
 
 - backend
@@ -64,20 +67,26 @@ References
     Pons, J. et al., 2018. END-TO-END LEARNING FOR MUSIC AUDIO TAGGING AT SCALE. Paris, s.n., pp. 637-644.
 '''
 
+import argparse
 import json
 import os
+import re
 
+from _ctypes import PyObj_FromPtr
+
+import numpy as np
 import tensorflow as tf
 
-from utils import MyJSONEncoder, NoIndent
-        
-def create_config_json(config_path, **kwargs):
-    ''' Creates an "empty" configuration file for training specs.
+from lastfm import LastFm
+from lastfm import LastFm2Pandas
+
+def write_config_json(config_path, **kwargs):
+    ''' Write an "empty" configuration file for training specs.
 
     Parameters
     -----------
     config_path: str
-        The path to the json file, or the directory where it will be saved.
+        The path to the .json file.
         
     Outputs
     -------
@@ -89,7 +98,7 @@ def create_config_json(config_path, **kwargs):
 
     Examples
     --------
-    >>> create_config_json(config_path, learning_rate=0.00001, n_filters=64)
+    >>> write_config_json(config_path, learning_rate=0.00001, n_filters=64)
     '''
 
     # specify how to build the model
@@ -116,7 +125,7 @@ def create_config_json(config_path, **kwargs):
         "log_dir": "~/",                # directory where tensorboard logs and checkpoints will be stored
         "shuffle": True,                # if True, shuffle the dataset
         "shuffle_buffer_size": 0,       # buffer size to use to shuffle the dataset (only applies if shuffle is True)
-        "split": NoIndent([0, 0]),      # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
+        "split": MyJSONEnc_NoIndent([0, 0]),      # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
         "window_length": 0,             # length (in seconds) of the audio 'window' to input into the model
         "window_random": True,          # if True, the window is picked randomly along the track length; if False, the window is always picked from the middle
     }
@@ -124,8 +133,8 @@ def create_config_json(config_path, **kwargs):
     # specify which tags to use
     tags = {
         "top": 0,                   # e.g. use only the most popular 50 tags from the tags database will go into training (if None, all tags go into training)
-        "with": NoIndent([]),       # tags that will be added to the list above        
-        "without": NoIndent([]),    # tags that will be excluded from the list above
+        "with": MyJSONEnc_NoIndent([]),       # tags that will be added to the list above        
+        "without": MyJSONEnc_NoIndent([]),    # tags that will be excluded from the list above
         "merge": None,              # tags to merge together (e.g. use 'merge': [[1,2], [3,4]] to merge tags 1 and 2, 3 and 4)
     }
 
@@ -152,11 +161,78 @@ def create_config_json(config_path, **kwargs):
     
     with open(config_path, 'w') as f:
         d = {'model': model, 'model-training': model_training, 'tags': tags, 'tfrecords': tfrecords}
-        s = json.dumps(d, cls=MyJSONEncoder, indent=2)
+        s = json.dumps(d, cls=MyJSONEnc, indent=2)
         f.write(s)
+
+def parse_config_json(config_path, lastfm):
+    ''' Parse a JSON configuration file into a handy Namespace.
+
+    Parameters
+    -----------
+    config_path: str
+        The path to the .json file, or the directory where it is saved.
+
+    lastfm: str, LastFm, LastFm2Pandas
+        Instance of the tags database. If a string is passed, try to instantiate the tags database from the (string as a) path.
+        
+    Returns
+    -------
+    config: argparse.Namespace
+    '''
+
+    if not isinstance(lastfm, (LastFm, LastFm2Pandas)):
+        lastfm = LastFm(os.path.expanduser(lastfm))
+
+    # if config_path is a folder, assume the folder contains a config.json
+    if os.path.isdir(os.path.expanduser(config_path)):
+        config_path = os.path.join(os.path.abspath(os.path.expanduser(config_path)), 'config.json')
+    else:
+        config_path = os.path.expanduser(config_path)
+
+    # load json
+    with open(config_path, 'r') as f:
+        config_dict = json.loads(f.read())
+
+    # create config namespace
+    config = argparse.Namespace(**config_dict['model'], **config_dict['model-training'], **config_dict['tfrecords'])
+    config.path = os.path.abspath(config_path)
+
+    # update config (optimizer will be instantiated with tf.get_optimizer using {"class_name": config.optimizer_name, "config": config.optimizer})
+    config.optimizer_name = config.optimizer.pop('name')
+
+    # read tags from popularity dataframe
+    top = config_dict['tags']['top']
+    if (top is not None) and (top != config.n_tags):
+        top_tags = lastfm.popularity()['tag'][:top].tolist()
+        tags = set(top_tags)
+    else:
+        tags = None
+
+    # update tags according to 'with' (to be added) and 'without' (to be discarded)
+    if tags is not None:
+        if config_dict['tags']['with']:
+            tags.update(config_dict['tags']['with'])
+        
+        if config_dict['tags']['without']:
+            tags.difference_update(config_dict['tags']['without'])
+
+        tags = list(tags)
+    else:
+        raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
+
+    # write final tags
+    config.tags = np.sort(lastfm.tag_to_tag_num(tags)) if tags is not None else None # sorting is necessary to aviod unexpected behaviour
+
+    # write final tags to merge together
+    config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] is not None else None
+
+    # count number of classes
+    config.n_output_neurons = len(tags) if tags is not None else config.n_tags
     
-def wave_frontend(input):
-    ''' Creates the frontend model for waveform input. '''
+    return config
+    
+def frontend_wave(input):
+    ''' Create the frontend model for waveform input. '''
 
     initializer = tf.keras.initializers.VarianceScaling()
     
@@ -205,8 +281,8 @@ def wave_frontend(input):
     exp_dim = tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, [3]), name='expdim2_wave')(pool6)
     return exp_dim
 
-def log_mel_spec_frontend(input, y_input=96, num_filts=32):
-    ''' Creates the frontend model for log-mel-spectrogram input. '''
+def frontend_log_mel_spect(input, y_input=96, num_filts=32):
+    ''' Create the frontend model for log-mel-spectrogram input. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
     input = tf.expand_dims(input, 3)
@@ -310,7 +386,7 @@ def log_mel_spec_frontend(input, y_input=96, num_filts=32):
     return exp_dim
 
 def backend(input, num_output_neurons, num_units=1024):
-    ''' Creates the backend model. '''
+    ''' Create the backend model. '''
     
     initializer = tf.keras.initializers.VarianceScaling()
     
@@ -353,7 +429,7 @@ def backend(input, num_output_neurons, num_units=1024):
                  kernel_initializer=initializer, name='dense2_back')(dense_dropout)
 
 def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500, num_filts=16, batch_size=None):
-    ''' Generates the final model by combining frontend and backend.
+    ''' Generate the final model by combining frontend and backend.
     
     Parameters
     ----------
@@ -377,19 +453,51 @@ def build_model(frontend_mode, num_output_neurons=155, y_input=96, num_units=500
         For log-mel-spectrogram, this is the number of filters of the first CNN layer. See (Pons, et al., 2018) for more details.
     '''
 
-    if frontend_mode == 'waveform':
+    if frontend_mode not in ('waveform', 'log-mel-spectrogram'):
+        raise ValueError("please specify the correct frontend: 'waveform' or 'log-mel-spectrogram'")
+
+    elif frontend_mode == 'waveform':
         input = tf.keras.Input(shape=[None], batch_size=batch_size)
-        front_out = wave_frontend(input)
+        front_out = frontend_wave(input)
 
     elif frontend_mode == 'log-mel-spectrogram':
         input = tf.keras.Input(shape=[y_input, None], batch_size=batch_size)
-        front_out = log_mel_spec_frontend(input, y_input=y_input, num_filts=num_filts)
-
-    else:
-        raise ValueError('please specify the frontend_mode: "waveform" or "log-mel-spectrogram"')
+        front_out = frontend_log_mel_spect(input, y_input=y_input, num_filts=num_filts)
 
     model = tf.keras.Model(input,
                            backend(front_out,
                                    num_output_neurons=num_output_neurons,
                                    num_units=num_units))
     return model
+
+class MyJSONEnc(json.JSONEncoder): # see https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
+    FORMAT_SPEC = '@@{}@@'
+    regex = re.compile(FORMAT_SPEC.format(r'(\d+)'))
+
+    def __init__(self, **kwargs):
+        # save copy of any keyword argument values needed for use here
+        self.__sort_keys = kwargs.get('sort_keys', None)
+        super(MyJSONEnc, self).__init__(**kwargs)
+
+    def default(self, obj):
+        return (self.FORMAT_SPEC.format(id(obj)) if isinstance(obj, MyJSONEnc_NoIndent)
+                else super(MyJSONEnc, self).default(obj))
+
+    def encode(self, obj):
+        format_spec = self.FORMAT_SPEC
+        json_repr = super(MyJSONEnc, self).encode(obj) # default JSON repr
+
+        # replace any marked-up object ids in the JSON repr with the value returned from the json.dumps() of the corresponding wrapped object
+        for match in self.regex.finditer(json_repr):
+            id = int(match.group(1))
+            no_indent = PyObj_FromPtr(id)
+            json_obj_repr = json.dumps(no_indent.value, sort_keys=self.__sort_keys)
+
+            # replace the matched id string with json formatted representation of the corresponding object
+            json_repr = json_repr.replace(
+                            '"{}"'.format(format_spec.format(id)), json_obj_repr)
+        return json_repr
+
+class MyJSONEnc_NoIndent(): # value wrapper
+    def __init__(self, value):
+        self.value = value
