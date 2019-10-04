@@ -35,7 +35,7 @@ import sys
 
 import pandas as pd
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../orpheus-code')))
 
 from lastfm import LastFm
 from lastfm import LastFm2Pandas
