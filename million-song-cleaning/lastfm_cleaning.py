@@ -37,6 +37,8 @@ import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../orpheus-code')))
 
+import lastfm_cleaning_utils as lf_utils
+
 from lastfm import LastFm
 from lastfm import LastFm2Pandas
 
@@ -166,8 +168,6 @@ def create_tid_tag_table(lf: LastFm, tag_tag: pd.DataFrame, tid_tag_threshold: i
 
 if __name__ == "__main__":
 
-    import lastfm_tool as lf_tool
-
     description = "Script to generate a new LastFm database, similar in structure to the original LastFm database, containing only clean the tags for each track."
     epilog = "Example: python clean_lastfm.py ~/lastfm/lastfm_tags.db ~/lastfm/lastfm_tags_clean.db"
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
@@ -195,9 +195,9 @@ if __name__ == "__main__":
     
     # check if different txt path has been provided
     if args.supp_txt_path:
-        lf_tool.set_txt_path(args.supp_txt_path)
+        lf_utils.set_txt_path(args.supp_txt_path)
     
-    df = lf_tool.generate_final_df(lastfm)
+    df = lf_utils.generate_final_df(lastfm)
     df.reset_index(drop=True, inplace=True) # shouldn't be needed to reset_index... this only adds extra safety
     df.index += 1
 
