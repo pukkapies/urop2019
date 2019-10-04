@@ -202,28 +202,32 @@ def parse_config_json(config_path, lastfm):
 
     # read tags from popularity dataframe
     top = config_dict['tags']['top']
-    if (top is not None) and (top !=config.n_tags):
+    if (top is not None) and (top != config.n_tags):
         top_tags = lastfm.popularity()['tag'][:top].tolist()
         tags = set(top_tags)
     else:
-        tags=None
+        tags = None
 
-    # find tags to use
+    # update tags according to 'with' (to be added) and 'without' (to be discarded)
     if tags is not None:
         if config_dict['tags']['with']:
             tags.update(config_dict['tags']['with'])
         
         if config_dict['tags']['without']:
             tags.difference_update(config_dict['tags']['without'])
+
         tags = list(tags)
     else:
         raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
-    
-    config.n_output_neurons = len(tags) if tags is not None else config.n_tags
-    config.tags = lastfm.tag_to_tag_num(tags) if tags is not None else None
-    config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] else None
 
-    config.tags = np.sort(config.tags)
+    # write final tags
+    config.tags = np.sort(lastfm.tag_to_tag_num(tags)) if tags is not None else None # sorting is necessary to aviod unexpected behaviour
+
+    # write final tags to merge together
+    config.tags_to_merge = lastfm.tag_to_tag_num(config_dict['tags']['merge']) if config_dict['tags']['merge'] is not None else None
+
+    # count number of classes
+    config.n_output_neurons = len(tags) if tags is not None else config.n_tags
     
     return config
     
