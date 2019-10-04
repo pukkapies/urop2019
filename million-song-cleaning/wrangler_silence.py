@@ -275,7 +275,6 @@ if __name__ == "__main__":
     parser.add_argument("--filter-trim-length", type=float, default=0, help="keep only tracks whose effective length (in seconds) is longer than the theshold")
     parser.add_argument("--filter-tot-silence", type=float, default=0, help="keep only tracks whose tot silent length is shorter than the theshold")
     parser.add_argument("--filter-max-silence", type=float, default=0, help="keep only tracks whose max silent length is shorter than the theshold")
-    parser.add_argument("")
 
     args = parser.parse_args()
 
