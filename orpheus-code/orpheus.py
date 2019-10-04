@@ -242,7 +242,7 @@ if __name__ == '__main__':
     testing.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from (default to path on Boden)')
 
-    predicting = subparsers.add_parser('predict', help='take a trained model and use it to make tag previctions on .mp3 audio tracks or an audio recording')
+    predicting = subparsers.add_parser('predict', help='take a trained model and use it to make tag previctions on (single or multiple) .mp3 audio tracks, or on an audio recording')
     predicting.add_argument('format', help='model audio format')
     predicting.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
     predicting.add_argument('--config', help='path to config.json', required=True)
