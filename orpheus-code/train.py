@@ -408,7 +408,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('frontend', choices=['waveform', 'log-mel-spectrogram'])
     parser.add_argument('--tfrecords-dir', dest='tfrecords_dir', help='directory to read the .tfrecord files from (default to path on Boden)')
-    parser.add_argument('--config', help='path to config.json (default to path on Boden)', default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json'))
+    parser.add_argument('--config', help='path to config.json (default to path on Boden)', default='~/config.json')
     parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     parser.add_argument('--multi-db', help='specify the number of different tags features in the .tfrecord files', type=int, default=1)
     parser.add_argument('--multi-db-default', help='specify the index of the default tags database, when there are more than one tags features in the .tfrecord files', type=int)
