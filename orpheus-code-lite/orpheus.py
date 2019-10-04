@@ -342,7 +342,7 @@ if __name__ == '__main__':
         if os.path.isfile(args.mp3_path):
             try:
                 audio = get_audio(config=config, mp3_path=args.mp3_path)
-                print("Prediction: ", predict(model, config, audio, cutoff=args.threshold))
+                print("Predictions: ", predict(model, config, audio, cutoff=args.threshold))
             except audioread.NoBackendError:
                 print('Skipping {} because a NoBackendError occurred...'.format(args.mp3_path))
         else:
