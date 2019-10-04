@@ -316,7 +316,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
 
         max_metric = -200 # for early stopping
 
-        
         # loop
         for epoch in tf.range(prev_epoch+1, epochs, dtype=tf.int64):
             start_time = time.time()
@@ -353,7 +352,6 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
                                             profiler_outdir=os.path.normpath(prof_log_dir)) 
 
             if valid_dataset:
-
                 distributed_val_body(valid_dataset)
                 gc.collect()
 
@@ -402,9 +400,8 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
             # report time
             time_taken = time.time()-start_time
             tf.print('Epoch {}: {} s'.format(epoch, time_taken))
-        
-    return
 
+    return
 
 if __name__ == '__main__':
     
@@ -421,7 +418,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', help='load a previously saved model with the time in the format ddmmyy-hhmm, e.g. if the folder which the model is saved is custom_log-mel-spect_160919-0539, resume should take the argument 160919-0539')
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
     parser.add_argument('--cuda', help='set cuda visible devices', type=int, nargs='+')
-    parser.add_argument('--built-in', action='store_true', help='train using custom training loop')
+    parser.add_argument('--built-in', action='store_true', help='train using the built-in model.fit training loop')
     parser.add_argument('-v', '--verbose', choices=['0', '1', '2', '3'], help='verbose mode', default='0')
 
     args = parser.parse_args()
