@@ -284,7 +284,7 @@ if __name__ == '__main__':
                     narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
                     print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                 except audioread.NoBackendError:
-                    print('Skipping {} because of a NoBackendError occurred...'.format(args.mp3_path))
+                    print('Skipping {} because a NoBackendError occurred...'.format(args.mp3_path))
             else:
                 for mp3_path in os.listdir(args.mp3_path): 
                     try:
@@ -293,7 +293,7 @@ if __name__ == '__main__':
                         print('File: ', mp3_path)
                         print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                     except audioread.NoBackendError:
-                        print('Skipping {} because of a NoBackendError occurred...'.format(mp3_path))
+                        print('Skipping {} because a NoBackendError occurred...'.format(mp3_path))
                         continue
         else:
             assert args.record_length >=15
