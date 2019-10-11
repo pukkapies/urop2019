@@ -367,7 +367,7 @@ if __name__ == '__main__':
             for num_file in range(start-1, stop):
                 filename = base_name + str(num_file+1) + ".tfrecord"
                 print()
-                print("INFO currently writing to: " + filename)
+                print("INFO writing to " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save
@@ -382,7 +382,7 @@ if __name__ == '__main__':
                 stop = args.num_files-1
                 filename = base_name + str(args.num_files) + ".tfrecord"
                 print()
-                print("INFO currently writing to: " + filename)
+                print("INFO writing to " + filename)
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 # create and save to the .tfrecord file
@@ -397,7 +397,7 @@ if __name__ == '__main__':
             for num_file in range(args.num_files - 1):
                 filename = base_name + str(num_file+1) + ".tfrecord"
                 print()
-                print("INFO currently writing to: " + filename)
+                print("INFO writing to " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save to the .tfrecord file
@@ -410,7 +410,7 @@ if __name__ == '__main__':
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             filename = base_name + str(args.num_files) + ".tfrecord"
             print()
-            print("INFO currently writing to: " + filename)
+            print("INFO writing to " + filename)
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             # create and save to the .tfrecord file
