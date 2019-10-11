@@ -214,9 +214,9 @@ It is recommended to use [tmux](https://github.com/tmux/tmux/wiki) split screens
 
 ### TFRecords into a tf.data.Dataset
 
-The `projectname_input.py` module was used to create ready-to-use TensorFlow datasets from the `.tfrecord` files. Its main feature is to create three datasets for train/validating/testing by parsing the `.tfrecord` files and extracting a 15 sec window from the audio, then normalizing the data. If waveform is used, we normalized the batch, but if log mel-spectrogram is used, we normalized with respect to the spectrograms themselves (Pons, et al., 2018). The module will also create mini-batches of a chosen size.
+The `data_input.py` module was used to create ready-to-use TensorFlow datasets from the `.tfrecord` files. Its main feature is to create three datasets for train/validating/testing by parsing the `.tfrecord` files and extracting a 15 sec window from the audio, then normalizing the data. If waveform is used, we normalized the batch, but if log mel-spectrogram is used, we normalized with respect to the spectrograms themselves (Pons, et al., 2018). The module will also create mini-batches of a chosen size.
 
-The `projectname_input.py` module again leaves a lot of room for customisation. There are functions to exclude certain track IDs from the dataset, to merge certain tags (e.g. 'rap' and 'hip hop'), or to only include some tags. The user can also choose the size of the audio window and whether the window is to be extracted at random, or centred on the audio array. 
+The `data_input.py` module again leaves a lot of room for customisation. There are functions to exclude certain track IDs from the dataset, to merge certain tags (e.g. 'rap' and 'hip hop'), or to only include some tags. The user can also choose the size of the audio window and whether the window is to be extracted at random, or centred on the audio array. 
 
 In the training script, we use the `generate_datasets_from_dir()` function to automatically use all the `.tfrecord` files in the specified directory. In order to manually generate one or more datasets from a list of `.tfrecord` files, you can use the `generate_datasets()` function.
 
@@ -242,11 +242,11 @@ Finally, this data input pipeline is optimised following the [official guideline
 
 ## Model and JSON Configuration
 
-The model we used was designed by (Pons, et al., 2018). See their GitHub [repository](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. In our experiment, as mentioned above, we have followed their approach and compared the performance when training with **waveform** or **log mel-spectrogram** audio format. Since the model they provide is written using TensorFlow 1.x syntax, we have rewritten the same model using TensorFlow 2.0. You can find the 'upgraded' model in `projectname.py`.
+The model we used was designed by (Pons, et al., 2018). See their GitHub [repository](https://github.com/jordipons/music-audio-tagging-at-scale-models) for more details. In our experiment, as mentioned above, we have followed their approach and compared the performance when training with **waveform** or **log mel-spectrogram** audio format. Since the model they provide is written using TensorFlow 1.x syntax, we have rewritten the same model using TensorFlow 2.0. You can find the 'upgraded' model in `orpheus_model.py`.
 
-In brief, `projectname.py` contains two frontend architectures (one for waveform and one for log mel-spectrogram) and a single backend architecture, with a `build_model()` function which combines the two to produce the complete model that will be used for training.
+In brief, `orpheus_model.py` contains two frontend architectures (one for waveform and one for log mel-spectrogram) and a single backend architecture, with a `build_model()` function which combines the two to produce the complete model that will be used for training.
 
-In order to avoid having to manually tinker with the training code every time a training parameter has to be changed, all the training parameters are set through a handy JSON file. You can create an empty `config.json` file by using the `create_config_json()` function. Here is an outline of how the JSON file is structured:
+In order to avoid having to manually tinker with the training code every time a training parameter has to be changed, all the training parameters are set through a handy JSON file. You can create an empty `config.json` file by using the `write_config_json()` function. Here is an outline of how the JSON file is structured:
 
 1. `model`: contains parameters to set the number of dense units and convolutional filters in the model;
 
@@ -256,28 +256,28 @@ In order to avoid having to manually tinker with the training code every time a 
 
 4. `tfrecords`: contains parameters to specify how the audio tracks were encoded in the TFRecords such as sample rate or the number of frequency bands in the mel scale.
 
-See the inline comments for the `create_config_json()` function within `projectname.py` for more details. 
+See the inline comments for the `write_config_json()` function within `orpheus_model.py` for more details. 
 
 *Example:*
 
 ```python
-import projectname
+from orpheus_model import write_config_json
 
 # to create an empty .json
-projectname.create_config_json('/srv/data/urop/config.json')
+write_config_json('/srv/data/urop/config.json')
 
 # to create an empty .json and manually enter some parameters (equivalent to editing the file after creation)
-projectname.create_config_json('/srv/data/urop/config.json', 'batch_size'=32)
+write_config_json('/srv/data/urop/config.json', 'batch_size'=32)
 ```
 
 ## Training
 
-We have written two separate scripts for the training algorithm, `training.py` 
-and `'training_custom.py`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as described in the [official guidelines](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) for TensorFlow 2.0) where each training step is performed manually. While `training.py` only allows the introduction of advanced training features through Keras callbacks, `training_custom.py` allows total flexibility in the features you could introduce. 
+We have written two separate training functions in the `train.py` module, `train_with_fit()` 
+and `'train()`. The main difference between the two is that the former makes use of the built-in Keras `model.fit`, whereas the latter makes use of a custom training loop (as described in the [official guidelines](https://www.tensorflow.org/beta/guide/keras/training_and_evaluation#part_ii_writing_your_own_training_evaluation_loops_from_scratch) for TensorFlow 2.0) where each training step is performed manually. While `train_with_fit()` only allows the introduction of advanced training features through Keras callbacks, `train()` allows total flexibility in the features you could introduce. 
 
-Both scripts assume you have one or more GPUs available, and make use of a MirroredStrategy to distribute training. Both scripts write (train and validation) summaries on TensorBoard and save checkpoints at the end of each epoch, and they also have the option to enable early stopping or learning rate reduction on plateau. Only the custom loop implements cyclical learning rate and the one-cycle policy, as described by (N. Smith, 2018) in [this](https://arxiv.org/pdf/1803.09820.pdf) paper.
+Both functions assume you have one or more GPUs available, and make use of a MirroredStrategy to distribute training. Both functions write (train and validation) summaries on TensorBoard and save checkpoints at the end of each epoch, and they also have the option to enable early stopping or learning rate reduction on plateau. Only the custom loop implements cyclical learning rate and the one-cycle policy, as described by (N. Smith, 2018) in [this](https://arxiv.org/pdf/1803.09820.pdf) paper.
 
-For ease of use, `projectname_train.py` is wrapper of the two scripts. By default, the custom loop is selected, unless a different choice is specified. You may control all the training parameters by tweaking the `config.json` file.
+By default, the custom loop is selected, unless a different choice is specified in the `train.py` terminal arguments. You may control all the training parameters by tweaking the `config.json` file.
 
 *Example:*
 
@@ -292,14 +292,15 @@ python waveform --epochs 10 --root-dir /srv/data/urop/tfrecords-waveform --confi
 
 Furthermore, it is possible to stop the scripts in the middle of training by keyboard interrupt and recover from a saved checkpoint using the `--resume-time` parameter.
 
-The `projectname_train.py` script makes use of `projectname_input.py` to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may generate your own datasets using the tf.data API and then do the following:
+The `train.py` module makes use of the `data_input.py` module to generate training and validation datasets. If you want to perform the model training with more flexibility in choosing your own datasets, you may generate your own datasets using the tf.data API and then do the following:
 
 ```python
 import os
 import tensorflow as tf
 
-import training
-import projectname_train
+import train
+
+from orpheus_model import parse_config_json
 
 strategy = tf.distribute.MirroredStrategy()
 #train_dataset = strategy.experimental_distribute_dataset(train_dataset)
@@ -308,34 +309,34 @@ strategy = tf.distribute.MirroredStrategy()
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
-config = projectname_train.parse_config('/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db')
+config = parse_config_json('/srv/data/urop/config.json', '/srv/data/urop/clean_lastfm.db')
 
-training.train(train_dataset, valid_dataset, frontend='waveform', strategy=strategy, config=config, epochs=10)
+train.train_with_fit(train_dataset, valid_dataset, frontend='waveform', strategy=strategy, config=config, epochs=10)
 ```
-If you prefer to use `training_custom.py`, do exactly the same procedure as above, except replacing `training` with `training_custom` and uncommenting the two `strategy.experimental_distribute_dataset()` lines.
+If you prefer to use the custom training loop, follow exactly the same procedure as above, except replacing `train_with_fit()` with `train()` and uncommenting the two `strategy.experimental_distribute_dataset()` lines.
 
 ## Validating and Predicting
 
-The evaluation tools are contained in the script `projectname.py`. There is a `test()` function which simply tests the model's performance on the test dataset from a certain checkpoint. There is also a `predict()` function which takes an audio array (in waveform or log mel-spectrogram format) and uses the model to return the most confident tag predicitons for that track. Optionally, the audio array might be sliced in `n_slices` sliding windows of length `window_length`, and the final tag predictions will average out the tag predictions for each single slice. In either case, you will need to pass a `threshold` to determine which tags are shown, based on their prediction confidence.
+The evaluation tools are contained in the script `orpheus.py`. There is a `test()` function which simply tests the model's performance on the test dataset from a certain checkpoint. There is also a `predict()` function which takes an audio array (in waveform or log mel-spectrogram format) and uses the model to return the most confident tag predicitons for that track. Optionally, the audio array might be sliced in `n_slices` sliding windows of length `window_length`, and the final tag predictions will average out the tag predictions for each single slice. In either case, you will need to pass a `threshold` to determine which tags are shown, based on their prediction confidence.
 
 *Example:*
 
 To test a log-mel-spectrogram model on the test dataset (as specified by `split` in the config JSON):
 
 ```
-python projectname.py test log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db --tfrecords-dir /srv/data/urop/tfrecords-log-mel-spectrogram
+python orpheus.py test log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db --tfrecords-dir /srv/data/urop/tfrecords-log-mel-spectrogram
 ```
 
 To use the same model to predict tags with threshold 0.1 for a single audio track (or multiple tracks in the same folder):
 
 ```
-python projectname.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --mp3 /path/to/your/song.mp3
+python orpheus.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --mp3 /path/to/your/song.mp3
 ```
 
 To use the same model to predict tags with threshold 0.1 for a 30 sec recording:
 
 ```
-python projectname.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --record --record-length 30
+python orpheus.py predict log-mel-spectrogram --checkpoint /path/to/model/checkpoint --config /path/to/config.json --lastfm /path/to/clean/lastfm.db -t 0.1 --record --record-length 30
 ```
 
 ## Results
