@@ -127,12 +127,14 @@ def get_encoded_tags(fm, tid, n_tags):
     
     tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
 
-    # returns empty array if it has no clean tags, this makes it easy to check later on
+    # returns empty array if tag has no tags
     if not tag_nums:
         return np.array([])
     
-    # encodes the tags using a one-hot encoding
+    # encodes the tags using a one-hot encoding (if n_tags > len(tag_nums), last entries will be zeros)
     encoded_tags = np.zeros(n_tags, dtype=np.int8)
+
+    # encodes the tags in the array
     for num in tag_nums:
         encoded_tags[num-1] = 1
 
@@ -224,9 +226,7 @@ def save_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_r
             n_tags = len(fm.get_tag_nums())
         else:
             fm = [LastFm(os.path.join(tag_path, path)) for path in multitag]
-            n_tags = [len(fm.get_tag_nums()) for fm in fm]
-            assert all(x == n_tags[0] for x in n_tags), 'all databases need to have the same number of tags'
-            n_tags = n_tags[0] # cast back to int
+            n_tags = np.max(([len(fm.get_tag_nums()) for fm in fm]) # if n_tags is different for each database, use max and fill the rest with zeros
 
         # initialize
         exceptions = []
