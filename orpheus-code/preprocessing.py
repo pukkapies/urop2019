@@ -124,8 +124,11 @@ def get_encoded_tags(fm, tid, n_tags):
     ndarray
         A one-hot encoded vector storing tag information of the tid.
     '''
-    
-    tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
+
+    try:
+        tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
+    except:
+        raise KeyError(tid)
 
     # returns empty array if tag has no tags
     if not tag_nums:
@@ -226,7 +229,7 @@ def save_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_r
             n_tags = len(fm.get_tag_nums())
         else:
             fm = [LastFm(os.path.join(tag_path, path)) for path in multitag]
-            n_tags = np.max(([len(fm.get_tag_nums()) for fm in fm]) # if n_tags is different for each database, use max and fill the rest with zeros
+            n_tags = np.max([len(fm.get_tag_nums()) for fm in fm]) # if n_tags is different for each database, use max and fill the rest with zeros
 
         # initialize
         exceptions = []
