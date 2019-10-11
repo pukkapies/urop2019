@@ -110,38 +110,47 @@ def get_encoded_tags(fm, tid, n_tags):
     
     Parameters
     ----------
-    fm: LastFm, LastFm2Pandas
-        Any instance of the tags database.
+    fm: list, LastFm, LastFm2Pandas
+        Any (list of) instance(s) of the tags database(s).
 
     tid: str
         The track tid.
 
     n_tags: int
-        The number of tag entries in the database.
+        The number of tag entries to encode.
 
     Returns
     -------
     ndarray
-        A one-hot encoded vector storing tag information of the tid.
+        A one-hot encoded vector storing tag information of the tid (optionally, a multi-dimensional array if multiple databases are passed).
     '''
 
-    try:
-        tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
-    except:
-        raise KeyError(tid)
+    if isinstance(fm, (LastFm, LastFm2Pandas)):
+        fm = [fm]
 
-    # returns empty array if tag has no tags
-    if not tag_nums:
-        return np.array([])
+    nd_encoded_tags = []
+
+    for fm in fm:
+        try:
+            tag_nums = fm.tid_num_to_tag_nums(fm.tid_to_tid_num(tid))
+        except:
+            return None # no tags have been found
     
-    # encodes the tags using a one-hot encoding (if n_tags > len(tag_nums), last entries will be zeros)
-    encoded_tags = np.zeros(n_tags, dtype=np.int8)
+        # encodes the tags using a one-hot encoding (if n_tags > len(tag_nums), last entries will be zeros)
+        encoded_tags = np.zeros(n_tags, dtype=np.int8)
 
-    # encodes the tags in the array
-    for num in tag_nums:
-        encoded_tags[num-1] = 1
+        # encodes the tags in the array
+        for tag_num in tag_nums:
+            encoded_tags[tag_num-1] = 1
 
-    return encoded_tags
+        nd_encoded_tags.append(encoded_tags)
+    
+    nd_encoded_tags = np.array(nd_encoded_tags)
+    
+    if nd_encoded_tags.shape[0] == 1:
+        return nd_encoded_tags[0] # return a single hot-encoded vector
+    else:
+        return nd_encoded_tags
 
 def _bytes_feature(value):
     ''' Creates a BytesList Feature. '''
@@ -247,15 +256,12 @@ def save_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_r
             tid, path = cols
 
             # encode tags
-            if not multitag:
-                encoded_tags = get_encoded_tags(fm, tid, n_tags)
-            else:
-                encoded_tags = np.array([get_encoded_tags(fm, tid, n_tags) for fm in fm]) # convert to ndarray to ensure consistency with one-dimensional case
+            encoded_tags = get_encoded_tags(fm, tid, n_tags)
             
             # skip tracks which dont have any "clean" tags    
-            if encoded_tags.size == 0:
+            if encoded_tags is None:
                 if verbose:
-                    print("{} has no tags. Skipping...".format(tid))
+                    print("WARNING skipping {} as no tags has been found within one of the databases".format(tid))
                 continue
 
             path = os.path.join(root_dir, path)
@@ -286,9 +292,8 @@ def save_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_r
             return
         else:
             if exceptions:
-                print('Could not process the following tracks:')
-                for i, exception in enumerate(exceptions):
-                    print(" {:3d}. {} {}".format(i, exception["tid"] + exception["path"]))
+                for exception in exceptions:
+                    print('WARNING could not process track {} due to unknown audio error ({})'.format(exception["tid"], exception["path"]))
             return
 
 if __name__ == '__main__':
@@ -362,7 +367,7 @@ if __name__ == '__main__':
             for num_file in range(start-1, stop):
                 filename = base_name + str(num_file+1) + ".tfrecord"
                 print()
-                print("Writing to: " + filename)
+                print("INFO currently writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save
@@ -377,7 +382,7 @@ if __name__ == '__main__':
                 stop = args.num_files-1
                 filename = base_name + str(args.num_files) + ".tfrecord"
                 print()
-                print("Writing to: " + filename)
+                print("INFO currently writing to: " + filename)
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 # create and save to the .tfrecord file
@@ -392,7 +397,7 @@ if __name__ == '__main__':
             for num_file in range(args.num_files - 1):
                 filename = base_name + str(num_file+1) + ".tfrecord"
                 print()
-                print("Writing to: " + filename)
+                print("INFO currently writing to: " + filename)
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save to the .tfrecord file
@@ -405,7 +410,7 @@ if __name__ == '__main__':
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             filename = base_name + str(args.num_files) + ".tfrecord"
             print()
-            print("Writing to: " + filename)
+            print("INFO currently writing to: " + filename)
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             # create and save to the .tfrecord file
