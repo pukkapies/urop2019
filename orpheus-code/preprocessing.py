@@ -43,7 +43,7 @@ Functions
 - get_example
     Gets a tf.train.Example object with features containing the array, tid and the encoded tags.
 
-- save_example_to_tfrecord
+- save_to_tfrecord
     Creates and saves a TFRecord file.
 '''
 
@@ -184,7 +184,7 @@ def get_example(array, tid, encoded_tags):
 
     return tf.train.Example(features=tf.train.Features(feature=feature_dict))
 
-def save_example_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, num_mels=96, multitag=False, verbose=False):
+def save_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_rate=16000, num_mels=96, multitag=False, verbose=False):
     ''' Creates and saves a TFRecord file.
 
     Parameters
@@ -345,11 +345,11 @@ if __name__ == '__main__':
         filename_suffix = str(args.split[0]) + '-' + str(args.split[1]) + '-' + str(args.split[2]) + ".tfrecord" 
 
         for i, df in enumerate((df1, df2, df3)):
-            save_example_to_tfrecord(df, base_name + filename[i] + filename_suffix, audio_format=args.format, 
-                                     root_dir=args.root_dir, tag_path=args.tag_path, 
-                                     multitag=args.tag_path_multi,
-                                     sample_rate=args.sr, num_mels=args.mels,
-                                     verbose=args.verbose)
+            save_to_tfrecord(df, base_name + filename[i] + filename_suffix, audio_format=args.format, 
+                             root_dir=args.root_dir, tag_path=args.tag_path, 
+                             multitag=args.tag_path_multi,
+                             sample_rate=args.sr, num_mels=args.mels,
+                             verbose=args.verbose)
 
     # otherwise, save to args.num_files equal-sized files
     else:
@@ -363,11 +363,11 @@ if __name__ == '__main__':
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save
-                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
-                                        root_dir=args.root_dir, tag_path=args.tag_path, 
-                                        multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, num_mels=args.mels,
-                                        verbose=args.verbose)
+                save_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                 root_dir=args.root_dir, tag_path=args.tag_path, 
+                                 multitag=args.tag_path_multi,
+                                 sample_rate=args.sr, num_mels=args.mels,
+                                 verbose=args.verbose)
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             if stop >= args.num_files:
@@ -378,11 +378,11 @@ if __name__ == '__main__':
                 # obtain the df slice corresponding the last file
                 df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
-                                        root_dir=args.root_dir, tag_path=args.tag_path, 
-                                        multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, num_mels=args.mels,
-                                        verbose=args.verbose)
+                save_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                 root_dir=args.root_dir, tag_path=args.tag_path, 
+                                 multitag=args.tag_path_multi,
+                                 sample_rate=args.sr, num_mels=args.mels,
+                                 verbose=args.verbose)
         
         # otherwise, create all files at once
         else:
@@ -393,11 +393,11 @@ if __name__ == '__main__':
                 # obtain the df slice corresponding to current file
                 df_slice = df[num_file*len(df)//args.num_files:(num_file+1)*len(df)//args.num_files]
                 # create and save to the .tfrecord file
-                save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
-                                        root_dir=args.root_dir, tag_path=args.tag_path, 
-                                        multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, num_mels=args.mels,
-                                        verbose=args.verbose)
+                save_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                                 root_dir=args.root_dir, tag_path=args.tag_path, 
+                                 multitag=args.tag_path_multi,
+                                 sample_rate=args.sr, num_mels=args.mels,
+                                 verbose=args.verbose)
 
             # the last file will need to be dealt with separately, as it will have a slightly bigger size than the others (due to rounding errors)
             filename = base_name + str(args.num_files) + ".tfrecord"
@@ -406,8 +406,8 @@ if __name__ == '__main__':
             # obtain the df slice corresponding to the last file
             df_slice = df.loc[(args.num_files-1)*len(df)//args.num_files:]
             # create and save to the .tfrecord file
-            save_example_to_tfrecord(df_slice, filename, audio_format=args.format, 
-                                        root_dir=args.root_dir, tag_path=args.tag_path, 
-                                        multitag=args.tag_path_multi,
-                                        sample_rate=args.sr, num_mels=args.mels,
-                                        verbose=args.verbose)
+            save_to_tfrecord(df_slice, filename, audio_format=args.format, 
+                             root_dir=args.root_dir, tag_path=args.tag_path, 
+                             multitag=args.tag_path_multi,
+                             sample_rate=args.sr, num_mels=args.mels,
+                             verbose=args.verbose)
