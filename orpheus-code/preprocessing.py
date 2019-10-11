@@ -261,7 +261,7 @@ def save_to_tfrecord(df, output_path, audio_format, root_dir, tag_path, sample_r
             # skip tracks which dont have any "clean" tags    
             if encoded_tags is None:
                 if verbose:
-                    print("WARNING skipping {} as no tags has been found within one of the databases".format(tid))
+                    print("WARNING skipping {} as no tags has been found for one of the tags db".format(tid))
                 continue
 
             path = os.path.join(root_dir, path)
