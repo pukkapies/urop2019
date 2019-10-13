@@ -36,7 +36,7 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     model: tf.keras.Model
     '''
 
-    model = build_model(audio_format, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
+    model = build_model(audio_format, num_output_neurons=config.num_output_neurons, num_dense_units=config.num_dense_units, y_input=config.melspect_y)
     
     checkpoint_path = checkpoint_path or config.log_dir # if checkpoint_path is not specified, use 'log_dir' from config.json
 
@@ -209,7 +209,8 @@ def test(model, tfrecords_dir, audio_format, config):
                                                     block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                     shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                     window_length = config.window_length, window_random = config.window_random, 
-                                                    num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge,
+                                                    hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
+                                                    num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
 										            as_tuple = True)
 
     metric_1 = tf.keras.metrics.AUC(name='ROC_AUC',

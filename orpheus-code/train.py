@@ -93,7 +93,7 @@ def train_with_fit(train_dataset, valid_dataset, frontend, strategy, config, epo
         optimizer = tf.keras.optimizers.get({"class_name": config.optimizer_name, "config": config.optimizer})
 
         # build and compile model
-        model = build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
+        model = build_model(frontend, num_output_neurons=config.num_output_neurons, num_dense_units=config.num_dense_units, y_input=config.melspect_y)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM), metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
         
         # restore timestamp_to_resume (if provided)
@@ -210,7 +210,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
         tf.print('num_replica:', num_replica)
         
         # build model
-        model = build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
+        model = build_model(frontend, num_output_neurons=config.num_output_neurons, num_dense_units=config.num_dense_units, y_input=config.melspect_y)
         
         # initialise loss, optimizer and metrics
         optimizer = tf.keras.optimizers.get({"class_name": config.optimizer_name, "config": config.optimizer})
@@ -444,7 +444,8 @@ if __name__ == '__main__':
                                                               block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                               shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                               window_length = config.window_length, window_random = config.window_random, 
-                                                              num_mels = config.n_mels, num_tags = config.n_tags, num_tags_db = args.multi_db, default_tags_db = args.multi_db_default, with_tags = config.tags, merge_tags = config.tags_to_merge,
+                                                              hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
+                                                              num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
 										                      as_tuple = True)
 
     # set up training strategy
