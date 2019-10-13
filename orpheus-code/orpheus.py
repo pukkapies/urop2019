@@ -267,16 +267,6 @@ if __name__ == '__main__':
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
 
     if args.mode == 'test':
-<<<<<<< HEAD
-        if not args.tfrecords_dir: # if --tfrecords-dir is not specified, use default path on our server
-            if config.sr != 16000:
-                s = '-' + str(config.sr // 1000) + 'kHz'
-            else:
-                s = ''
-            args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.format + s)
-
-=======
->>>>>>> a45630d174343595a03c66d62a63acb8cd7bc118
         test(model, args.tfrecords_dir, args.format, config)
     
     else:
