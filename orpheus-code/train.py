@@ -440,7 +440,7 @@ if __name__ == '__main__':
 
     # generate train_dataset and valid_dataset (valid_dataset will be None if config.split is None)
     train_dataset, valid_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split = config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
-                                                              sample_rate = config.sample_rate, batch_size = config.batch_size, 
+                                                              sample_rate = config.sr, batch_size = config.batch_size, 
                                                               block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                               shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                               window_length = config.window_length, window_random = config.window_random, 

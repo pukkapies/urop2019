@@ -279,7 +279,7 @@ def _window_2(features_dict, sample_rate, hop_length=512, window_length=15, wind
     features_dict['audio'] = tf.cond(random, lambda: fn2a(features_dict['audio']), lambda: fn2b(features_dict['audio']))
     return features_dict
 
-def (audio_format):
+def _window(audio_format):
     ''' Returns the right window function, depending to the specified audio-format. '''
 
     return {'waveform': _window_1, 'log-mel-spectrogram': _window_2}[audio_format]

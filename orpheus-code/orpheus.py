@@ -205,7 +205,7 @@ def test(model, tfrecords_dir, audio_format, config):
         The namespace generated from config.json with parse_config_json().
     '''
     _, _, test_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.format, split = config.split, which_split=(True, True, True),
-                                                    sample_rate = config.sample_rate, batch_size = config.batch_size, 
+                                                    sample_rate = config.sr, batch_size = config.batch_size, 
                                                     block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                     shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                     window_length = config.window_length, window_random = config.window_random, 
@@ -268,8 +268,8 @@ if __name__ == '__main__':
 
     if args.mode == 'test':
         if not args.tfrecords_dir: # if --tfrecords-dir is not specified, use default path on our server
-            if config.sample_rate != 16000:
-                s = '-' + str(config.sample_rate // 1000) + 'kHz'
+            if config.sr != 16000:
+                s = '-' + str(config.sr // 1000) + 'kHz'
             else:
                 s = ''
             args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.format + s)
@@ -281,16 +281,16 @@ if __name__ == '__main__':
         if not args.record:
             if os.path.isfile(args.mp3_path):
                 try:
-                    narray = get_audio(args.mp3_path, args.format, sample_rate=config.sample_rate, n_mels=config.n_mels)
-                    narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
+                    narray = get_audio(args.mp3_path, args.format, sample_rate=config.sr, n_mels=config.n_mels)
+                    narray = get_audio_slices(narray, args.format, sample_rate=config.sr, window_length=args.window_length, n_slices=args.n_slices)
                     print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                 except audioread.NoBackendError:
                     print('Skipping {} because a NoBackendError occurred...'.format(args.mp3_path))
             else:
                 for mp3_path in os.listdir(args.mp3_path): 
                     try:
-                        narray = get_audio(mp3_path, args.mp3_path, args.format, sample_rate=config.sample_rate, n_mels=config.n_mels)
-                        narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
+                        narray = get_audio(mp3_path, args.mp3_path, args.format, sample_rate=config.sr, n_mels=config.n_mels)
+                        narray = get_audio_slices(narray, args.format, sample_rate=config.sr, window_length=args.window_length, n_slices=args.n_slices)
                         print('File: ', mp3_path)
                         print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                     except audioread.NoBackendError:
@@ -320,5 +320,5 @@ if __name__ == '__main__':
             sd.wait() # wait until recording is finished
             
             audio = audio.transpose()
-            audio = get_audio(mp3_path = None, sample_rate=config.sample_rate, n_mels=config.n_mels, array=audio, array_sr=sr_rec)
+            audio = get_audio(mp3_path = None, sample_rate=config.sr, n_mels=config.n_mels, array=audio, array_sr=sr_rec)
             print('Predictions: ', predict(model, audio, config, threshold=args.threshold))
