@@ -407,13 +407,13 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('frontend', choices=['waveform', 'log-mel-spectrogram'])
-    parser.add_argument('--tfrecords-dir', dest='tfrecords_dir', help='directory to read the .tfrecord files from (default to path on Boden)')
-    parser.add_argument('--config', help='path to config.json (default to path on Boden)', default='~/config.json')
+    parser.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from', required=True)
+    parser.add_argument('--config', help='path to config.json (default to path on Boden)', default='/srv/data/urop/config.json')
     parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     parser.add_argument('--multi-db', help='specify the number of different tags features in the .tfrecord files', type=int, default=1)
     parser.add_argument('--multi-db-default', help='specify the index of the default tags database, when there are more than one tags features in the .tfrecord files', type=int)
-    parser.add_argument('--epochs', help='specify the number of epochs to train on', type=int, required=True)
-    parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)', type=int)
+    parser.add_argument('--epochs', help='specify the number of epochs to train for', type=int, default=1)
+    parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform at each epoch (if unspecified, go through the whole dataset)', type=int)
     parser.add_argument('--no-shuffle', action='store_true', help='force no shuffle, override config setting')
     parser.add_argument('--resume', help='load a previously saved model with the time in the format ddmmyy-hhmm, e.g. if the folder which the model is saved is custom_log-mel-spect_160919-0539, resume should take the argument 160919-0539')
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
@@ -433,14 +433,6 @@ if __name__ == '__main__':
 
     # parse config
     config = parse_config_json(args.config, args.lastfm)
-
-    # if --tfrecords-dir is not specified, use default path on our server
-    if not args.tfrecords_dir:
-        if config.sample_rate != 16000:
-            s = '-' + str(config.sample_rate // 1000) + 'kHz'
-        else:
-            s = ''
-        args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.frontend + s)
 
     # override config setting
     if args.no_shuffle:
