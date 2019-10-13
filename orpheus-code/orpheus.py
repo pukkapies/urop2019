@@ -241,7 +241,7 @@ if __name__ == '__main__':
     testing.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
     testing.add_argument('--config', help='path to config.json', required=True)
     testing.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
-    testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from (default to path on Boden)')
+    testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from')
 
     predicting = subparsers.add_parser('predict', help='take a trained model and use it to make tag previctions on (single or multiple) .mp3 audio tracks, or on an audio recording')
     predicting.add_argument('format', help='model audio format')
@@ -267,6 +267,7 @@ if __name__ == '__main__':
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
 
     if args.mode == 'test':
+<<<<<<< HEAD
         if not args.tfrecords_dir: # if --tfrecords-dir is not specified, use default path on our server
             if config.sr != 16000:
                 s = '-' + str(config.sr // 1000) + 'kHz'
@@ -274,6 +275,8 @@ if __name__ == '__main__':
                 s = ''
             args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.format + s)
 
+=======
+>>>>>>> a45630d174343595a03c66d62a63acb8cd7bc118
         test(model, args.tfrecords_dir, args.format, config)
     
     else:
