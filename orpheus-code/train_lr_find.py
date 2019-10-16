@@ -12,37 +12,43 @@ def lr_find(dataset, strategy, config, frontend='log-mel-spectrogram', start_lr=
         optimizer = tf.keras.optimizers.get({"class_name": config.optimizer_name, "config": config.optimizer})
 
         train_loss = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
-        # train_mean_loss = tf.keras.metrics.Mean(name='train_mean_loss', dtype=tf.float32)
-    
+
         @tf.function
         def train_step(batch):
-            # unpack audio and track labels (i.e. tags)
-            batch_x, batch_y = batch
-
-            # calculate gradients used to optimize the model's variables
-            with tf.GradientTape() as tape:
-                loss = train_loss(batch_y,  model(batch_x)) / config.batch_size
-            grads = tape.gradient(loss, model.trainable_variables)
+            def _train_step(batch):
+                features, labels = batch
+                with tf.GradientTape() as tape:
+                    loss = train_loss(labels,  model(features)) / config.batch_size
+                
+                grads = tape.gradient(loss, model.trainable_variables)
+                optimizer.apply_gradients(zip(grads, model.trainable_variables))
+                return loss
+      
+            per_example_losses = strategy.experimental_run_v2(_train_step, args=(batch, ))
             
-            # update the model's variables
-            optimizer.apply_gradients(zip(grads, model.trainable_variables))
-
-            return loss
+            mean_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, axis=None)
+            return mean_loss
 
         # initialize iteration count and lr
         it = 0
         lr = start_lr
         
         f = np.power(end_lr/start_lr, 1/num_it) # the factor to multiply lr by after each iteration
+        
+        output = []
 
         for batch in dataset:
             it += 1
             lr *= f
             optimizer.learning_rate.assign(lr)
 
-            per_replica_loss = strategy.experimental_run_v2(train_step, args=(batch, ))
+            loss = train_step(batch)
 
-            print(it, lr, per_replica_loss)
+            print(it, lr, loss)
+            
+            output.append((it, lr, loss))
 
             if it >= num_it:
                 break
+
+        return output
