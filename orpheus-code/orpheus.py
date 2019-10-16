@@ -36,7 +36,7 @@ def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     model: tf.keras.Model
     '''
 
-    model = build_model(audio_format, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
+    model = build_model(audio_format, num_output_neurons=config.num_output_neurons, num_dense_units=config.num_dense_units, y_input=config.melspect_y)
     
     checkpoint_path = checkpoint_path or config.log_dir # if checkpoint_path is not specified, use 'log_dir' from config.json
 
@@ -205,11 +205,12 @@ def test(model, tfrecords_dir, audio_format, config):
         The namespace generated from config.json with parse_config_json().
     '''
     _, _, test_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.format, split = config.split, which_split=(True, True, True),
-                                                    sample_rate = config.sample_rate, batch_size = config.batch_size, 
+                                                    sample_rate = config.sr, batch_size = config.batch_size, 
                                                     block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                     shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                     window_length = config.window_length, window_random = config.window_random, 
-                                                    num_mels = config.n_mels, num_tags = config.n_tags, with_tags = config.tags, merge_tags = config.tags_to_merge,
+                                                    hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
+                                                    num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
 										            as_tuple = True)
 
     metric_1 = tf.keras.metrics.AUC(name='ROC_AUC',
@@ -240,7 +241,7 @@ if __name__ == '__main__':
     testing.add_argument('--checkpoint', help='path to checkpoint to restore', required=True)
     testing.add_argument('--config', help='path to config.json', required=True)
     testing.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
-    testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from (default to path on Boden)')
+    testing.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from')
 
     predicting = subparsers.add_parser('predict', help='take a trained model and use it to make tag previctions on (single or multiple) .mp3 audio tracks, or on an audio recording')
     predicting.add_argument('format', help='model audio format')
@@ -266,13 +267,6 @@ if __name__ == '__main__':
     model = load_from_checkpoint(args.format, config, checkpoint_path=args.checkpoint) 
 
     if args.mode == 'test':
-        if not args.tfrecords_dir: # if --tfrecords-dir is not specified, use default path on our server
-            if config.sample_rate != 16000:
-                s = '-' + str(config.sample_rate // 1000) + 'kHz'
-            else:
-                s = ''
-            args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.format + s)
-
         test(model, args.tfrecords_dir, args.format, config)
     
     else:
@@ -280,16 +274,16 @@ if __name__ == '__main__':
         if not args.record:
             if os.path.isfile(args.mp3_path):
                 try:
-                    narray = get_audio(args.mp3_path, args.format, sample_rate=config.sample_rate, n_mels=config.n_mels)
-                    narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
+                    narray = get_audio(args.mp3_path, args.format, sample_rate=config.sr, n_mels=config.n_mels)
+                    narray = get_audio_slices(narray, args.format, sample_rate=config.sr, window_length=args.window_length, n_slices=args.n_slices)
                     print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                 except audioread.NoBackendError:
                     print('Skipping {} because a NoBackendError occurred...'.format(args.mp3_path))
             else:
                 for mp3_path in os.listdir(args.mp3_path): 
                     try:
-                        narray = get_audio(mp3_path, args.mp3_path, args.format, sample_rate=config.sample_rate, n_mels=config.n_mels)
-                        narray = get_audio_slices(narray, args.format, sample_rate=config.sample_rate, window_length=args.window_length, n_slices=args.n_slices)
+                        narray = get_audio(mp3_path, args.mp3_path, args.format, sample_rate=config.sr, n_mels=config.n_mels)
+                        narray = get_audio_slices(narray, args.format, sample_rate=config.sr, window_length=args.window_length, n_slices=args.n_slices)
                         print('File: ', mp3_path)
                         print('Predictions: ', predict(model, fm, narray, config, threshold=args.threshold))
                     except audioread.NoBackendError:
@@ -319,5 +313,5 @@ if __name__ == '__main__':
             sd.wait() # wait until recording is finished
             
             audio = audio.transpose()
-            audio = get_audio(mp3_path = None, sample_rate=config.sample_rate, n_mels=config.n_mels, array=audio, array_sr=sr_rec)
+            audio = get_audio(mp3_path = None, sample_rate=config.sr, n_mels=config.n_mels, array=audio, array_sr=sr_rec)
             print('Predictions: ', predict(model, audio, config, threshold=args.threshold))

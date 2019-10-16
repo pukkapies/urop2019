@@ -94,7 +94,7 @@ def train_with_fit(train_dataset, valid_dataset, frontend, strategy, config, epo
         optimizer = tf.keras.optimizers.get({"class_name": config.optimizer_name, "config": config.optimizer})
 
         # build and compile model
-        model = build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
+        model = build_model(frontend, num_output_neurons=config.num_output_neurons, num_dense_units=config.num_dense_units, y_input=config.melspect_y)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM), metrics=[[tf.keras.metrics.AUC(curve='ROC', name='AUC-ROC'), tf.keras.metrics.AUC(curve='PR', name='AUC-PR')]])
         
         # restore timestamp_to_resume (if provided)
@@ -207,7 +207,7 @@ def train(train_dataset, valid_dataset, frontend, strategy, config, epochs, step
     
     with strategy.scope():
         
-        model = build_model(frontend, num_output_neurons=config.n_output_neurons, num_units=config.n_dense_units, num_filts=config.n_filters, y_input=config.n_mels)
+        model = build_model(frontend, num_output_neurons=config.num_output_neurons, num_dense_units=config.num_dense_units, y_input=config.melspect_y)
 
         def get_cyclic_learning_rate(step, iterations, max_lr):
             # it is recommended that min_lr is 1/3 or 1/4th of the maximum lr. see:  
@@ -435,13 +435,13 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('frontend', choices=['waveform', 'log-mel-spectrogram'])
-    parser.add_argument('--tfrecords-dir', dest='tfrecords_dir', help='directory to read the .tfrecord files from (default to path on Boden)')
-    parser.add_argument('--config', help='path to config.json (default to path on Boden)', default='~/config.json')
+    parser.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from', required=True)
+    parser.add_argument('--config', help='path to config.json (default to path on Boden)', default='/srv/data/urop/config.json')
     parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
     parser.add_argument('--multi-db', help='specify the number of different tags features in the .tfrecord files', type=int, default=1)
     parser.add_argument('--multi-db-default', help='specify the index of the default tags database, when there are more than one tags features in the .tfrecord files', type=int)
-    parser.add_argument('--epochs', help='specify the number of epochs to train on', type=int, required=True)
-    parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform for each epoch (if unspecified, go through the whole dataset)', type=int)
+    parser.add_argument('--epochs', help='specify the number of epochs to train for', type=int, default=1)
+    parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform at each epoch (if unspecified, go through the whole dataset)', type=int)
     parser.add_argument('--no-shuffle', action='store_true', help='force no shuffle, override config setting')
     parser.add_argument('--resume', help='load a previously saved model with the time in the format ddmmyy-hhmm, e.g. if the folder which the model is saved is custom_log-mel-spect_160919-0539, resume should take the argument 160919-0539')
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
@@ -462,25 +462,18 @@ if __name__ == '__main__':
     # parse config
     config = parse_config_json(args.config, args.lastfm)
 
-    # if --tfrecords-dir is not specified, use default path on our server
-    if not args.tfrecords_dir:
-        if config.sample_rate != 16000:
-            s = '-' + str(config.sample_rate // 1000) + 'kHz'
-        else:
-            s = ''
-        args.tfrecords_dir = os.path.normpath('/srv/data/urop/tfrecords-' + args.frontend + s)
-
     # override config setting
     if args.no_shuffle:
         config.shuffle = False
 
     # generate train_dataset and valid_dataset (valid_dataset will be None if config.split is None)
     train_dataset, valid_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split = config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
-                                                              sample_rate = config.sample_rate, batch_size = config.batch_size, 
+                                                              sample_rate = config.sr, batch_size = config.batch_size, 
                                                               block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                               shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                               window_length = config.window_length, window_random = config.window_random, 
-                                                              num_mels = config.n_mels, num_tags = config.n_tags, num_tags_db = args.multi_db, default_tags_db = args.multi_db_default, with_tags = config.tags, merge_tags = config.tags_to_merge,
+                                                              hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
+                                                              num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
 										                      as_tuple = True)
 
     # set up training strategy
