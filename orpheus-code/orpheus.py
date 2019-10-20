@@ -210,8 +210,7 @@ def test(model, tfrecords_dir, audio_format, config, tags_db = 1, default_tags_d
                                                     shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                     window_length = config.window_length, window_random = config.window_random, 
                                                     hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
-                                                    num_tags_db = tags_db, default_tags_db = default_tags_db,
-										            as_tuple = True)
+                                                    num_tags_db = tags_db, default_tags_db = default_tags_db, as_tuple = True)
 
     metric_1 = tf.keras.metrics.AUC(name='ROC_AUC',
                                         curve='ROC',
