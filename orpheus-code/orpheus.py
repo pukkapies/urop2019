@@ -187,7 +187,7 @@ def predict(model, fm, audio, config, threshold=0.5):
 
     return tags
 
-def test(model, tfrecords_dir, audio_format, config):
+def test(model, tfrecords_dir, audio_format, config, tags_db = 1, default_tags_db = None):
     ''' Takes a given model and tests its performance on a test dataset using AUC_ROC and AUC_PR.
     
     Parameters
@@ -204,13 +204,13 @@ def test(model, tfrecords_dir, audio_format, config):
     config: argparse.Namespace
         The namespace generated from config.json with parse_config_json().
     '''
-    _, _, test_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.format, split = config.split, which_split=(True, True, True),
+    _, _, test_dataset = generate_datasets_from_dir(tfrecords_dir, audio_format, split = config.split, which_split=(True, True, True),
                                                     sample_rate = config.sr, batch_size = config.batch_size, 
                                                     block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                     shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                     window_length = config.window_length, window_random = config.window_random, 
                                                     hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
-                                                    num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
+                                                    num_tags_db = tags_db, default_tags_db = default_tags_db,
 										            as_tuple = True)
 
     metric_1 = tf.keras.metrics.AUC(name='ROC_AUC',
