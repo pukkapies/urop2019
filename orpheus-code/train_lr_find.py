@@ -14,8 +14,9 @@ def lr_find(dataset, strategy, config, frontend='log-mel-spectrogram', start_lr=
         train_loss = tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM)
 
         @tf.function
-        def train_step(batch):
-            def _train_step(batch):
+        def _train_step(batch, strategy):
+
+            def _train_step_per_replica(batch):
                 features, labels = batch
                 with tf.GradientTape() as tape:
                     loss = train_loss(labels,  model(features)) / config.batch_size
@@ -24,9 +25,10 @@ def lr_find(dataset, strategy, config, frontend='log-mel-spectrogram', start_lr=
                 optimizer.apply_gradients(zip(grads, model.trainable_variables))
                 return loss
       
-            per_example_losses = strategy.experimental_run_v2(_train_step, args=(batch, ))
+            per_replica_losses = strategy.experimental_run_v2(_train_step_per_replica, args=(batch, ))
             
-            mean_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_loss, axis=None)
+            mean_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None)
+
             return mean_loss
 
         # initialize iteration count and lr
