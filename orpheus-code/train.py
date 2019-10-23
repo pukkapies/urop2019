@@ -50,7 +50,7 @@ from orpheus_model import build_model
 from orpheus_model import parse_config_json
 
 class Learner():
-    def __init__(frontend, train_dataset, valid_dataset, strategy, config, restore=None, custom_loop=True):
+    def __init__(self, frontend, train_dataset, valid_dataset, strategy, config, restore=None, custom_loop=True):
         # initialize training variables and strategy
         self.train_dataset = train_dataset
         self.valid_dataset = valid_dataset
@@ -77,10 +77,10 @@ class Learner():
 
             self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM)
 
-            self.train_metric_1 = tf.keras.metrics.AUC(curve='ROC',
+            self.metric_1 = tf.keras.metrics.AUC(curve='ROC',
                                                        name='train_ROC-AUC', 
                                                        dtype=tf.float32)
-            self.train_metric_2 = tf.keras.metrics.AUC(curve='PR',
+            self.metric_2 = tf.keras.metrics.AUC(curve='PR',
                                                        name='train_PR-AUC',
                                                        dtype=tf.float32)
 
@@ -91,18 +91,9 @@ class Learner():
                 if restore:
                     file = tf.train.latest_checkpoint(self.log_dir)
                     if file:
-                        self.checkpoint.restore(file)
-                        self.checkpoint_epoch = int(file.split('-')[-1]) # restart training from last saved epoch
+                        self.checkpoint.restore(file).assert_consumed()
                     else:
                         raise FileNotFoundError
-                
-                # initialize validation metrics (automatically done in built-in loop)
-                self.valid_metric_1 = tf.keras.metrics.AUC(curve='ROC',
-                                                        name='train_ROC-AUC', 
-                                                        dtype=tf.float32)
-                self.valid_metric_2 = tf.keras.metrics.AUC(curve='PR',
-                                                        name='train_PR-AUC',
-                                                        dtype=tf.float32)
                 
                 # initialize tensorboard summary writers
                 self.train_log_dir = os.path.join(self.log_dir, 'train/')
@@ -154,7 +145,7 @@ class Learner():
             
             # restore the model (if restore timestamp is provided)
             if restore:
-                self.model.load_weights(os.path.join(os.path.expanduser(self.config.checkpoint_dir), self.frontend + '_' + restore))
+                self.model.load_weights(os.path.join(os.path.expanduser(self.config.log_dir), self.frontend + '_' + restore))
 
         # initialize training callbacks
         callbacks = [
@@ -276,26 +267,6 @@ class Learner():
 
         return mean_loss
 
-    # def get_cyclic_learning_rate(step, iterations, max_lr):
-    #     # it is recommended that min_lr is 1/3 or 1/4th of the maximum lr. see:  
-    #     min_lr = max_lr/4
-    #     # cycle stepsize twice the iterations in an epoch is recommended
-    #     cycle_stepsize = iterations*2
-
-    #     current_cycle = tf.floor(step/(2*cycle_stepsize))
-    #     ratio = step/cycle_stepsize-current_cycle*2
-    #     lr = min_lr + (max_lr - min_lr)*tf.cast(tf.abs(tf.abs(ratio-1)-1), dtype=tf.float32)
-    #     return lr
-
-    # def get_range_test_learning_rate(step, lr_range, iterations):
-    #     lr = lr_range[0]*tf.cast((lr_range[1]/lr_range[0])**(step/iterations), dtype=tf.float32)
-    #     return lr
-
-    # if lr_range:
-    #     config_optim.config['learning_rate'] = tf.Variable(get_range_test_learning_rate(0, lr_range, config.iterations))
-    # elif config_optim.max_learning_rate:
-    #     config_optim.config['learning_rate'] = tf.Variable(get_cyclic_learning_rate(0, config.iterations, config_optim.max_learning_rate))
-
     def train(self, epochs, steps_per_epoch=None, restore=None, update_freq=1, lr_range=None, analyse_trace=False):
         ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs using a custom training loop.
 
@@ -328,131 +299,117 @@ class Learner():
         analyse_trace: bool
             Specifies whether to enable profiling.
         '''
+
+        train_dataset = self.strategy.experimental_distribute_dataset(self.train_dataset)
+        valid_dataset = self.strategy.experimental_distribute_dataset(self.valid_dataset) if self.valid_dataset else None
         
         with self.strategy.scope():
-                
-            # @tf.function 
-            # def distributed_train_body(entry, epoch, num_replicas):
-            #     for entry in train_dataset:
-            #         per_replica_losses = strategy.experimental_run_v2(train_step, args=(entry, ))
-
-            #         if lr_range:
-            #             optimizer.learning_rate.assign(get_range_test_learning_rate(optimizer.iterations, lr_range, config.iterations))
-            #         elif config_optim.max_learning_rate:
-            #             optimizer.learning_rate.assign(get_cyclic_learning_rate(optimizer.iterations, config.iterations, config_optim.max_learning_rate))
-
-            #         # print metrics after each iteration
-            #         if tf.equal(optimizer.iterations % update_freq, 0):
-            #             tf.print('Epoch',  epoch,'; Step', optimizer.iterations, '; loss', tf.multiply(train_mean_loss.result(), num_replicas), 
-            #                     '; ROC_AUC', train_metrics_1.result(), ';PR_AUC', train_metrics_2.result(), '; learning rate', optimizer.learning_rate)
-
-            #             with train_summary_writer.as_default():
-            #                 tf.summary.scalar('ROC_AUC_itr', train_metrics_1.result(), step=optimizer.iterations)
-            #                 tf.summary.scalar('PR_AUC_itr', train_metrics_2.result(), step=optimizer.iterations)
-            #                 if lr_range:
-            #                     tf.summary.scalar('Learning rate', optimizer.learning_rate, step=optimizer.iterations)
-            #                     tf.summary.scalar('Loss_itr', strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None), step=optimizer.iterations)
-            #                 else:
-            #                     tf.summary.scalar('Loss_itr', tf.multiply(train_mean_loss.result(), num_replicas), step=optimizer.iterations)
-
-            #                 train_summary_writer.flush()
-
-            # max_metric = -200 # for early stopping
 
             tf.summary.trace_off() # in case of previous keyboard interrupt
 
-            epoch = 0
+            # initialize early stop variables
+            early_stop = 0
+            early_stop_max_metric = 0
 
-            try:
-                epoch += self.checkpoint_epoch # if model has been restored from checkpoint
+            # initialize starting value for epoch count (in case of previous checkpoint restored)
+            start = self.checkpoint.save_counter
 
-            for _ in range(epochs):
-                epoch += 1
-                start_time = time.time()
-                print('Epoch {}/{}'.format(epoch, epochs))
+            for epoch in range(start, epochs):
+
+                print()
+                print('Epoch {}/{}'.format(epoch+1, epochs))
                 
-                if analyse_trace and epoch == 1:
+                if analyse_trace and epoch == 0:
                     tf.summary.trace_off()
                     tf.summary.trace_on(graph=False, profiler=True)
                 
-                for i, batch in enumerate(train_dataset):
-                    self._train_step(batch, strategy=self.strategy, metrics=[self.train_metric_1, self.train_metric_2])
+                for step, batch in enumerate(train_dataset):
+                    loss = self._train_step(batch, strategy=self.strategy, metrics=[self.metric_1, self.metric_2])
+                    
+                    if step+1 % update_freq == 0:
+                        # write metrics on tensorboard
+                        with self.train_summary_writer.as_default():
+                            tf.summary.scalar(name='iter_loss',
+                                            data=loss, 
+                                            step=optimizer.iterations)
+                            tf.summary.scalar(name='iter_ROC-AUC', 
+                                            data=metric_1.result(),
+                                            step=optimizer.iterations)
+                            tf.summary.scalar(name='iter_PR-AUC, 
+                                            data=metric_2.result(),
+                                            step=optimizer.iterations)
+                            self.train_summary_writer.flush()
+                        
+                        # print progress
+                        print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end='\r')
                 
-                # write metrics on tensorboard after each epoch
-                with train_summary_writer.as_default():
-                    tf.summary.scalar('ROC_AUC_epoch', train_metrics_1.result(), step=epoch)
-                    tf.summary.scalar('PR_AUC_epoch', train_metrics_2.result(), step=epoch)
-                    tf.summary.scalar('mean_loss_epoch', tf.multiply(train_mean_loss.result(), strategy.num_replicas_in_sync), step=epoch)
-                    train_summary_writer.flush()
+                # write metrics on tensorboard
+                with self.train_summary_writer.as_default():
+                    tf.summary.scalar(name='epoch_loss',
+                                      data=loss, 
+                                      step=epoch+1)
+                    tf.summary.scalar(name='epoch_ROC-AUC', 
+                                      data=metric_1.result(),
+                                      step=epoch+1)
+                    tf.summary.scalar(name='epoch_PR-AUC, 
+                                      data=metric_2.result(),
+                                      step=epoch+1)
+                    self.train_summary_writer.flush()
                     
                 # print progress
-                tf.print('Epoch', epoch,  ': loss', tf.multiply(train_mean_loss.result(), strategy.num_replicas_in_sync), '; ROC_AUC', train_metrics_1.result(), '; PR_AUC', train_metrics_2.result())
+                print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end=' ')
                 
-                train_metrics_1.reset_states()
-                train_metrics_2.reset_states()
-                train_mean_loss.reset_states()
+                # reset metrics at the end of each epoch
+                metric_1.reset_states()
+                metric_2.reset_states()
 
                 # write training profile
                 if analyse_trace:
-                    with prof_summary_writer.as_default():   
+                    with self.profiler_summary_writer.as_default():   
                         tf.summary.trace_export(name="trace", 
-                                                step=epoch, 
-                                                profiler_outdir=os.path.normpath(prof_log_dir)) 
+                                                step=epoch+1, 
+                                                profiler_outdir=self.profiler_log_dir_log_dir)
+
+                # save checkpoint
+                checkpoint.save(os.path.join(self.log_dir, 'epoch_' + str(epoch+1))
 
                 if valid_dataset:
-                    distributed_val_body(valid_dataset)
-                    with val_summary_writer.as_default():
-                        tf.summary.scalar('ROC_AUC_epoch', val_metrics_1.result(), step=epoch)
-                        tf.summary.scalar('PR_AUC_epoch', val_metrics_2.result(), step=epoch)
-                        tf.summary.scalar('mean_loss_epoch', tf.multiply(val_loss.result(), strategy.num_replicas_in_sync), step=epoch)
-                        val_summary_writer.flush()
-
-                    tf.print('Val- Epoch', epoch, ': loss', tf.multiply(val_loss.result(), strategy.num_replicas_in_sync), ';ROC_AUC', val_metrics_1.result(), '; PR_AUC', val_metrics_2.result())
+                    for step, batch in enumerate(valid_dataset):
+                        loss = self._valid_step(batch, strategy=self.strategy, metrics=[self.metric_1, self.metric_2])
                     
+                    # write metrics on tensorboard
+                    with self.valid_summary_writer.as_default():
+                        tf.summary.scalar(name='epoch_loss',
+                                        data=loss, 
+                                        step=epoch+1)
+                        tf.summary.scalar(name='epoch_ROC-AUC', 
+                                        data=metric_1.result(),
+                                        step=epoch+1)
+                        tf.summary.scalar(name='epoch_PR-AUC, 
+                                        data=metric_2.result(),
+                                        step=epoch+1)
+                        self.valid_summary_writer.flush()
+
+                    # print progress
+                    print('- val_Loss {:8.6f} - val_ROC-AUC {:6.5f} - val_PR-AUC{:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result())
+                
                     # early stopping callback
-                    if config.early_stop_patience is not None:
+                    if self.config.early_stop_patience is not None:
 
-                        # if some parameters have not been provided, use default
                         config.early_stop_min_delta = config.early_stop_min_delta or 0.
-                        
-                        if os.path.isfile(os.path.join(checkpoint_dir, 'early_stopping.npy')):
-                            cumerror = int(np.load(os.path.join(checkpoint_dir, 'early_stopping.npy')))
 
-                        if tf.less(config_optim.min_lr_plateau, optimizer.learning_rate):
-                            if config_optim.lr_plateau_mult:
-                                optimizer.learning_rate.assign(tf.multiply(optimizer.learning_rate, config_optim.lr_plateau_mult))
-                            else:
-                                optimizer.learning_rate.assign(tf.multiply(optimizer.learning_rate, ))
-
-                        elif val_metrics_2.result() > (max_metric + config.early_stop_min_d):
-                            max_metric = val_metrics_2.result()
-                            cumerror = 0
-                            np.save(os.path.join(log_dir, 'early_stopping.npy'), cumerror)
+                        if self.metric_2.result() > (early_stop_max + self.config.early_stop_min_d):
+                            early_stop_max_metric = self.metrics_2.result()
+                            early_stop = 0
                         else:
-                            cumerror += 1
-                            tf.print('Epoch {}/{}: no significant improvements ({}/{})'.format(epoch, epochs-1, cumerror, config.early_stop_patience))
-                            np.save(os.path.join(log_dir, 'early_stopping.npy'), cumerror)
-                            if cumerror == config.early_stop_patience:
-                                tf.print('Epoch {}: stopping')
+                            early_stop += 1
+                            print('No significant improvements on PR-AUC ({:1d}/{:1d})'.format(early_stop, self.config.early_stop_patience))
+                            if early_stop == config.early_stop_patience:
                                 break
                     
-                    # reset validation metrics after each epoch
-                    val_metrics_1.reset_states()
-                    val_metrics_2.reset_states()
-                    val_loss.reset_states()
-                        
-                elif config.early_stop_patience is not None:
-                    raise RuntimeError('EarlyStopping requires a validation dataset')
-
-                checkpoint_path = os.path.join(log_dir, 'epoch'+str(epoch.numpy()))
-                saved_path = checkpoint.save(checkpoint_path)
-                tf.print('Saving model as TF checkpoint: {}'.format(saved_path))
-
-                # report time
-                time_taken = time.time()-start_time
-                tf.print('Epoch {}: {} s'.format(epoch, time_taken))
-
-        return
+                    # reset metrics after validation (metrics were needed in previous callbacks)
+                    self.metric_1.reset_states()
+                    self.metric_2.reset_states()
 
 if __name__ == '__main__':
     
@@ -466,7 +423,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', help='specify the number of epochs to train for', type=int, default=1)
     parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform at each epoch (if unspecified, go through the whole dataset)', type=int)
     parser.add_argument('--no-shuffle', action='store_true', help='force no shuffle, override config setting')
-    parser.add_argument('--resume', help='load a previously saved model with the time in the format ddmmyy-hhmm, e.g. if the folder which the model is saved is custom_log-mel-spect_160919-0539, resume should take the argument 160919-0539')
+    parser.add_argument('--restore', help='load a previously saved model with the time in the format ddmmyy-hhmm, e.g. if the folder which the model is saved is custom_log-mel-spect_160919-0539, resume should take the argument 160919-0539')
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
     parser.add_argument('--cuda', help='set cuda visible devices', type=int, nargs='+')
     parser.add_argument('--built-in', action='store_true', help='train using the built-in model.fit training loop')
@@ -476,7 +433,6 @@ if __name__ == '__main__':
 
     # specify number of visible gpu's
     if args.cuda:
-        os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID' # see issue #152
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(i) for i in args.cuda])
 
     # specify verbose mode
@@ -499,23 +455,22 @@ if __name__ == '__main__':
                                                               num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
 										                      as_tuple = True)
 
-    # set up training strategy
-    strategy = tf.distribute.MirroredStrategy()
+    # instantiate learner
+    orpheus = Learner(frontend=args.frontend, 
+                      train_dataset=train_dataset, valid_dataset=valid_dataset, 
+                      strategy=tf.distribute.MirroredStrategy, 
+                      config=config, 
+                      restore=args.restore, custom_loop=(not args.built_in))
 
+    # train
     if not args.built_in:
-        # datasets need to be manually 'distributed'
-        train_dataset = strategy.experimental_distribute_dataset(train_dataset)
-        if valid_dataset is not None:
-            valid_dataset = strategy.experimental_distribute_dataset(valid_dataset)
-        
-        # train model using custom training loop (default choice)
-        train(train_dataset, valid_dataset, frontend=args.frontend,
-                strategy=strategy, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, 
-                config=config,
-                update_freq=args.update_freq, restore=args.resume)
+        orpheus.train(epochs=args.epochs,
+                      steps_per_epoch=args.steps_per_epoch,
+                      restore=args.restore,
+                      update_freq=args.update_freq)
     else:
-        # train model
-        train_with_fit(train_dataset, valid_dataset, frontend=args.frontend,
-                strategy=strategy, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, 
-                config=config,
-                update_freq=args.update_freq, restore=args.resume)
+        orpheus.train_with_fit(epochs=args.epochs, 
+                        steps_per_epoch=args.steps_per_epoch, 
+                        restore=args.restore, 
+                        update_freq=args.update_freq)
+
