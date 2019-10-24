@@ -209,7 +209,7 @@ class Learner():
         return history.history
 
     @tf.function
-    def _train_step(self, batch, strategy, metrics=None):
+    def _train_step(self, batch, metrics=None):
 
         def _train_step_per_replica(batch, metrics=None):
             # unpack batch
@@ -234,15 +234,15 @@ class Learner():
             return loss
 
         # run train step on each replica using distribution strategy
-        per_replica_losses = strategy.experimental_run_v2(_train_step_per_replica, args=(batch, metrics))
+        per_replica_losses = self.strategy.experimental_run_v2(_train_step_per_replica, args=(batch, metrics))
         
         # compute mean loss
-        mean_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None)
+        mean_loss = self.strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None)
 
         return mean_loss
 
     @tf.function
-    def _valid_step(self, batch, strategy, metrics=None):
+    def _valid_step(self, batch, metrics=None):
 
         def _valid_step_per_replica(batch, metrics=None):
             # unpack batch
@@ -262,10 +262,10 @@ class Learner():
             return loss
         
         # run valid step on each replica using distribution strategy
-        per_replica_losses = strategy.experimental_run_v2(_valid_step_per_replica, args=(batch, metrics))
+        per_replica_losses = self.strategy.experimental_run_v2(_valid_step_per_replica, args=(batch, metrics))
         
         # compute mean loss
-        mean_loss = strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None)
+        mean_loss = self.strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=None)
 
         return mean_loss
 
@@ -425,8 +425,10 @@ class Learner():
             plt.plot(self.lr_find_x, self.lr_find_y)
             plt.yscale('log')
             plt.xscale('log')
+        except AttributeError:
+            print('you need to run lr_find() first, in order to plot the results with lr_find_plot()' )
     
-    def lr_find(self, start_lr=1e-07, end_lr=10, num_it=10000, stop_div=True):
+    def lr_find(self, start_lr=1e-07, end_lr=10, num_it=1000, stop_div=True):
         
         learning_rate = start_lr
         
@@ -435,13 +437,14 @@ class Learner():
         self.lr_find_x = []
         self.lr_find_y = []
 
-        for step, batch in enumerate(dataset):
+        for step, batch in enumerate(self.train_dataset):
             # update learning rate
             learning_rate *= f
             self.optimizer.learning_rate.assign(learning_rate)
 
             # get loss
-            loss = train_step(batch)
+            loss = self._train_step(batch)
+            print('{:4d} - Learning Rate {:.3e} - Loss {:8.5f}'.format(step+1, learning_rate, loss), end='\r')
 
             # add loss to output
             self.lr_find_x.append(learning_rate)
@@ -453,9 +456,10 @@ class Learner():
 
             # stop if loss is diverging
             if stop_div:
-                if x[-1] > x[0]:
+                if self.lr_find_y[-1] - self.lr_find_y[0] > self.lr_find_y[0]/5:
+                    self.lr_find_x.pop()
+                    self.lr_find_y.pop()
                     break
-
 
 if __name__ == '__main__':
     
