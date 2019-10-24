@@ -458,7 +458,7 @@ if __name__ == '__main__':
     # instantiate learner
     orpheus = Learner(frontend=args.frontend, 
                       train_dataset=train_dataset, valid_dataset=valid_dataset, 
-                      strategy=tf.distribute.MirroredStrategy, 
+                      strategy=tf.distribute.MirroredStrategy(), 
                       config=config, 
                       restore=args.restore, custom_loop=(not args.built_in))
 
