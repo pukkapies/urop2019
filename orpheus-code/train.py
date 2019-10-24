@@ -71,9 +71,9 @@ class Learner():
 
         # initialize model, loss, metrics, optimizer
         with self.strategy.scope():
-            self.model = build_model(frontend, num_output_neurons=config.num_output_neurons, num_dense_units=config.num_dense_units, y_input=config.melspect_y)
+            self.model = build_model(frontend, num_output_neurons=self.config.num_output_neurons, num_dense_units=self.config.num_dense_units, y_input=self.config.melspect_y)
 
-            self.optimizer = tf.keras.optimizers.get({"class_name": config.optimizer_name, "config": config.optimizer})
+            self.optimizer = tf.keras.optimizers.get({"class_name": self.config.optimizer_name, "config": self.config.optimizer})
 
             self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM)
 
@@ -177,9 +177,9 @@ class Learner():
                 tf.keras.callbacks.EarlyStopping(
                     monitor = 'val_PR-AUC',
                     mode = 'max',
-                    min_delta = config.early_stop_min_delta,
+                    min_delta = self.config.early_stop_min_delta,
                     restore_best_weights = True,
-                    patience = config.early_stop_patience,
+                    patience = self.config.early_stop_patience,
                     verbose = 1,
                 ),
             )
@@ -333,15 +333,15 @@ class Learner():
                                             data=loss, 
                                             step=optimizer.iterations)
                             tf.summary.scalar(name='iter_ROC-AUC', 
-                                            data=metric_1.result(),
+                                            data=self.metric_1.result(),
                                             step=optimizer.iterations)
-                            tf.summary.scalar(name='iter_PR-AUC, 
-                                            data=metric_2.result(),
+                            tf.summary.scalar(name='iter_PR-AUC', 
+                                            data=self.metric_2.result(),
                                             step=optimizer.iterations)
                             self.train_summary_writer.flush()
                         
                         # print progress
-                        print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end='\r')
+                        print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end='\r'))
                 
                 # write metrics on tensorboard
                 with self.train_summary_writer.as_default():
@@ -349,19 +349,19 @@ class Learner():
                                       data=loss, 
                                       step=epoch+1)
                     tf.summary.scalar(name='epoch_ROC-AUC', 
-                                      data=metric_1.result(),
+                                      data=self.metric_1.result(),
                                       step=epoch+1)
-                    tf.summary.scalar(name='epoch_PR-AUC, 
-                                      data=metric_2.result(),
+                    tf.summary.scalar(name='epoch_PR-AUC', 
+                                      data=self.metric_2.result(),
                                       step=epoch+1)
                     self.train_summary_writer.flush()
                     
                 # print progress
-                print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end=' ')
+                print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end=' '))
                 
                 # reset metrics at the end of each epoch
-                metric_1.reset_states()
-                metric_2.reset_states()
+                self.metric_1.reset_states()
+                self.metric_2.reset_states()
 
                 # write training profile
                 if analyse_trace:
@@ -371,7 +371,7 @@ class Learner():
                                                 profiler_outdir=self.profiler_log_dir_log_dir)
 
                 # save checkpoint
-                checkpoint.save(os.path.join(self.log_dir, 'epoch_' + str(epoch+1))
+                checkpoint.save(os.path.join(self.log_dir, 'epoch_' + str(epoch+1)))
 
                 if valid_dataset:
                     for step, batch in enumerate(valid_dataset):
@@ -383,20 +383,20 @@ class Learner():
                                         data=loss, 
                                         step=epoch+1)
                         tf.summary.scalar(name='epoch_ROC-AUC', 
-                                        data=metric_1.result(),
+                                        data=self.metric_1.result(),
                                         step=epoch+1)
-                        tf.summary.scalar(name='epoch_PR-AUC, 
-                                        data=metric_2.result(),
+                        tf.summary.scalar(name='epoch_PR-AUC', 
+                                        data=self.metric_2.result(),
                                         step=epoch+1)
                         self.valid_summary_writer.flush()
 
                     # print progress
-                    print('- val_Loss {:8.6f} - val_ROC-AUC {:6.5f} - val_PR-AUC{:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result())
+                    print('- val_Loss {:8.6f} - val_ROC-AUC {:6.5f} - val_PR-AUC{:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
                 
                     # early stopping callback
                     if self.config.early_stop_patience is not None:
 
-                        config.early_stop_min_delta = config.early_stop_min_delta or 0.
+                        self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0.
 
                         if self.metric_2.result() > (early_stop_max + self.config.early_stop_min_d):
                             early_stop_max_metric = self.metrics_2.result()
@@ -404,7 +404,7 @@ class Learner():
                         else:
                             early_stop += 1
                             print('No significant improvements on PR-AUC ({:1d}/{:1d})'.format(early_stop, self.config.early_stop_patience))
-                            if early_stop == config.early_stop_patience:
+                            if early_stop == self.config.early_stop_patience:
                                 break
                     
                     # reset metrics after validation (metrics were needed in previous callbacks)
