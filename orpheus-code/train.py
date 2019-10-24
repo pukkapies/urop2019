@@ -43,6 +43,8 @@ import json
 import os
 import shutil
 
+import matplotlib
+import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from data_input import generate_datasets_from_dir
@@ -416,6 +418,44 @@ class Learner():
                     # reset
                     self.metric_1.reset_states()
                     self.metric_2.reset_states()
+    
+    def lr_find_plot(self):
+        try:
+            fig = plt.figure()
+            plt.plot(self.lr_find_x, self.lr_find_y)
+            plt.yscale('log')
+            plt.xscale('log')
+    
+    def lr_find(self, start_lr=1e-07, end_lr=10, num_it=10000, stop_div=True):
+        
+        learning_rate = start_lr
+        
+        f = (end_lr/start_lr)**(1/num_it) # the factor to multiply lr by after each iteration
+        
+        self.lr_find_x = []
+        self.lr_find_y = []
+
+        for step, batch in enumerate(dataset):
+            # update learning rate
+            learning_rate *= f
+            self.optimizer.learning_rate.assign(learning_rate)
+
+            # get loss
+            loss = train_step(batch)
+
+            # add loss to output
+            self.lr_find_x.append(learning_rate)
+            self.lr_find_y.append(loss)
+
+            # stop
+            if step >= num_it-1:
+                break
+
+            # stop if loss is diverging
+            if stop_div:
+                if x[-1] > x[0]:
+                    break
+
 
 if __name__ == '__main__':
     
