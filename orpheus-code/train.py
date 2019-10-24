@@ -427,7 +427,7 @@ if __name__ == '__main__':
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
     parser.add_argument('--cuda', help='set cuda visible devices', type=int, nargs='+')
     parser.add_argument('--built-in', action='store_true', help='train using the built-in model.fit training loop')
-    parser.add_argument('-v', '--verbose', choices=['0', '1', '2', '3'], help='verbose mode', default='0')
+    parser.add_argument('-v', '--verbose', choices=['0', '1', '2', '3'], help='verbose mode', default='2')
 
     args = parser.parse_args()
 
@@ -454,12 +454,13 @@ if __name__ == '__main__':
                                                               hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
                                                               num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
 										                      as_tuple = True)
+    
+    strategy = tf.distribute.MirroredStrategy()
 
     # instantiate learner
     orpheus = Learner(frontend=args.frontend, 
                       train_dataset=train_dataset, valid_dataset=valid_dataset, 
-                      strategy=tf.distribute.MirroredStrategy(), 
-                      config=config, 
+                      strategy=strategy, config=config, 
                       restore=args.restore, custom_loop=(not args.built_in))
 
     # train
