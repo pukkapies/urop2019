@@ -218,7 +218,7 @@ class Learner():
                 logits = self.model(features)
                 
                 # compute loss
-                loss = self.loss(labels, logits) / self.config.batch_size
+                loss = self.loss(labels, logits)
             
             # apply gradients using optimizer
             grads = tape.gradient(loss, self.model.trainable_variables)
@@ -250,7 +250,7 @@ class Learner():
             logits = self.model(features, training=False)
 
             # compute loss
-            loss = self.loss(labels, logits) / self.config.batch_size
+            loss = self.loss(labels, logits)
 
             # update metrics
             if metrics:
@@ -323,11 +323,13 @@ class Learner():
                     tf.summary.trace_off()
                     tf.summary.trace_on(graph=False, profiler=True)
                 
+                # train
                 for step, batch in enumerate(train_dataset):
                     loss = self._train_step(batch, strategy=self.strategy, metrics=[self.metric_1, self.metric_2])
-                    
+                    print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
+         
+                    # write metrics on tensorboard every update_freq step
                     if step+1 % update_freq == 0:
-                        # write metrics on tensorboard
                         with self.train_summary_writer.as_default():
                             tf.summary.scalar(name='iter_loss',
                                             data=loss, 
@@ -339,11 +341,11 @@ class Learner():
                                             data=self.metric_2.result(),
                                             step=optimizer.iterations)
                             self.train_summary_writer.flush()
-                        
-                        # print progress
-                        print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end='\r'))
-                
-                # write metrics on tensorboard
+
+                # print progress summary
+                print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
+               
+                # write metrics on tensorboard at the end of each epoch
                 with self.train_summary_writer.as_default():
                     tf.summary.scalar(name='epoch_loss',
                                       data=loss, 
@@ -355,11 +357,8 @@ class Learner():
                                       data=self.metric_2.result(),
                                       step=epoch+1)
                     self.train_summary_writer.flush()
-                    
-                # print progress
-                print('Epoch {:2d}/{:2d}: Step {:4d} - Loss {:8.6f} - ROC-AUC {:6.5f} - PR-AUC{:6.5f}'.format(epoch+1, epochs, step+1, loss, self.metric_1.result(), self.metric_2.result(), end=' '))
                 
-                # reset metrics at the end of each epoch
+                # reset
                 self.metric_1.reset_states()
                 self.metric_2.reset_states()
 
@@ -374,10 +373,20 @@ class Learner():
                 checkpoint.save(os.path.join(self.log_dir, 'epoch_' + str(epoch+1)))
 
                 if valid_dataset:
+                    
+                    print()
+                    print('Epoch {}/{} - Validation'.format(epoch+1, epochs))
+                    
+                    # validate
                     for step, batch in enumerate(valid_dataset):
                         loss = self._valid_step(batch, strategy=self.strategy, metrics=[self.metric_1, self.metric_2])
+                        print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
                     
-                    # write metrics on tensorboard
+                    # print progress summary
+                    print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
+                    print()
+                    
+                    # write metrics on tensorboard at the end of each epoch
                     with self.valid_summary_writer.as_default():
                         tf.summary.scalar(name='epoch_loss',
                                         data=loss, 
@@ -389,9 +398,6 @@ class Learner():
                                         data=self.metric_2.result(),
                                         step=epoch+1)
                         self.valid_summary_writer.flush()
-
-                    # print progress
-                    print('- val_Loss {:8.6f} - val_ROC-AUC {:6.5f} - val_PR-AUC{:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
                 
                     # early stopping callback
                     if self.config.early_stop_patience is not None:
@@ -407,7 +413,7 @@ class Learner():
                             if early_stop == self.config.early_stop_patience:
                                 break
                     
-                    # reset metrics after validation (metrics were needed in previous callbacks)
+                    # reset
                     self.metric_1.reset_states()
                     self.metric_2.reset_states()
 
