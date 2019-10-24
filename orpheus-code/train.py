@@ -218,7 +218,7 @@ class Learner():
                 logits = self.model(features)
                 
                 # compute loss
-                loss = self.train_loss(labels, logits) / self.config.batch_size
+                loss = self.loss(labels, logits) / self.config.batch_size
             
             # apply gradients using optimizer
             grads = tape.gradient(loss, self.model.trainable_variables)
@@ -250,7 +250,7 @@ class Learner():
             logits = self.model(features, training=False)
 
             # compute loss
-            loss = self.train_loss(labels, logits) / self.config.batch_size
+            loss = self.loss(labels, logits) / self.config.batch_size
 
             # update metrics
             if metrics:
@@ -314,7 +314,7 @@ class Learner():
             # initialize starting value for epoch count (in case of previous checkpoint restored)
             start = self.checkpoint.save_counter
 
-            for epoch in range(start, epochs):
+            for epoch in tf.range(start, epochs, dtype=tf.int64):
 
                 print()
                 print('Epoch {}/{}'.format(epoch+1, epochs))
@@ -427,7 +427,7 @@ if __name__ == '__main__':
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
     parser.add_argument('--cuda', help='set cuda visible devices', type=int, nargs='+')
     parser.add_argument('--built-in', action='store_true', help='train using the built-in model.fit training loop')
-    parser.add_argument('-v', '--verbose', choices=['0', '1', '2', '3'], help='verbose mode', default='2')
+    parser.add_argument('-v', '--verbose', choices=['0', '1', '2', '3'], help='verbose mode', default='1')
 
     args = parser.parse_args()
 
