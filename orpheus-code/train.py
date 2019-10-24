@@ -47,6 +47,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
+from math import cos
+from math import sin
+
 from data_input import generate_datasets_from_dir
 from orpheus_model import build_model
 from orpheus_model import parse_config_json
@@ -220,7 +223,7 @@ class Learner():
                 logits = self.model(features)
                 
                 # compute loss
-                loss = self.loss(labels, logits)
+                loss = self.loss(labels, logits) / self.config.batch_size
             
             # apply gradients using optimizer
             grads = tape.gradient(loss, self.model.trainable_variables)
@@ -252,7 +255,7 @@ class Learner():
             logits = self.model(features, training=False)
 
             # compute loss
-            loss = self.loss(labels, logits)
+            loss = self.loss(labels, logits) / self.config.batch_size
 
             # update metrics
             if metrics:
@@ -461,6 +464,54 @@ class Learner():
                     self.lr_find_y.pop()
                     break
 
+class LearnerCallback():
+    def __init__(self, epochs, steps_per_epoch, lr_max, div_factor, moms=(0.95, 0.85), start_epoch=None):
+        self.iter = 0
+        self.iter_tot = epochs * steps_per_epoch
+
+    def schedule(self):
+        self.peak = self.iter_tot // 9 * 4
+        phase_1 = # generator
+        phase_2 = # generator
+        
+        def get_next(self, current_iter):
+            if current_iter < self.peak:
+                next(phase_1)
+            else:
+                next(phase_2)
+        
+        self.get_next = get_next
+
+    def seq_linear(min_val, max_val, n_steps, increasing=True):
+        
+        step_size = (max_val - min_val) / n_steps
+        
+        val = min_val if increasing else max_val
+
+        factor = increasing or -1 # either 1 or -1
+        
+        while True:
+            yield val
+            val += step_size * factor
+
+    def seq_cosine(min, max, n_steps, increasing=True):
+
+        step_size = 1 / n_steps
+
+        it = 0
+
+        diff = max_val - min_val
+
+        trig_fn = sin if increasing else cos
+
+        while True:
+            val = trig_fn(i) * diff + min_val
+            yield val
+            it += step_size
+    
+    def get_next(self):
+        pass
+
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
@@ -524,4 +575,3 @@ if __name__ == '__main__':
                         steps_per_epoch=args.steps_per_epoch, 
                         restore=args.restore, 
                         update_freq=args.update_freq)
-
