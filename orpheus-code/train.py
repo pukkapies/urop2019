@@ -40,6 +40,7 @@ variable LD_LIBRARY_PATH is specified.
 import argparse
 import datetime
 import json
+import math
 import os
 import shutil
 
@@ -47,14 +48,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-from math import cos
-from math import sin
-
 from data_input import generate_datasets_from_dir
 from orpheus_model import build_model
 from orpheus_model import parse_config_json
 
-class Learner():
+class Learner:
     def __init__(self, frontend, train_dataset, valid_dataset, strategy, config, restore=None, custom_loop=True):
         # initialize training variables and strategy
         self.train_dataset = train_dataset
@@ -335,6 +333,11 @@ class Learner():
          
                     # write metrics on tensorboard every update_freq step
                     if step+1 % update_freq == 0:
+                        if lr_callback:
+                            learning_rate, momentum = lr_callback.get(self.optimizer.iterations)
+                            self.optimizer.learning_rate.assign(learning_rate)
+                            self.optimizer.momentum.assign(momentum)
+
                         with self.train_summary_writer.as_default():
                             tf.summary.scalar(name='iter_loss',
                                             data=loss, 
@@ -346,6 +349,8 @@ class Learner():
                                             data=self.metric_2.result(),
                                             step=optimizer.iterations)
                             self.train_summary_writer.flush()
+
+                            if lr_callback:
 
                 # print progress summary
                 print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
@@ -464,53 +469,68 @@ class Learner():
                     self.lr_find_y.pop()
                     break
 
-class LearnerCallback():
-    def __init__(self, epochs, steps_per_epoch, lr_max, div_factor, moms=(0.95, 0.85), start_epoch=None):
-        self.iter = 0
-        self.iter_tot = epochs * steps_per_epoch
+class Scheduler:
+    def __init__(self, cycle_length, max_lr, div_factor, moms):
+        self.max_lr = max_lr
+        self.min_lr = max_lr / div_factor
+        self.delta = self.max_lr - self.min_lr
+        self.moms = moms
+        self.cycle_length = cycle_length
 
-    def schedule(self):
-        self.peak = self.iter_tot // 9 * 4
-        phase_1 = # generator
-        phase_2 = # generator
-        
-        def get_next(self, current_iter):
-            if current_iter < self.peak:
-                next(phase_1)
-            else:
-                next(phase_2)
-        
-        self.get_next = get_next
-
-    def seq_linear(min_val, max_val, n_steps, increasing=True):
-        
-        step_size = (max_val - min_val) / n_steps
-        
-        val = min_val if increasing else max_val
-
-        factor = increasing or -1 # either 1 or -1
-        
-        while True:
-            yield val
-            val += step_size * factor
-
-    def seq_cosine(min, max, n_steps, increasing=True):
-
-        step_size = 1 / n_steps
-
-        it = 0
-
-        diff = max_val - min_val
-
-        trig_fn = sin if increasing else cos
-
-        while True:
-            val = trig_fn(i) * diff + min_val
-            yield val
-            it += step_size
-    
-    def get_next(self):
+    def _step_fn(step, max, min, reverse=False):
         pass
+    
+    def get(step):
+        max_mm, min_mm = moms
+        lr = self._step_fn(step, max_lr, min_lr)
+        mm = self._step_fn(step, max_mm, min_mm, reverse=True)
+        return lr, mm
+
+class CyclicLR(Scheduler):
+    def __init__(self, max_lr, cycle_length, div_factor=10, moms=(0.95, 0.85)):
+        super().__init__(cycle_length, max_lr, div_factor, moms)
+
+    def _step_fn(step, max, min, reverse=False):
+        # get index of current cycle (i.e. how many full cycles have already been completed)
+        cycle = math.floor(step/self.cycle_length)
+
+        # get progress ratio within current cycle (i.e. a float between 0 and 1)
+        ratio = step/self.cycle_length - cycle
+
+        # get progress ratio within current cycle, but count from the nearest extremum (i.e. a float between 0 and .5)
+        effective_ratio = (0.5 - math.abs(0.5 - ratio)) * 2
+
+        start = min if not reverse else max
+
+        f = int(reverse) * 2 - 1
+
+        val = start + f * (delta * effective_ratio)
+
+        return val
+
+class CyclicLR_1Cycle(Scheduler):
+    def __init__(self, max_lr, cycle_length, div_factor=10, moms=(0.95, 0.85)):
+        super().__init__(cycle_length, max_lr, div_factor, moms)
+
+    def _step_fn(step, max, min, reverse=False):
+        delta = max - min
+
+        ratio = step / self.cycle_length
+
+        assert ratio <= 1
+
+        indicator = ratio < 0.4
+
+        scaled_ratio_1 = ratio * 5 / 4
+        scaled_ratio_2 = ratio * 5 / 6 - 2 / 6
+
+        start = min if not reverse else max
+
+        f = int(reverse) * 2 - 1
+
+        val = start + f * (delta * (indicator * scaled_ratio_1 + (not indicator) * math.cos(math.pi * scaled_ratio_2)))
+
+        return val
 
 if __name__ == '__main__':
     
