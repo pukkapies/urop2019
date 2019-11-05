@@ -334,10 +334,8 @@ class Learner:
                     # write metrics on tensorboard every update_freq step
                     if step+1 % update_freq == 0:
                         if lr_callback:
-                            learning_rate, momentum = lr_callback.get(self.optimizer.iterations)
-                            self.optimizer.learning_rate.assign(learning_rate)
-                            self.optimizer.momentum.assign(momentum)
-
+                            self.optimizer.learning_rate.assign(lr_callback.get_lr(self.optimizer.iterations))
+ 
                         with self.train_summary_writer.as_default():
                             tf.summary.scalar(name='iter_loss',
                                             data=loss, 
@@ -349,8 +347,6 @@ class Learner:
                                             data=self.metric_2.result(),
                                             step=optimizer.iterations)
                             self.train_summary_writer.flush()
-
-                            if lr_callback:
 
                 # print progress summary
                 print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
@@ -409,7 +405,7 @@ class Learner:
                                         step=epoch+1)
                         self.valid_summary_writer.flush()
                 
-                    # early stopping callback
+                    # early stop check
                     if self.config.early_stop_patience is not None:
 
                         self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0.
@@ -434,7 +430,7 @@ class Learner:
             plt.yscale('log')
             plt.xscale('log')
         except AttributeError:
-            print('you need to run lr_find() first, in order to plot the results with lr_find_plot()' )
+            print('you need to run lr_find() first, in order to plot the results with lr_find_plot()')
     
     def lr_find(self, start_lr=1e-07, end_lr=10, num_it=1000, stop_div=True):
         
@@ -470,27 +466,30 @@ class Learner:
                     break
 
 class Scheduler:
-    def __init__(self, cycle_length, max_lr, div_factor, moms):
+    def __init__(self, cycle_length, max_lr=0.1, div_factor=10, moms=None):
         self.max_lr = max_lr
         self.min_lr = max_lr / div_factor
         self.delta = self.max_lr - self.min_lr
         self.moms = moms
         self.cycle_length = cycle_length
 
-    def _step_fn(step, max, min, reverse=False):
+    def _step_fn(self, step, max_val, min_val, reverse=False): # overridden by subclass
         pass
     
-    def get(step):
-        max_mm, min_mm = moms
-        lr = self._step_fn(step, max_lr, min_lr)
-        mm = self._step_fn(step, max_mm, min_mm, reverse=True)
-        return lr, mm
+    def get_lr(self, step):
+        return self._step_fn(step, self.max_lr, self.min_lr)
+
+    def get_mm(self, step):
+        max_mm, min_mm = self.moms
+        return self._step_fn(step, max_mm, min_mm, reverse=True)
 
 class CyclicLR(Scheduler):
     def __init__(self, max_lr, cycle_length, div_factor=10, moms=(0.95, 0.85)):
         super().__init__(cycle_length, max_lr, div_factor, moms)
 
-    def _step_fn(step, max, min, reverse=False):
+    def _step_fn(self, step, max_val, min_val, reverse=False):
+        delta = max_val - min_val
+
         # get index of current cycle (i.e. how many full cycles have already been completed)
         cycle = math.floor(step/self.cycle_length)
 
@@ -498,13 +497,13 @@ class CyclicLR(Scheduler):
         ratio = step/self.cycle_length - cycle
 
         # get progress ratio within current cycle, but count from the nearest extremum (i.e. a float between 0 and .5)
-        effective_ratio = (0.5 - math.abs(0.5 - ratio)) * 2
+        effective_ratio = (0.5 - abs(0.5 - ratio)) * 2
 
-        start = min if not reverse else max
+        start = max_val if reverse else min_val
 
         f = int(reverse) * 2 - 1
 
-        val = start + f * (delta * effective_ratio)
+        val = start - f * (delta * effective_ratio)
 
         return val
 
@@ -512,8 +511,8 @@ class CyclicLR_1Cycle(Scheduler):
     def __init__(self, max_lr, cycle_length, div_factor=10, moms=(0.95, 0.85)):
         super().__init__(cycle_length, max_lr, div_factor, moms)
 
-    def _step_fn(step, max, min, reverse=False):
-        delta = max - min
+    def _step_fn(self, step, max_val, min_val, reverse=False):
+        delta = max_val - min_val
 
         ratio = step / self.cycle_length
 
@@ -521,14 +520,14 @@ class CyclicLR_1Cycle(Scheduler):
 
         indicator = ratio < 0.4
 
-        scaled_ratio_1 = ratio * 5 / 4
-        scaled_ratio_2 = ratio * 5 / 6 - 2 / 6
+        scaled_ratio_1 = ratio * 5 / 2
+        scaled_ratio_2 = ratio * 5 / 3 - 2 / 3
 
-        start = min if not reverse else max
+        start = max_val if reverse else min_val
 
         f = int(reverse) * 2 - 1
 
-        val = start + f * (delta * (indicator * scaled_ratio_1 + (not indicator) * math.cos(math.pi * scaled_ratio_2)))
+        val = start - (f * delta * indicator * scaled_ratio_1) - (f * delta/2 * (not indicator) * (1 + math.cos(math.pi * scaled_ratio_2)))
 
         return val
 
