@@ -499,7 +499,7 @@ class CyclicLR(Scheduler):
         # get progress ratio within current cycle, but count from the nearest extremum (i.e. a float between 0 and .5)
         effective_ratio = (0.5 - abs(0.5 - ratio)) * 2
 
-        start = max_val if reverse else min_val
+        start = min_val if not reverse else max_val
 
         f = int(reverse) * 2 - 1
 
@@ -512,22 +512,28 @@ class CyclicLR_1Cycle(Scheduler):
         super().__init__(cycle_length, max_lr, div_factor, moms)
 
     def _step_fn(self, step, max_val, min_val, reverse=False):
-        delta = max_val - min_val
+        delta_1 = max_val - min_val
+        delta_2 = max_val - math.floor(min_val) if not reverse else max_val - min_val
 
         ratio = step / self.cycle_length
 
         assert ratio <= 1
 
-        indicator = ratio < 0.4
-
         scaled_ratio_1 = ratio * 5 / 2
         scaled_ratio_2 = ratio * 5 / 3 - 2 / 3
 
-        start = max_val if reverse else min_val
-
         f = int(reverse) * 2 - 1
 
-        val = start - (f * delta * indicator * scaled_ratio_1) - (f * delta/2 * (not indicator) * (1 + math.cos(math.pi * scaled_ratio_2)))
+        if not reverse:
+            if ratio < 0.4:
+                val = delta_1 * scaled_ratio_1 * (-f) + min_val
+            else:
+                val = delta_2 / 2 * (1 + math.cos(math.pi * scaled_ratio_2)) * (-f)
+        else:
+            if ratio < 0.4:
+                val = delta_1 * scaled_ratio_1 * (-f) + max_val
+            else:
+                val = delta_2 / 2 * (1 + math.cos(math.pi * scaled_ratio_2)) * (-f) + max_val
 
         return val
 
