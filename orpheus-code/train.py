@@ -307,15 +307,16 @@ class Learner:
         valid_dataset = self.strategy.experimental_distribute_dataset(self.valid_dataset) if self.valid_dataset else None
         
         with self.strategy.scope():
+            
+            # get previous optimizer iteration count
+            opt_init_count = self.optimizer.iteration.numpy() # optimizer *does not* reset on train keyboard interrupt, but only when the class goes out of scope
 
-            tf.summary.trace_off() # in case of previous keyboard interrupt
+            # get previous epoch count (in case a checkpoint is restored)
+            start = self.checkpoint.save_counter
 
             # initialize early stop variables
             early_stop = 0
             early_stop_max_metric = 0
-
-            # initialize starting value for epoch count (in case of previous checkpoint restored)
-            start = self.checkpoint.save_counter
 
             for epoch in tf.range(start, epochs, dtype=tf.int64):
 
@@ -328,24 +329,24 @@ class Learner:
                 
                 # train
                 for step, batch in enumerate(train_dataset):
-                    loss = self._train_step(batch, strategy=self.strategy, metrics=[self.metric_1, self.metric_2])
+                    loss = self._train_step(batch, metrics=[self.metric_1, self.metric_2])
                     print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
-         
+
                     # write metrics on tensorboard every update_freq step
-                    if step+1 % update_freq == 0:
-                        if lr_callback:
-                            self.optimizer.learning_rate.assign(lr_callback.get_lr(self.optimizer.iterations))
+                    if tf.equal(self.optimizer.iterations % update_freq, 0):
+                        # if lr_callback:
+                        #     self.optimizer.learning_rate.assign(lr_callback.get_lr(self.optimizer.iterations))
  
                         with self.train_summary_writer.as_default():
                             tf.summary.scalar(name='iter_loss',
                                             data=loss, 
-                                            step=optimizer.iterations)
+                                            step=self.optimizer.iterations.numpy())
                             tf.summary.scalar(name='iter_ROC-AUC', 
                                             data=self.metric_1.result(),
-                                            step=optimizer.iterations)
+                                            step=self.optimizer.iterations.numpy())
                             tf.summary.scalar(name='iter_PR-AUC', 
                                             data=self.metric_2.result(),
-                                            step=optimizer.iterations)
+                                            step=self.optimizer.iterations.numpy())
                             self.train_summary_writer.flush()
 
                 # print progress summary
@@ -385,7 +386,7 @@ class Learner:
                     
                     # validate
                     for step, batch in enumerate(valid_dataset):
-                        loss = self._valid_step(batch, strategy=self.strategy, metrics=[self.metric_1, self.metric_2])
+                        loss = self._valid_step(batch, metrics=[self.metric_1, self.metric_2])
                         print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
                     
                     # print progress summary
