@@ -106,7 +106,7 @@ class Learner:
                 self.profiler_log_dir = os.path.join(self.log_dir, 'profile/')
                 self.profiler_summary_writer = tf.summary.create_file_writer(self.profiler_log_dir)
 
-    def train_with_fit(self, epochs, steps_per_epoch=None, restore=None, update_freq=1, profile_batch=0):
+    def train_with_fit(self, epochs, steps_per_epoch=None, restore=None, update_freq=1):
         ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
 
         Parameters
@@ -166,7 +166,7 @@ class Learner:
                 histogram_freq = 1,
                 write_graph = False,
                 update_freq = update_freq,
-                profile_batch = profile_batch, # make sure the env variable LD_LIBRARY_PATH is properly set up
+                profile_batch = 0,
             ),
 
             tf.keras.callbacks.TerminateOnNaN(),
@@ -270,7 +270,7 @@ class Learner:
 
         return mean_loss
 
-    def train(self, epochs, steps_per_epoch=None, restore=None, update_freq=1, lr_range=None, analyse_trace=False):
+    def train(self, epochs, steps_per_epoch=None, restore=None, update_freq=1, analyse_trace=False):
         ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs using a custom training loop.
 
         Parameters
