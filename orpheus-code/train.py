@@ -49,8 +49,8 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from data_input import generate_datasets_from_dir
-from orpheus_model import build_model
-from orpheus_model import parse_config_json
+from orpheus_backend import build_model
+from orpheus_backend import parse_config_json
 
 class Learner:
     def __init__(self, frontend, train_dataset, valid_dataset, strategy, config, restore=False, standard_loop=False):

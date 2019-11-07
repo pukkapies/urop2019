@@ -3,7 +3,7 @@
 
 Notes
 -----
-This module creates a json file to record parameters used in training, and
+This module creates a .json file to record parameters used in training, and
 reproduces the skeleton model proposed by (Pons, et al., 2018) in the
 new TensorFlow 2.0 Keras syntax. For more information, please refer to (Pons, et al., 2018).
 
@@ -225,6 +225,9 @@ def parse_config_json(config_path, lastfm):
 
     # count total number of output classes
     config.num_output_neurons = len(tags) if tags is not None else config.tag_shape
+
+
+    # self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0.
     
     return config
     

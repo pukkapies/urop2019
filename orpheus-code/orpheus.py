@@ -12,8 +12,8 @@ from tqdm.auto import tqdm
 import lastfm
 
 from data_input import generate_datasets_from_dir
-from orpheus_model import build_model
-from orpheus_model import parse_config_json
+from orpheus_backend import build_model
+from orpheus_backend import parse_config_json
 
 def load_from_checkpoint(audio_format, config, checkpoint_path=None):
     ''' Loads the model from a specified checkpoint.
