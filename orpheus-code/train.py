@@ -53,13 +53,18 @@ from orpheus_model import build_model
 from orpheus_model import parse_config_json
 
 class Learner:
-    def __init__(self, frontend, train_dataset, valid_dataset, strategy, config, restore=None, custom_loop=True):
+    def __init__(self, frontend, train_dataset, valid_dataset, strategy, config, restore=False, standard_loop=False):
         # initialize training variables and strategy
         self.train_dataset = train_dataset
         self.valid_dataset = valid_dataset
+        self.train_size = 0 
+        self.valid_size = 0
         self.frontend = frontend
         self.config = config
         self.strategy = strategy
+
+        # check if traning with early stop callback
+        self.early_stop = self.config.early_stop_patience is not None
 
         # initialize timestamp 
         self.timestamp = restore or datetime.datetime.now().strftime("%d%m%y-%H%M") # if restoring from previously saved checkpoint, use the 'old' timestamp
@@ -87,10 +92,10 @@ class Learner:
                                                        name='train_PR-AUC',
                                                        dtype=tf.float32)
 
-            if custom_loop:
-                # initialize (and restore) checkpoint
+            if not standard_loop:
+                
                 self.checkpoint = tf.train.Checkpoint(model=self.model, optimizer=self.optimizer)
-            
+                
                 if restore:
                     file = tf.train.latest_checkpoint(self.log_dir)
                     if file:
@@ -98,116 +103,14 @@ class Learner:
                     else:
                         raise FileNotFoundError
                 
-                # initialize tensorboard summary writers
                 self.train_log_dir = os.path.join(self.log_dir, 'train/')
                 self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
                 self.valid_log_dir = os.path.join(self.log_dir, 'validation/')
                 self.valid_summary_writer = tf.summary.create_file_writer(self.valid_log_dir)
                 self.profiler_log_dir = os.path.join(self.log_dir, 'profile/')
                 self.profiler_summary_writer = tf.summary.create_file_writer(self.profiler_log_dir)
-
-    def train_with_fit(self, epochs, steps_per_epoch=None, restore=None, update_freq=1):
-        ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs.
-
-        Parameters
-        ----------
-        train_dataset: tf.data.Dataset
-            The training dataset.
-            
-        valid_dataset: tf.data.Dataset
-            The validation dataset. If None, validation will be disabled. Tfe callbacks might not work properly.
-
-        frontend: {'waveform', 'log-mel-spectrogram'}
-            The frontend to adopt.
-            
-        strategy: tf.distribute.Strategy
-            Strategy for multi-GPU distribution.
-
-        config: argparse.Namespace
-            Instance of the config namespace. It is generated when parsing the config.json file.
-            
-        epochs: int
-            Specifies the number of epochs to train for.
-
-        steps_per_epoch: int
-            Specifies the number of steps to perform for each epoch. If None, the whole dataset will be used.
-        
-        restore: str
-            Specifies the timestamp of the checkpoint to restore. Should be a timestamp in the 'YYMMDD-hhmm' format.
-
-        update_freq: int
-            Specifies the number of batches to wait before writing to logs. Note that writing too frequently can slow down training.
-
-        profile_batch: int
-            Specifies which batch to profile. Set to 0 to disable.
-        '''
-
-        with self.strategy.scope():
-            # compile the model
-            self.model.compile(optimizer=self.optimizer, loss=self.loss, metrics=[[tf.keras.metrics.AUC(curve='ROC', name='ROC-AUC'), tf.keras.metrics.AUC(curve='PR', name='PR-AUC')]])
-            
-            # restore the model (if restore timestamp is provided)
-            if restore:
-                self.model.load_weights(os.path.join(os.path.expanduser(self.config.log_dir), self.frontend + '_' + restore))
-
-        # initialize training callbacks
-        callbacks = [
-            tf.keras.callbacks.ModelCheckpoint(
-                filepath = os.path.join(self.log_dir, 'mymodel.h5'),
-                monitor = 'val_PR-AUC',
-                mode = 'max',
-                save_best_only = True,
-                save_freq = 'epoch',
-                verbose = 1,
-            ),
-
-            tf.keras.callbacks.TensorBoard(
-                log_dir = self.log_dir,
-                histogram_freq = 1,
-                write_graph = False,
-                update_freq = update_freq,
-                profile_batch = 0,
-            ),
-
-            tf.keras.callbacks.TerminateOnNaN(),
-        ]
-
-        if self.config.early_stop_patience is not None:
-
-            self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0
-
-            callbacks.append(
-                tf.keras.callbacks.EarlyStopping(
-                    monitor = 'val_PR-AUC',
-                    mode = 'max',
-                    min_delta = self.config.early_stop_min_delta,
-                    restore_best_weights = True,
-                    patience = self.config.early_stop_patience,
-                    verbose = 1,
-                ),
-            )
-        
-        if self.config.reduceLRoP_patience is not None:
-
-            self.config.reduceLRoP_factor = self.config.reduceLRoP_factor or 0.5
-            self.config.reduceLRoP_min_delta = self.config.reduceLRoP_min_delta or 0
-            self.config.reduceLRoP_min_lr = self.config.reduceLRoP_min_lr or 0
-
-            callbacks.append(
-                tf.keras.callbacks.ReduceLROnPlateau(
-                    monitor = 'val_PR-AUC',
-                    mode = 'max',
-                    factor = self.config.reduceLRoP_factor,
-                    min_delta = self.config.reduceLRoP_min_delta,
-                    min_lr = self.config.reduceLRoP_min_lr,
-                    patience = self.config.reduceLRoP_patience,
-                    verbose = 1,
-                ),
-            )
-
-        history = self.model.fit(self.train_dataset, epochs=epochs, steps_per_epoch=steps_per_epoch, callbacks=callbacks, validation_data=self.valid_dataset)
-
-        return history.history
+            else:
+                self.checkpoint = restore # will restore checkpoint using model.load_weights()
 
     @tf.function
     def _train_step(self, batch, metrics=None):
@@ -270,28 +173,16 @@ class Learner:
 
         return mean_loss
 
-    def train(self, epochs, steps_per_epoch=None, restore=None, update_freq=1, analyse_trace=False):
-        ''' Creates a compiled instance of the training model and trains it for 'epochs' epochs using a custom training loop.
+    def train_1(self, epochs, steps_per_epoch=None, restore=None, update_freq=1, cyclic_lr=None, analyse_trace=False):
+        ''' Trains the model for 'epochs' epochs.
 
         Parameters
         ----------
-        train_dataset: tf.data.Dataset
-            The training dataset.
-            
-        valid_dataset: tf.data.Dataset
-            The validation dataset. If None, validation will be disabled. Tfe callbacks might not work properly.
-
-        frontend: {'waveform', 'log-mel-spectrogram'}
-            The frontend to adopt.
-            
-        strategy: tf.distribute.Strategy
-            Strategy for multi-GPU distribution.
-
-        config: argparse.Namespace
-            Instance of the config namespace. It is generated when parsing the config.json file.
-            
         epochs: int
             Specifies the number of epochs to train for.
+
+        steps_per_epoch: int
+            Specifies the number of steps to perform for each epoch. If None, the whole dataset will be used.
         
         restore: str
             Specifies the timestamp of the checkpoint to restore. Should be a timestamp in the 'YYMMDD-hhmm' format.
@@ -305,19 +196,54 @@ class Learner:
 
         train_dataset = self.strategy.experimental_distribute_dataset(self.train_dataset)
         valid_dataset = self.strategy.experimental_distribute_dataset(self.valid_dataset) if self.valid_dataset else None
-        
-        with self.strategy.scope():
-            
-            # get previous optimizer iteration count
-            opt_init_count = self.optimizer.iteration.numpy() # optimizer *does not* reset on train keyboard interrupt, but only when the class goes out of scope
 
-            # get previous epoch count (in case a checkpoint is restored)
-            start = self.checkpoint.save_counter
+        optimizer_iter_start = self.optimizer.iteration.numpy() # optimizer *does not* reset on train keyboard interrupt, but only when the class goes out of scope
 
-            # initialize early stop variables
+        start = self.checkpoint.save_counter
+
+        if cyclic_lr:
+            if cyclic_lr not in ('cyclic', 'cyclic-1cycle'): # sanity check
+                raise ValueError
+
+            elif cyclic_lr == 'cyclic':
+                momentum = False # disable cyclic momentum
+                lr_callback = CyclicLR(cycle_length=config.cycle_length, 
+                                    max_lr=config.max_lr,
+                                    div_factor=config.div_factor,
+                                    mom=config.mom)
+
+            elif cyclic_lr == 'cyclic-1cycle':
+                self.early_stop = False # disable early stop callback
+                momentum = (self.optimizer.name == 'SGD') # disable cyclic momentum for optimizers other than plain-vanilla stochastic gradient descent...
+                if steps_per_epoch is not None:
+                    cycle_length = epochs * steps_per_epoch
+                else:
+                    cycle_length = epochs * (self.train_size or self.cycle()) # if train_size is undefined, cycle through train_dataset
+                lr_callback = CyclicLR_1Cycle(cycle_length=cycle_length, 
+                                            max_lr=config.max_lr,
+                                            div_factor=config.div_factor,
+                                            mom=config.mom)
+
+            # wrap lr (and mom) update step in one handy function 
+            def _update_cycle():
+                step = self.optimizer.iterations.numpy() - opt_init_count # actual current iteration
+
+                lr = lr_callback.get_lr(step=step)
+                self.optimizer.learning_rate.assign(lr)
+
+                if momentum:
+                    mom = lr_callback.get_mm(step=step)
+                    self.optimizer.momentum.assign(mom)
+        else:
+            def _update_cycle(): # do nothing
+                pass
+
+        if self.early_stop:
             early_stop = 0
             early_stop_max_metric = 0
-
+        
+        # end of preliminaries... train loop starts *here*
+        with self.strategy.scope():
             for epoch in tf.range(start, epochs, dtype=tf.int64):
 
                 print()
@@ -329,14 +255,14 @@ class Learner:
                 
                 # train
                 for step, batch in enumerate(train_dataset):
-                    loss = self._train_step(batch, metrics=[self.metric_1, self.metric_2])
-                    print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
 
-                    # write metrics on tensorboard every update_freq step
-                    if tf.equal(self.optimizer.iterations % update_freq, 0):
-                        # if lr_callback:
-                        #     self.optimizer.learning_rate.assign(lr_callback.get_lr(self.optimizer.iterations))
- 
+                    loss = self._train_step(batch, metrics=[self.metric_1, self.metric_2])
+
+                    print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
+                    
+                    _update_cycle() # if cyclic_lr, perform update lr (and mom, optionally)
+
+                    if tf.equal(self.optimizer.iterations % update_freq, 0): # write on tensorboard every update_freq steps
                         with self.train_summary_writer.as_default():
                             tf.summary.scalar(name='iter_loss',
                                             data=loss, 
@@ -349,10 +275,10 @@ class Learner:
                                             step=self.optimizer.iterations.numpy())
                             self.train_summary_writer.flush()
 
-                # print progress summary
+                # end of epoch summary
                 print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
                
-                # write metrics on tensorboard at the end of each epoch
+                # end of epoch summary (on tensorboard)
                 with self.train_summary_writer.as_default():
                     tf.summary.scalar(name='epoch_loss',
                                       data=loss, 
@@ -365,11 +291,11 @@ class Learner:
                                       step=epoch+1)
                     self.train_summary_writer.flush()
                 
-                # reset
+                # reset metrics
                 self.metric_1.reset_states()
                 self.metric_2.reset_states()
 
-                # write training profile
+                # analyze hardware usage and performance (usually disabled...)
                 if analyse_trace:
                     with self.profiler_summary_writer.as_default():   
                         tf.summary.trace_export(name="trace", 
@@ -389,11 +315,11 @@ class Learner:
                         loss = self._valid_step(batch, metrics=[self.metric_1, self.metric_2])
                         print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
                     
-                    # print progress summary
+                    # end of validation epoch summary
                     print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
                     print()
                     
-                    # write metrics on tensorboard at the end of each epoch
+                    # end of validation epoch summary (on tensorboard)
                     with self.valid_summary_writer.as_default():
                         tf.summary.scalar(name='epoch_loss',
                                         data=loss, 
@@ -405,12 +331,9 @@ class Learner:
                                         data=self.metric_2.result(),
                                         step=epoch+1)
                         self.valid_summary_writer.flush()
-                
-                    # early stop check
-                    if self.config.early_stop_patience is not None:
 
-                        self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0.
-
+                    # if early stop is enabled, compare previous epochs and check progress  
+                    if self.early_stop:
                         if self.metric_2.result() > (early_stop_max + self.config.early_stop_min_d):
                             early_stop_max_metric = self.metrics_2.result()
                             early_stop = 0
@@ -420,9 +343,96 @@ class Learner:
                             if early_stop == self.config.early_stop_patience:
                                 break
                     
-                    # reset
+                    # reset metrics
                     self.metric_1.reset_states()
                     self.metric_2.reset_states()
+
+    def train_2(self, epochs, steps_per_epoch=None, restore=None, update_freq=1):
+        ''' Trains the model for 'epochs' epochs using the buit-in model.fit() training loop.
+
+        Parameters
+        ----------
+        epochs: int
+            Specifies the number of epochs to train for.
+
+        steps_per_epoch: int
+            Specifies the number of steps to perform for each epoch. If None, the whole dataset will be used.
+
+        update_freq: int
+            Specifies the number of batches to wait before writing to logs. Note that writing too frequently can slow down training.
+        '''
+
+        with self.strategy.scope():
+
+            self.model.compile(optimizer=self.optimizer, loss=self.loss, metrics=[[tf.keras.metrics.AUC(curve='ROC', name='ROC-AUC'), tf.keras.metrics.AUC(curve='PR', name='PR-AUC')]])
+            
+            if self.checkpoint:
+                self.model.load_weights(os.path.join(os.path.expanduser(self.config.log_dir), self.frontend + '_' + self.checkpoint))
+
+        callbacks = [
+            tf.keras.callbacks.ModelCheckpoint(
+                filepath = os.path.join(self.log_dir, 'mymodel.h5'),
+                monitor = 'val_PR-AUC',
+                mode = 'max',
+                save_best_only = True,
+                save_freq = 'epoch',
+                verbose = 1,
+            ),
+
+            tf.keras.callbacks.TensorBoard(
+                log_dir = self.log_dir,
+                histogram_freq = 1,
+                write_graph = False,
+                update_freq = update_freq,
+                profile_batch = 0,
+            ),
+
+            tf.keras.callbacks.TerminateOnNaN(),
+        ]
+
+        if self.config.early_stop_patience is not None:
+
+            self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0
+
+            callbacks.append(
+                tf.keras.callbacks.EarlyStopping(
+                    monitor = 'val_PR-AUC',
+                    mode = 'max',
+                    min_delta = self.config.early_stop_min_delta,
+                    restore_best_weights = True,
+                    patience = self.config.early_stop_patience,
+                    verbose = 1,
+                ),
+            )
+        
+        if self.config.reduceLRoP_patience is not None:
+
+            self.config.reduceLRoP_factor = self.config.reduceLRoP_factor or 0.5
+            self.config.reduceLRoP_min_delta = self.config.reduceLRoP_min_delta or 0
+            self.config.reduceLRoP_min_lr = self.config.reduceLRoP_min_lr or 0
+
+            callbacks.append(
+                tf.keras.callbacks.ReduceLROnPlateau(
+                    monitor = 'val_PR-AUC',
+                    mode = 'max',
+                    factor = self.config.reduceLRoP_factor,
+                    min_delta = self.config.reduceLRoP_min_delta,
+                    min_lr = self.config.reduceLRoP_min_lr,
+                    patience = self.config.reduceLRoP_patience,
+                    verbose = 1,
+                ),
+            )
+
+        history = self.model.fit(self.train_dataset, epochs=epochs, steps_per_epoch=steps_per_epoch, callbacks=callbacks, validation_data=self.valid_dataset)
+
+        return history.history
+    
+    def cycle(self):
+        count = 0
+        for batch in train_dataset:
+            count += 1
+        self.train_size = count
+        return count
     
     def lr_find_plot(self):
         try:
@@ -455,10 +465,6 @@ class Learner:
             self.lr_find_x.append(learning_rate)
             self.lr_find_y.append(loss)
 
-            # stop
-            if step >= num_it-1:
-                break
-
             # stop if loss is diverging
             if stop_div:
                 if self.lr_find_y[-1] - self.lr_find_y[0] > self.lr_find_y[0]/5:
@@ -466,12 +472,16 @@ class Learner:
                     self.lr_find_y.pop()
                     break
 
+            # stop
+            if step >= num_it-1:
+                break
+
 class Scheduler:
-    def __init__(self, cycle_length, max_lr=0.1, div_factor=10, moms=None):
+    def __init__(self, cycle_length, max_lr=0.1, div_factor=10, mom=None):
         self.max_lr = max_lr
         self.min_lr = max_lr / div_factor
         self.delta = self.max_lr - self.min_lr
-        self.moms = moms
+        self.mom = mom
         self.cycle_length = cycle_length
 
     def _step_fn(self, step, max_val, min_val, reverse=False): # overridden by subclass
@@ -481,56 +491,58 @@ class Scheduler:
         return self._step_fn(step, self.max_lr, self.min_lr)
 
     def get_mm(self, step):
-        max_mm, min_mm = self.moms
-        return self._step_fn(step, max_mm, min_mm, reverse=True)
+        return self._step_fn(step, self.mom[0], self.mom[1], reverse=True)
 
 class CyclicLR(Scheduler):
-    def __init__(self, max_lr, cycle_length, div_factor=10, moms=(0.95, 0.85)):
-        super().__init__(cycle_length, max_lr, div_factor, moms)
+    def __init__(self, cycle_length, max_lr, div_factor=10, mom=(0.95, 0.85)):
+        super().__init__(cycle_length, max_lr, div_factor, mom)
 
     def _step_fn(self, step, max_val, min_val, reverse=False):
         delta = max_val - min_val
 
-        # get index of current cycle (i.e. how many full cycles have already been completed)
-        cycle = math.floor(step/self.cycle_length)
+        cycle = math.floor(step/self.cycle_length) # index of current cycle, i.e. how many full cycles have already been completed
 
-        # get progress ratio within current cycle (i.e. a float between 0 and 1)
+        # progress ratio within current cycle (float between 0 and 1)
         ratio = step/self.cycle_length - cycle
 
-        # get progress ratio within current cycle, but count from the nearest extremum (i.e. a float between 0 and .5)
+        # progress ratio within current cycle, but counting from the nearest extremum (float between 0 and .5)
         effective_ratio = (0.5 - abs(0.5 - ratio)) * 2
 
-        start = min_val if not reverse else max_val
+        start = min_val if not reverse else max_val # accounts for increasing-decreasing (lr) and decreasing-increasing (momentum) cycles 
 
-        f = int(reverse) * 2 - 1
+        f = int(reverse) * 2 - 1 # +1 if reverse is True, -1 if reverse is False
 
         val = start - f * (delta * effective_ratio)
 
         return val
 
 class CyclicLR_1Cycle(Scheduler):
-    def __init__(self, max_lr, cycle_length, div_factor=10, moms=(0.95, 0.85)):
-        super().__init__(cycle_length, max_lr, div_factor, moms)
+    def __init__(self, cycle_length, max_lr, div_factor=10, mom=(0.95, 0.85)):
+        super().__init__(cycle_length, max_lr, div_factor, mom)
 
     def _step_fn(self, step, max_val, min_val, reverse=False):
         delta_1 = max_val - min_val
-        delta_2 = max_val - math.floor(min_val) if not reverse else max_val - min_val
+        delta_2 = max_val - math.floor(min_val) if not reverse else max_val - min_val # you want lr to decrease to zero, not to initial value
 
+        # progress ratio within current cycle (float between 0 and 1)
         ratio = step / self.cycle_length
 
-        assert ratio <= 1
+        assert ratio <= 1 # sanity check, we should be going through one single cycle
 
-        scaled_ratio_1 = ratio * 5 / 2
-        scaled_ratio_2 = ratio * 5 / 3 - 2 / 3
+        # progress ratio within current cycle, 'scaled up' to fit our policy
+        scaled_ratio_1 = ratio * 5 / 2              # ratio = 0.0 --> scaled_ratio_1 = 0; ratio = 0.4 --> scaled_ratio_1 = 1; useless when ratio > 0.4
+        scaled_ratio_2 = ratio * 5 / 3 - 2 / 3      # ratio = 0.4 --> scaled_ratio_2 = 0; ratio = 1.0 --> scaled_ratio_2 = 1; useless when ratio < 0.4
 
-        f = int(reverse) * 2 - 1
+        f = int(reverse) * 2 - 1 # +1 if reverse is True, -1 if reverse is False
 
         if not reverse:
+            # increase linearly for first two-fifths of cycle, then decreasing cosine annealing (go to zero, not to min_val)
             if ratio < 0.4:
                 val = delta_1 * scaled_ratio_1 * (-f) + min_val
             else:
                 val = delta_2 / 2 * (1 + math.cos(math.pi * scaled_ratio_2)) * (-f)
         else:
+            # decrease linearly for first two-fifths of cycle, then increasing cosine annealing
             if ratio < 0.4:
                 val = delta_1 * scaled_ratio_1 * (-f) + max_val
             else:
@@ -558,21 +570,18 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # specify number of visible gpu's
+    # specify number of visible GPUs (if multiple GPUs are available)
     if args.cuda:
         os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(i) for i in args.cuda])
 
     # specify verbose mode
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = args.verbose
 
-    # parse config
     config = parse_config_json(args.config, args.lastfm)
 
-    # override config setting
     if args.no_shuffle:
-        config.shuffle = False
+        config.shuffle = False # override config.json setting
 
-    # generate train_dataset and valid_dataset (valid_dataset will be None if config.split is None)
     train_dataset, valid_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split = config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
                                                               sample_rate = config.sr, batch_size = config.batch_size, 
                                                               block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
@@ -584,20 +593,18 @@ if __name__ == '__main__':
     
     strategy = tf.distribute.MirroredStrategy()
 
-    # instantiate learner
     orpheus = Learner(frontend=args.frontend, 
                       train_dataset=train_dataset, valid_dataset=valid_dataset, 
                       strategy=strategy, config=config, 
                       restore=args.restore, custom_loop=(not args.built_in))
 
-    # train
     if not args.built_in:
-        orpheus.train(epochs=args.epochs,
-                      steps_per_epoch=args.steps_per_epoch,
-                      restore=args.restore,
-                      update_freq=args.update_freq)
+        orpheus.train_1(epochs=args.epochs,
+                        steps_per_epoch=args.steps_per_epoch,
+                        restore=args.restore,
+                        update_freq=args.update_freq)
     else:
-        orpheus.train_with_fit(epochs=args.epochs, 
+        orpheus.train_2(epochs=args.epochs, 
                         steps_per_epoch=args.steps_per_epoch, 
                         restore=args.restore, 
                         update_freq=args.update_freq)
