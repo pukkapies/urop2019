@@ -110,20 +110,19 @@ def write_config_json(config_path, **kwargs):
     model_training = {
         "optimizer": {
             "name": "Adam",             # name of the optimizer, as appears in tf.keras.optimizers
-            "learning_rate": 0.,        # initial learning rate
-            "max_learning_reate": 0.,   # maximal learning rate in a cycle
-            "cycle_stepsize": 0,        # specify when using cyclical learning rate. Stepsize is a half cycle, recommended is 2 times the iterations in an epoch
         },
         "batch_size": 0,                        # global batch size
         "interleave_cycle_length": 0,           # number of input elements that are processed concurrently (when using tf.data.Dataset.interleave)
         "interleave_block_length": 0,           # number of consecutive input elements that are consumed at each cycle (when using tf.data.Dataset.interleave) (see https://www.tensorflow.org/api_docs/python/tf/data/Dataset#interleave)
-        "early_stop_patience": 0,               # the number epochs with 'no improvement' to wait before triggering EarlyStopping (please put None if EarlyStopping is not used)
-        "reduceLRoP_patience": 0,               # the number epochs with 'no improvement' to wait before triggering ReduceLROnPlateau and reduce lr by a 'reduceLRoP_factor' (please put None if ReduceLROnPlateau is not used)
-        "early_stop_min_delta": 0.,             # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
-        "reduceLRoP_min_delta": 0.,             # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
-        "reduceLRoP_min_lr": 0.,                # the lower bound for the learning rate, when using ReduceLROnPlateau callback
-        "reduceLRoP_factor": 0.,                # the factor the learning rate is deacreased by at each step, when using ReduceLROnPlateau callback
+        "callback_early_stop_patience": None,   # the number epochs with 'no improvement' to wait before triggering EarlyStopping (please put None if EarlyStopping is not used)
+        "callback_reduceLRoP_patience": None,   # the number epochs with 'no improvement' to wait before triggering ReduceLROnPlateau and reduce lr by a 'reduceLRoP_factor' (please put None if ReduceLROnPlateau is not used)
+        "callback_early_stop_min_delta": None,  # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
+        "callback_reduceLRoP_min_delta": None,  # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
+        "cycle_length": 0,                      # number of iteration per each cycle, when using cyclical lr
+        "div_factor": 0,                        # when training with one-cycle policy, min_lr = max_lr / div_factor; when using ReduceLROnPlateau, lr = lr / factor at each reduction step
+        "learning_rate": 0.001,                 # when training with one-cycle policy, max_lr
         "log_dir": "~/",                        # directory where tensorboard logs and checkpoints will be stored
+        "momentum": 0.,                         # when training with one-cycle policy, 
         "shuffle": True,                        # if True, shuffle the dataset
         "shuffle_buffer_size": 0,               # buffer size to use to shuffle the dataset (only applies if shuffle is True)
         "split": MyJSONEnc_NoIndent([0, 0]),    # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
@@ -134,8 +133,6 @@ def write_config_json(config_path, **kwargs):
     # specify which tags to use
     tags = {
         "top": 0,                             # e.g. use only the most popular 50 tags from the tags database will go into training (if None, all tags go into training)
-        "with": MyJSONEnc_NoIndent([]),       # tags that will be added to the list above        
-        "without": MyJSONEnc_NoIndent([]),    # tags that will be excluded from the list above
     }
 
     # specify how the data has been encoded in the .tfrecord files
@@ -156,9 +153,11 @@ def write_config_json(config_path, **kwargs):
     # substitute kwargs into output dictionary (passing kwargs is basically equivalent to editing the .json file manually)
     for key, value in kwargs.items():
         substitute_into_dict(key, value)
+
+    config_path = os.path.expanduser(config_path)
     
     if os.path.isdir(config_path):
-        config_path = os.path.join(os.path.abspath(config_path), 'config.json')
+        config_path = os.path.join(config_path, 'config.json')
     
     with open(config_path, 'w') as f:
         d = {'model': model, 'model-training': model_training, 'tags': tags, 'tfrecords': tfrecords}
@@ -201,33 +200,27 @@ def parse_config_json(config_path, lastfm):
     # update config (optimizer will be instantiated with tf.get_optimizer using {"class_name": config.optimizer_name, "config": config.optimizer})
     config.optimizer_name = config.optimizer.pop('name')
 
-    # read tags from popularity dataframe
+    # read top tags from popularity df
     top = config_dict['tags']['top']
-    if (top is not None) and (top != config.tag_shape):
-        top_tags = lastfm.popularity()['tag'][:top].tolist()
-        tags = set(top_tags)
+    if top != config.tag_shape:
+        tags = lastfm.popularity()['tag'][:top].tolist()
     else:
-        tags = None
-
-    # update tags according to 'with' (to be added) and 'without' (to be discarded)
-    if tags is not None:
-        if config_dict['tags']['with']:
-            tags.update(config_dict['tags']['with'])
-        
-        if config_dict['tags']['without']:
-            tags.difference_update(config_dict['tags']['without'])
-
-        tags = list(tags)
-    else:
-        raise ValueError("parameter 'with' is inconsistent to parameter 'top'")
+        tags = None # do not filter out tags when parsing dataset
 
     config.tags = np.sort(lastfm.tag_to_tag_num(tags)) if tags is not None else None # sorting is necessary to aviod unexpected behaviour
 
     # count total number of output classes
     config.num_output_neurons = len(tags) if tags is not None else config.tag_shape
 
-
-    # self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0.
+    # default values (if some entries are 'null'; can be changed to whatever other desired values)
+    config.callback_early_stop_patience = config.callback_early_stop_patience or 0
+    config.callback_reduceLRoP_patience = config.callback_reduceLRoP_patience or 0
+    config.callback_early_stop_min_delta = config.callback_early_stop_min_delta or 0.
+    config.callback_reduceLRoP_min_delta = config.callback_reduceLRoP_min_delta or 0.
+    config.cycle_length = config.cycle_length or 1000
+    config.div_factor = config.div_factor or 25
+    config.learning_rate = config.learning_rate or 0.01
+    config.momentum = config.momentum or (0.95, 0.85)
     
     return config
     
