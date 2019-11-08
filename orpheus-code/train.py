@@ -247,19 +247,10 @@ class Learner:
         
         # end of preliminaries... train loop starts *here*
         with self.strategy.scope():
-            for epoch in tf.range(start, epochs, dtype=tf.int64):
-
-                print()
-                print('Epoch {}/{}'.format(epoch+1, epochs))
-                
-                if analyse_trace and epoch == 0:
-                    tf.summary.trace_off()
-                    tf.summary.trace_on(graph=False, profiler=True)
-                
-                # train
-                for step, batch in enumerate(train_dataset):
-
-                    _update_cycle() # if cyclic_lr, perform update lr (and moms, optionally)
+            
+            def _train(step, batch): # batch is retrieved differently if using a standard dataset or a generator (that is, whether or not dataset resets at epoch end); hence this function to avoid code repetition
+                    
+                    _update_cycle()  # if cyclic_lr, perform lr update (optionally mom); otherwise, do nothing
 
                     loss = self._train_step(batch, metrics=[self.metric_1, self.metric_2])
 
@@ -284,6 +275,27 @@ class Learner:
                                                  data=self.optimizer.momentum,
                                                  step=self.optimizer.iterations.numpy() - optimizer_iter_start)
                             self.train_summary_writer.flush()
+
+            for epoch in tf.range(start, epochs, dtype=tf.int64):
+
+                print()
+                print('Epoch {}/{}'.format(epoch+1, epochs))
+                
+                if analyse_trace and epoch == 0:
+                    tf.summary.trace_off()
+                    tf.summary.trace_on(graph=False, profiler=True)
+                
+                # train for steps_per_epoch steps (train_dataset is a generator)
+                if steps_per_epoch:
+                    step = 0
+                    while step < steps_per_epoch:
+                        batch = next(train_dataset) # yield next batch (infinite generator, does not reset at epoch end)
+                        _train(step, batch)
+                        step += 1
+                # train
+                else:
+                    for step, batch in enumerate(train_dataset):
+                        _train(step, batch)
 
                 # end of epoch summary
                 print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
@@ -320,9 +332,10 @@ class Learner:
                     print()
                     print('Epoch {}/{} - Validation'.format(epoch+1, epochs))
                     
-                    # validate
                     for step, batch in enumerate(valid_dataset):
+
                         loss = self._valid_step(batch, metrics=[self.metric_1, self.metric_2])
+
                         print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
                     
                     # end of validation epoch summary
