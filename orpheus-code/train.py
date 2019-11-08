@@ -256,11 +256,11 @@ class Learner:
                 # train
                 for step, batch in enumerate(train_dataset):
 
+                    _update_cycle() # if cyclic_lr, perform update lr (and mom, optionally)
+
                     loss = self._train_step(batch, metrics=[self.metric_1, self.metric_2])
 
                     print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
-                    
-                    _update_cycle() # if cyclic_lr, perform update lr (and mom, optionally)
 
                     if tf.equal(self.optimizer.iterations % update_freq, 0): # write on tensorboard every update_freq steps
                         with self.train_summary_writer.as_default():

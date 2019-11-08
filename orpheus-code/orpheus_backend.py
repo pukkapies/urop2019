@@ -120,9 +120,9 @@ def write_config_json(config_path, **kwargs):
         "callback_reduceLRoP_min_delta": None,  # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
         "cycle_length": 0,                      # number of iteration per each cycle, when using cyclical lr
         "div_factor": 0,                        # when training with one-cycle policy, min_lr = max_lr / div_factor; when using ReduceLROnPlateau, lr = lr / factor at each reduction step
-        "learning_rate": 0.001,                 # when training with one-cycle policy, max_lr
         "log_dir": "~/",                        # directory where tensorboard logs and checkpoints will be stored
-        "momentum": 0.,                         # when training with one-cycle policy, 
+        "max_learning_rate": 0.,                # when training with cyclical lr, max value for learning rate (min value determined using div_factor)
+        "momentum": 0.,                         # when training with cyclical lr, tuple of max value and min value for momentum
         "shuffle": True,                        # if True, shuffle the dataset
         "shuffle_buffer_size": 0,               # buffer size to use to shuffle the dataset (only applies if shuffle is True)
         "split": MyJSONEnc_NoIndent([0, 0]),    # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
