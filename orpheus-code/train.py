@@ -189,6 +189,9 @@ class Learner:
 
         update_freq: int
             Specifies the number of batches to wait before writing to logs. Note that writing too frequently can slow down training.
+            
+        cyclic_lr: {'cyclic', 'cyclic-1cycle'}
+            Specifies whether to enable cyclic learning rate (optionally momentum), and whether to adopt the one-cycle policy.
         
         analyse_trace: bool
             Specifies whether to enable profiling.
@@ -197,7 +200,7 @@ class Learner:
         train_dataset = self.strategy.experimental_distribute_dataset(self.train_dataset)
         valid_dataset = self.strategy.experimental_distribute_dataset(self.valid_dataset) if self.valid_dataset else None
 
-        optimizer_iter_start = self.optimizer.iteration.numpy() # optimizer *does not* reset on train keyboard interrupt, but only when the class goes out of scope
+        optimizer_iter_start = self.optimizer.iterations.numpy() # optimizer *does not* reset on train keyboard interrupt, but only when the class goes out of scope
 
         start = self.checkpoint.save_counter
 
@@ -207,10 +210,10 @@ class Learner:
 
             elif cyclic_lr == 'cyclic':
                 momentum = False # disable cyclic momentum
-                lr_callback = CyclicLR(cycle_length=config.cycle_length, 
-                                    max_lr=config.max_lr,
-                                    div_factor=config.div_factor,
-                                    moms=config.moms)
+                lr_callback = CyclicLR(cycle_length=self.config.cycle_length, 
+                                    max_lr=self.config.max_lr,
+                                    div_factor=self.config.div_factor,
+                                    moms=self.config.moms)
 
             elif cyclic_lr == 'cyclic-1cycle':
                 self.early_stop = False # disable early stop callback
@@ -220,13 +223,13 @@ class Learner:
                 else:
                     cycle_length = epochs * (self.train_size or self.cycle()) # if train_size is undefined, cycle through train_dataset
                 lr_callback = CyclicLR_1Cycle(cycle_length=cycle_length, 
-                                            max_lr=config.max_lr,
-                                            div_factor=config.div_factor,
-                                            moms=config.moms)
+                                            max_lr=self.config.max_lr,
+                                            div_factor=self.config.div_factor,
+                                            moms=self.config.moms)
 
             # wrap lr (and moms) update step in one handy function 
             def _update_cycle():
-                step = self.optimizer.iterations.numpy() - opt_init_count # actual current iteration
+                step = self.optimizer.iterations.numpy() - optimizer_iter_start # actual current iteration
 
                 lr = lr_callback.get_lr(step=step)
                 self.optimizer.learning_rate.assign(lr)

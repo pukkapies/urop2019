@@ -218,9 +218,6 @@ def parse_config_json(config_path, lastfm):
 #    config.callback_reduceLRoP_patience = config.callback_reduceLRoP_patience or 2
 #    config.callback_early_stop_min_delta = config.callback_early_stop_min_delta or 0.01
 #    config.callback_reduceLRoP_min_delta = config.callback_reduceLRoP_min_delta or 0.01
-    config.cycle_length = config.cycle_length or 1000
-    config.div_factor = config.div_factor or 25
-    config.learning_rate = config.learning_rate or 0.01
     config.moms = config.moms or (0.95, 0.95)
 
     if isinstance(config.moms, (int, float)): config.moms = (config.moms, config.moms)
