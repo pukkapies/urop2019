@@ -55,7 +55,7 @@ from orpheus_backend import build_model
 from orpheus_backend import parse_config_json
 
 class Learner:
-    def __init__(self, frontend, train_dataset, valid_dataset, strategy, config, restore=False, standard_loop=False):
+    def __init__(self, frontend, train_dataset, valid_dataset, strategy, config, restore=False, built_in=False):
         # initialize training variables and strategy
         self.train_dataset = train_dataset
         self.valid_dataset = valid_dataset
@@ -94,8 +94,7 @@ class Learner:
                                                        name='train_PR-AUC',
                                                        dtype=tf.float32)
 
-            if not standard_loop:
-                
+            if not built_in:
                 self.checkpoint = tf.train.Checkpoint(model=self.model, optimizer=self.optimizer)
                 
                 if restore:
@@ -175,7 +174,7 @@ class Learner:
 
         return mean_loss
 
-    def train_1(self, epochs, steps_per_epoch=None, restore=None, update_freq=1, cyclic_lr=None, analyse_trace=False):
+    def train_1(self, epochs, steps_per_epoch=None, update_freq=1, cyclic_lr=None, analyse_trace=False):
         ''' Trains the model for 'epochs' epochs.
 
         Parameters
@@ -185,9 +184,6 @@ class Learner:
 
         steps_per_epoch: int
             Specifies the number of steps to perform for each epoch. If None, the whole dataset will be used.
-        
-        restore: str
-            Specifies the timestamp of the checkpoint to restore. Should be a timestamp in the 'YYMMDD-hhmm' format.
 
         update_freq: int
             Specifies the number of batches to wait before writing to logs. Note that writing too frequently can slow down training.
@@ -386,7 +382,7 @@ class Learner:
                     self.metric_1.reset_states()
                     self.metric_2.reset_states()
 
-    def train_2(self, epochs, steps_per_epoch=None, restore=None, update_freq=1):
+    def train_2(self, epochs, steps_per_epoch=None, update_freq=1):
         ''' Trains the model for 'epochs' epochs using the buit-in model.fit() training loop.
 
         Parameters
@@ -595,16 +591,21 @@ if __name__ == '__main__':
     parser.add_argument('--tfrecords-dir', help='directory to read the .tfrecord files from', required=True)
     parser.add_argument('--config', help='path to config.json (default to path on Boden)', default='/srv/data/urop/config.json')
     parser.add_argument('--lastfm', help='path to (clean) lastfm database (default to path on Boden)', default='/srv/data/urop/clean_lastfm.db')
+    parser.add_argument('--analyse-trace', action='store_true', help='enable hardware profiling')
     parser.add_argument('--multi-db', help='specify the number of different tags features in the .tfrecord files', type=int, default=1)
     parser.add_argument('--multi-db-default', help='specify the index of the default tags database, when there are more than one tags features in the .tfrecord files', type=int)
     parser.add_argument('--epochs', help='specify the number of epochs to train for', type=int, default=1)
     parser.add_argument('--steps-per-epoch', help='specify the number of steps to perform at each epoch (if unspecified, go through the whole dataset)', type=int)
-    parser.add_argument('--no-shuffle', action='store_true', help='force no shuffle, override config setting')
+    parser.add_argument('--no-shuffle', action='store_true', help='do not shuffle dataset, override config setting')
     parser.add_argument('--restore', help='load a previously saved model with the time in the format ddmmyy-hhmm, e.g. if the folder which the model is saved is custom_log-mel-spect_160919-0539, resume should take the argument 160919-0539')
     parser.add_argument('--update-freq', help='specify the frequency (in steps) to record metrics and losses', type=int, default=10)
     parser.add_argument('--cuda', help='set cuda visible devices', type=int, nargs='+')
     parser.add_argument('--built-in', action='store_true', help='train using the built-in model.fit training loop')
     parser.add_argument('-v', '--verbose', choices=['0', '1', '2', '3'], help='verbose mode', default='1')
+
+    cyclic = parser.add_mutually_exclusive_group()
+    cyclic.add_argument('--cyclic', action='store_true', help='training using cyclical lr (and mom, depending on optimizer)')
+    cyclic.add_argument('--cyclic-1cycle', action='store_true', help='training using cyclical lr (and mom, depending on optimizer); adopt one-cycle policy')
 
     args = parser.parse_args()
 
@@ -635,16 +636,20 @@ if __name__ == '__main__':
 
     orpheus = Learner(frontend=args.frontend, 
                       train_dataset=train_dataset, valid_dataset=valid_dataset, 
-                      strategy=strategy, config=config, 
-                      restore=args.restore, custom_loop=(not args.built_in))
+                      strategy=strategy,
+                      config=config, restore=args.restore, 
+                      built_in=args.built_in)
+
+    cyclic_lr = 'cyclic' if args.cyclic else None
+    cyclic_lr = 'cyclic-1cycle' if args.cyclic_1cycle else None
 
     if not args.built_in:
         orpheus.train_1(epochs=args.epochs,
                         steps_per_epoch=args.steps_per_epoch,
-                        restore=args.restore,
-                        update_freq=args.update_freq)
+                        update_freq=args.update_freq,
+                        cyclic_lr=cyclic_lr,
+                        analyse_trace=args.analyse_trace)
     else:
         orpheus.train_2(epochs=args.epochs, 
                         steps_per_epoch=args.steps_per_epoch, 
-                        restore=args.restore, 
                         update_freq=args.update_freq)
