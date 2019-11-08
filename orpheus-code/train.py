@@ -200,7 +200,7 @@ class Learner:
         train_dataset = self.strategy.experimental_distribute_dataset(self.train_dataset)
         valid_dataset = self.strategy.experimental_distribute_dataset(self.valid_dataset) if self.valid_dataset else None
 
-        optimizer_iter_start = self.optimizer.iterations.numpy() # optimizer *does not* reset on train keyboard interrupt, but only when the class goes out of scope
+        optimizer_iter_start = self.optimizer.iterations.numpy() # optimizer *does not* reset on keyboard interrupt, but only when the class goes out of scope
 
         start = self.checkpoint.save_counter
 
@@ -217,7 +217,7 @@ class Learner:
 
             elif cyclic_lr == 'cyclic-1cycle':
                 self.early_stop = False # disable early stop callback
-                momentum = (self.optimizer.name == 'SGD') # disable cyclic momentum for optimizers other than plain-vanilla stochastic gradient descent...
+                momentum = (isinstance(self.optimizer, tf.keras.optimizers.SGD)) # disable cyclic momentum for optimizers other than plain-vanilla stochastic gradient descent...
                 if steps_per_epoch is not None:
                     cycle_length = epochs * steps_per_epoch
                 else:
@@ -268,14 +268,21 @@ class Learner:
                     if tf.equal(self.optimizer.iterations % update_freq, 0): # write on tensorboard every update_freq steps
                         with self.train_summary_writer.as_default():
                             tf.summary.scalar(name='iter_loss',
-                                            data=loss, 
-                                            step=self.optimizer.iterations.numpy())
+                                             data=loss, 
+                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
                             tf.summary.scalar(name='iter_ROC-AUC', 
-                                            data=self.metric_1.result(),
-                                            step=self.optimizer.iterations.numpy())
+                                             data=self.metric_1.result(),
+                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
                             tf.summary.scalar(name='iter_PR-AUC', 
-                                            data=self.metric_2.result(),
-                                            step=self.optimizer.iterations.numpy())
+                                             data=self.metric_2.result(),
+                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
+                            tf.summary.scalar(name='learning_rate',
+                                             data=self.optimizer.learning_rate,
+                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
+                            if momentum:
+                                tf.summary.scalar(name='momentum',
+                                                 data=self.optimizer.momentum,
+                                                 step=self.optimizer.iterations.numpy() - optimizer_iter_start)
                             self.train_summary_writer.flush()
 
                 # end of epoch summary
@@ -430,8 +437,9 @@ class Learner:
     
     def cycle(self):
         count = 0
-        for batch in train_dataset:
+        for batch in self.train_dataset:
             count += 1
+            print('Counting number of batches in train dataset... ({})'.format(count), end='\r')
         self.train_size = count
         return count
     
