@@ -256,6 +256,13 @@ class Learner:
             early_stop = 0
             early_stop_max_metric = 0
 
+        print("Training on {} GPU's".format(self.strategy.num_replicas_in_sync))
+
+        if steps_per_epoch:
+            print("Training for {} epochs, {} steps per epoch".format(epochs, steps_per_epoch))
+        else:
+            print("Training for {} epochs".format(epochs))
+
         steps_per_epoch = steps_per_epoch or inf
         
         # end of preliminaries... train loop starts *here*
@@ -613,16 +620,18 @@ if __name__ == '__main__':
     if args.no_shuffle:
         config.shuffle = False # override config.json setting
 
+    strategy = tf.distribute.MirroredStrategy()
+
+    global_batch_size = config.batch_size * strategy.num_replicas_in_sync
+
     train_dataset, valid_dataset = generate_datasets_from_dir(args.tfrecords_dir, args.frontend, split = config.split, which_split=(True, True, ) + (False, ) * (len(config.split)-2),
-                                                              sample_rate = config.sr, batch_size = config.batch_size, 
+                                                              sample_rate = config.sr, batch_size = global_batch_size, 
                                                               block_length = config.interleave_block_length, cycle_length = config.interleave_cycle_length,
                                                               shuffle = config.shuffle, shuffle_buffer_size = config.shuffle_buffer_size, 
                                                               window_length = config.window_length, window_random = config.window_random, 
                                                               hop_length = config.melspect_x_hop_length, num_mel_bands = config.melspect_y, tag_shape = config.tag_shape, with_tags = config.tags,
                                                               num_tags_db = args.multi_db, default_tags_db = args.multi_db_default,
 										                      as_tuple = True)
-    
-    strategy = tf.distribute.MirroredStrategy()
 
     orpheus = Learner(frontend=args.frontend, 
                       train_dataset=train_dataset, valid_dataset=valid_dataset, 
