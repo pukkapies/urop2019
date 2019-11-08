@@ -225,7 +225,7 @@ def parse_config_json(config_path, lastfm):
 
     if isinstance(config.moms, (int, float)): config.moms = (config.moms, config.moms)
     
-    assert len(config.moms) = 2 # even if momentum is constant
+    assert len(config.moms) == 2 # even if momentum is constant
     
     return config
     
