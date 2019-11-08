@@ -48,6 +48,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
+from numpy import inf
+
 from data_input import generate_datasets_from_dir
 from orpheus_backend import build_model
 from orpheus_backend import parse_config_json
@@ -197,8 +199,15 @@ class Learner:
             Specifies whether to enable profiling.
         '''
 
+        if steps_per_epoch:
+            train_dataset = self.train_dataset.repeat().take(epochs * steps_per_epoch)
+        else:
+            train_dataset = self.train_dataset
+
         train_dataset = self.strategy.experimental_distribute_dataset(self.train_dataset)
         valid_dataset = self.strategy.experimental_distribute_dataset(self.valid_dataset) if self.valid_dataset else None
+
+        train_generator = (x for x in train_dataset)
 
         optimizer_iter_start = self.optimizer.iterations.numpy() # optimizer *does not* reset on keyboard interrupt, but only when the class goes out of scope
 
@@ -244,38 +253,11 @@ class Learner:
         if self.early_stop:
             early_stop = 0
             early_stop_max_metric = 0
+
+        steps_per_epoch = steps_per_epoch or inf
         
         # end of preliminaries... train loop starts *here*
         with self.strategy.scope():
-            
-            def _train(step, batch): # batch is retrieved differently if using a standard dataset or a generator (that is, whether or not dataset resets at epoch end); hence this function to avoid code repetition
-                    
-                    _update_cycle()  # if cyclic_lr, perform lr update (optionally mom); otherwise, do nothing
-
-                    loss = self._train_step(batch, metrics=[self.metric_1, self.metric_2])
-
-                    print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
-
-                    if tf.equal(self.optimizer.iterations % update_freq, 0): # write on tensorboard every update_freq steps
-                        with self.train_summary_writer.as_default():
-                            tf.summary.scalar(name='iter_loss',
-                                             data=loss, 
-                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
-                            tf.summary.scalar(name='iter_ROC-AUC', 
-                                             data=self.metric_1.result(),
-                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
-                            tf.summary.scalar(name='iter_PR-AUC', 
-                                             data=self.metric_2.result(),
-                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
-                            tf.summary.scalar(name='learning_rate',
-                                             data=self.optimizer.learning_rate,
-                                             step=self.optimizer.iterations.numpy() - optimizer_iter_start)
-                            if momentum:
-                                tf.summary.scalar(name='momentum',
-                                                 data=self.optimizer.momentum,
-                                                 step=self.optimizer.iterations.numpy() - optimizer_iter_start)
-                            self.train_summary_writer.flush()
-
             for epoch in tf.range(start, epochs, dtype=tf.int64):
 
                 print()
@@ -284,18 +266,42 @@ class Learner:
                 if analyse_trace and epoch == 0:
                     tf.summary.trace_off()
                     tf.summary.trace_on(graph=False, profiler=True)
-                
-                # train for steps_per_epoch steps (train_dataset is a generator)
-                if steps_per_epoch:
-                    step = 0
-                    while step < steps_per_epoch:
-                        batch = next(train_dataset) # yield next batch (infinite generator, does not reset at epoch end)
-                        _train(step, batch)
-                        step += 1
-                # train
-                else:
-                    for step, batch in enumerate(train_dataset):
-                        _train(step, batch)
+
+                step = 0 # initialize
+
+                while step < steps_per_epoch:
+                    step += 1
+                    try:
+                        _update_cycle()  # if cyclic_lr, perform lr update (optionally mom); otherwise, do nothing
+
+                        loss = self._train_step(next(train_generator), metrics=[self.metric_1, self.metric_2])
+
+                        print('{:4d} - Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(step+1, loss, self.metric_1.result(), self.metric_2.result()), end='\r')
+
+                        if tf.equal(self.optimizer.iterations % update_freq, 0): # write on tensorboard every 'update_freq' steps
+                            with self.train_summary_writer.as_default():
+                                tf.summary.scalar(name='iter_loss',
+                                                    data=loss, 
+                                                    step=self.optimizer.iterations.numpy() - optimizer_iter_start)
+                                tf.summary.scalar(name='iter_ROC-AUC', 
+                                                    data=self.metric_1.result(),
+                                                    step=self.optimizer.iterations.numpy() - optimizer_iter_start)
+                                tf.summary.scalar(name='iter_PR-AUC', 
+                                                    data=self.metric_2.result(),
+                                                    step=self.optimizer.iterations.numpy() - optimizer_iter_start)
+                                tf.summary.scalar(name='learning_rate',
+                                                    data=self.optimizer.learning_rate,
+                                                    step=self.optimizer.iterations.numpy() - optimizer_iter_start)
+                                if momentum:
+                                    tf.summary.scalar(name='momentum',
+                                                        data=self.optimizer.momentum,
+                                                        step=self.optimizer.iterations.numpy() - optimizer_iter_start)
+
+                                self.train_summary_writer.flush()
+
+                    except StopIteration: # will never be raised when training for 'steps_per_epoch' steps
+                        train_generator = (batch for batch in train_dataset)
+                        break
 
                 # end of epoch summary
                 print('Loss {:8.5f} - ROC-AUC {:6.5f} - PR-AUC {:6.5f}'.format(loss, self.metric_1.result(), self.metric_2.result()))
@@ -311,6 +317,7 @@ class Learner:
                     tf.summary.scalar(name='epoch_PR-AUC', 
                                       data=self.metric_2.result(),
                                       step=epoch+1)
+
                     self.train_summary_writer.flush()
                 
                 # reset metrics
@@ -353,6 +360,7 @@ class Learner:
                         tf.summary.scalar(name='epoch_PR-AUC', 
                                         data=self.metric_2.result(),
                                         step=epoch+1)
+
                         self.valid_summary_writer.flush()
 
                     # if early stop is enabled, compare previous epochs and check progress  
