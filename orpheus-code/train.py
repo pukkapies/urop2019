@@ -64,7 +64,7 @@ class Learner:
         self.strategy = strategy
 
         # check if traning with early stop callback
-        self.early_stop = self.config.early_stop_patience is not None
+        self.early_stop = self.config.callback_early_stop_patience is not None
 
         # initialize timestamp 
         self.timestamp = restore or datetime.datetime.now().strftime("%d%m%y-%H%M") # if restoring from previously saved checkpoint, use the 'old' timestamp
@@ -210,7 +210,7 @@ class Learner:
                 lr_callback = CyclicLR(cycle_length=config.cycle_length, 
                                     max_lr=config.max_lr,
                                     div_factor=config.div_factor,
-                                    mom=config.mom)
+                                    moms=config.moms)
 
             elif cyclic_lr == 'cyclic-1cycle':
                 self.early_stop = False # disable early stop callback
@@ -222,9 +222,9 @@ class Learner:
                 lr_callback = CyclicLR_1Cycle(cycle_length=cycle_length, 
                                             max_lr=config.max_lr,
                                             div_factor=config.div_factor,
-                                            mom=config.mom)
+                                            moms=config.moms)
 
-            # wrap lr (and mom) update step in one handy function 
+            # wrap lr (and moms) update step in one handy function 
             def _update_cycle():
                 step = self.optimizer.iterations.numpy() - opt_init_count # actual current iteration
 
@@ -232,8 +232,8 @@ class Learner:
                 self.optimizer.learning_rate.assign(lr)
 
                 if momentum:
-                    mom = lr_callback.get_mm(step=step)
-                    self.optimizer.momentum.assign(mom)
+                    moms = lr_callback.get_mm(step=step)
+                    self.optimizer.momentum.assign(moms)
         else:
             def _update_cycle(): # do nothing
                 pass
@@ -256,7 +256,7 @@ class Learner:
                 # train
                 for step, batch in enumerate(train_dataset):
 
-                    _update_cycle() # if cyclic_lr, perform update lr (and mom, optionally)
+                    _update_cycle() # if cyclic_lr, perform update lr (and moms, optionally)
 
                     loss = self._train_step(batch, metrics=[self.metric_1, self.metric_2])
 
@@ -334,13 +334,13 @@ class Learner:
 
                     # if early stop is enabled, compare previous epochs and check progress  
                     if self.early_stop:
-                        if self.metric_2.result() > (early_stop_max + self.config.early_stop_min_d):
+                        if self.metric_2.result() > (early_stop_max + self.config.callback_early_stop_min_d):
                             early_stop_max_metric = self.metrics_2.result()
                             early_stop = 0
                         else:
                             early_stop += 1
-                            print('No significant improvements on PR-AUC ({:1d}/{:1d})'.format(early_stop, self.config.early_stop_patience))
-                            if early_stop == self.config.early_stop_patience:
+                            print('No significant improvements on PR-AUC ({:1d}/{:1d})'.format(early_stop, self.config.callback_early_stop_patience))
+                            if early_stop == self.config.callback_early_stop_patience:
                                 break
                     
                     # reset metrics
@@ -390,35 +390,33 @@ class Learner:
             tf.keras.callbacks.TerminateOnNaN(),
         ]
 
-        if self.config.early_stop_patience is not None:
-
-            self.config.early_stop_min_delta = self.config.early_stop_min_delta or 0
+        if self.config.callback_early_stop_patience is not None:
 
             callbacks.append(
                 tf.keras.callbacks.EarlyStopping(
                     monitor = 'val_PR-AUC',
                     mode = 'max',
-                    min_delta = self.config.early_stop_min_delta,
+                    min_delta = self.config.callback_early_stop_min_delta,
                     restore_best_weights = True,
-                    patience = self.config.early_stop_patience,
+                    patience = self.config.callback_early_stop_patience,
                     verbose = 1,
                 ),
             )
         
-        if self.config.reduceLRoP_patience is not None:
+        if self.config.callback_reduceLRoP_patience is not None:
 
-            self.config.reduceLRoP_factor = self.config.reduceLRoP_factor or 0.5
-            self.config.reduceLRoP_min_delta = self.config.reduceLRoP_min_delta or 0
-            self.config.reduceLRoP_min_lr = self.config.reduceLRoP_min_lr or 0
+            min_lr = self.config.max_lr / self.config.div_factor
+
+            factor = 1 / self.config.div_factor_reduceLRoP # here factor is a multiplicative factor
 
             callbacks.append(
                 tf.keras.callbacks.ReduceLROnPlateau(
                     monitor = 'val_PR-AUC',
                     mode = 'max',
-                    factor = self.config.reduceLRoP_factor,
-                    min_delta = self.config.reduceLRoP_min_delta,
-                    min_lr = self.config.reduceLRoP_min_lr,
-                    patience = self.config.reduceLRoP_patience,
+                    factor = factor,
+                    min_delta = self.config.callback_reduceLRoP_min_delta,
+                    min_lr = min_lr,
+                    patience = self.config.callback_reduceLRoP_patience,
                     verbose = 1,
                 ),
             )
@@ -477,11 +475,11 @@ class Learner:
                 break
 
 class Scheduler:
-    def __init__(self, cycle_length, max_lr=0.1, div_factor=10, mom=None):
+    def __init__(self, cycle_length, max_lr=0.1, div_factor=10, moms=None):
         self.max_lr = max_lr
         self.min_lr = max_lr / div_factor
         self.delta = self.max_lr - self.min_lr
-        self.mom = mom
+        self.moms = moms
         self.cycle_length = cycle_length
 
     def _step_fn(self, step, max_val, min_val, reverse=False): # overridden by subclass
@@ -491,11 +489,11 @@ class Scheduler:
         return self._step_fn(step, self.max_lr, self.min_lr)
 
     def get_mm(self, step):
-        return self._step_fn(step, self.mom[0], self.mom[1], reverse=True)
+        return self._step_fn(step, self.moms[0], self.moms[1], reverse=True)
 
 class CyclicLR(Scheduler):
-    def __init__(self, cycle_length, max_lr, div_factor=10, mom=(0.95, 0.85)):
-        super().__init__(cycle_length, max_lr, div_factor, mom)
+    def __init__(self, cycle_length, max_lr, div_factor=10, moms=(0.95, 0.85)):
+        super().__init__(cycle_length, max_lr, div_factor, moms)
 
     def _step_fn(self, step, max_val, min_val, reverse=False):
         delta = max_val - min_val
@@ -517,8 +515,8 @@ class CyclicLR(Scheduler):
         return val
 
 class CyclicLR_1Cycle(Scheduler):
-    def __init__(self, cycle_length, max_lr, div_factor=10, mom=(0.95, 0.85)):
-        super().__init__(cycle_length, max_lr, div_factor, mom)
+    def __init__(self, cycle_length, max_lr, div_factor=10, moms=(0.95, 0.85)):
+        super().__init__(cycle_length, max_lr, div_factor, moms)
 
     def _step_fn(self, step, max_val, min_val, reverse=False):
         delta_1 = max_val - min_val

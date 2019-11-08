@@ -119,15 +119,16 @@ def write_config_json(config_path, **kwargs):
         "callback_early_stop_min_delta": None,  # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
         "callback_reduceLRoP_min_delta": None,  # the minimum increase in PR-AUC between two consecutive epochs to be considered as 'improvment'
         "cycle_length": 0,                      # number of iteration per each cycle, when using cyclical lr
-        "div_factor": 0,                        # when training with one-cycle policy, min_lr = max_lr / div_factor; when using ReduceLROnPlateau, lr = lr / factor at each reduction step
-        "log_dir": "~/",                        # directory where tensorboard logs and checkpoints will be stored
-        "max_learning_rate": 0.,                # when training with cyclical lr, max value for learning rate (min value determined using div_factor)
-        "momentum": 0.,                         # when training with cyclical lr, tuple of max value and min value for momentum
+        "div_factor": 0,                        # when using ReduceLROnPlateau callback or when training with one-cycle policy, min_lr = max_lr / div_factor
+        "div_factor_reduceLRoP": 0,             # when using ReduceLROnPlateau callback, lr = lr / div_factor at each callback step
+        "max_lr": 0.,                           # when training with cyclical lr, max value for learning rate (min value determined using div_factor)
+        "moms": 0.,                              # when training with cyclical lr, tuple of max value and min value for momentum
         "shuffle": True,                        # if True, shuffle the dataset
         "shuffle_buffer_size": 0,               # buffer size to use to shuffle the dataset (only applies if shuffle is True)
         "split": MyJSONEnc_NoIndent([0, 0]),    # number of (or percentage of) .tfrecord files that will go in each train/validation/test dataset (ideally an array of len <= 3)
         "window_length": 0,                     # length (in seconds) of the audio 'window' to input into the model
         "window_random": True,                  # if True, the window is picked randomly along the track length; if False, the window is always picked from the middle
+        "log_dir": "~/",                        # directory where tensorboard logs and checkpoints will be stored
     }
 
     # specify which tags to use
@@ -213,14 +214,18 @@ def parse_config_json(config_path, lastfm):
     config.num_output_neurons = len(tags) if tags is not None else config.tag_shape
 
     # default values (if some entries are 'null'; can be changed to whatever other desired values)
-    config.callback_early_stop_patience = config.callback_early_stop_patience or 0
-    config.callback_reduceLRoP_patience = config.callback_reduceLRoP_patience or 0
-    config.callback_early_stop_min_delta = config.callback_early_stop_min_delta or 0.
-    config.callback_reduceLRoP_min_delta = config.callback_reduceLRoP_min_delta or 0.
+#    config.callback_early_stop_patience = config.callback_early_stop_patience or 5
+#    config.callback_reduceLRoP_patience = config.callback_reduceLRoP_patience or 2
+#    config.callback_early_stop_min_delta = config.callback_early_stop_min_delta or 0.01
+#    config.callback_reduceLRoP_min_delta = config.callback_reduceLRoP_min_delta or 0.01
     config.cycle_length = config.cycle_length or 1000
     config.div_factor = config.div_factor or 25
     config.learning_rate = config.learning_rate or 0.01
-    config.momentum = config.momentum or (0.95, 0.85)
+    config.moms = config.moms or (0.95, 0.95)
+
+    if isinstance(config.moms, (int, float)): config.moms = (config.moms, config.moms)
+    
+    assert len(config.moms) = 2 # even if momentum is constant
     
     return config
     
