@@ -213,6 +213,8 @@ class Learner:
 
         start = self.checkpoint.save_counter
 
+        tf.summary.trace_off() # in case of previous keyboard interrupt
+
         if cyclic_lr:
             if cyclic_lr not in ('cyclic', 'cyclic-1cycle'): # sanity check
                 raise ValueError
@@ -264,7 +266,6 @@ class Learner:
                 print('Epoch {}/{}'.format(epoch+1, epochs))
                 
                 if analyse_trace and epoch == 0:
-                    tf.summary.trace_off()
                     tf.summary.trace_on(graph=False, profiler=True)
 
                 step = 0 # initialize
